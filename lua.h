@@ -303,7 +303,7 @@
 ** CHANGE them if you need to mark them in some special way. Elf/gcc
 ** (versions 3.2 and later) mark them as "hidden" to optimize access
 ** when Lua is compiled as a shared library. Not all elf targets support
-** this attribute. Unfortunately, gcc does not offer a way to check
+** this attribute. Unfortunately, gcc does not offer a way to luai_check
 ** whether the target offers that support, and those without support
 ** give a warning about it. To avoid these warnings, change to the
 ** default definition.
@@ -451,23 +451,23 @@
 @@ LUA_NUMBER is the floating-point type used by Lua.
 @@ LUAI_UACNUMBER is the result of a 'default argument promotion'
 @@ over a floating number.
-@@ l_mathlim(x) corrects limit name 'x' to the proper float type
+@@ luai_l_mathlim(x) corrects limit name 'x' to the proper float type
 ** by prefixing it with one of FLT/DBL/LDBL.
 @@ LUA_NUMBER_FRMLEN is the length modifier for writing floats.
 @@ LUA_NUMBER_FMT is the format for writing floats.
 @@ lua_number2str converts a float to a string.
-@@ l_mathop allows the addition of an 'l' or 'f' to all math operations.
-@@ l_floor takes the floor of a float.
+@@ luai_l_mathop allows the addition of an 'l' or 'f' to all math operations.
+@@ luai_l_floor takes the floor of a float.
 @@ lua_str2number converts a decimal numeric string to a number.
 */
 
 
 /* The following definitions are good for most cases here */
 
-#define l_floor(x)		(l_mathop(floor)(x))
+#define luai_l_floor(x)		(luai_l_mathop(floor)(x))
 
 #define lua_number2str(s,sz,n)  \
-	l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
+	luai_l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
 
 /*
 @@ lua_numbertointeger converts a float number to an integer, or
@@ -489,14 +489,14 @@
 
 #define LUA_NUMBER	float
 
-#define l_mathlim(n)		(FLT_##n)
+#define luai_l_mathlim(n)		(FLT_##n)
 
 #define LUAI_UACNUMBER	double
 
 #define LUA_NUMBER_FRMLEN	""
 #define LUA_NUMBER_FMT		"%.7g"
 
-#define l_mathop(op)		op##f
+#define luai_l_mathop(op)		op##f
 
 #define lua_str2number(s,p)	strtof((s), (p))
 
@@ -505,14 +505,14 @@
 
 #define LUA_NUMBER	long double
 
-#define l_mathlim(n)		(LDBL_##n)
+#define luai_l_mathlim(n)		(LDBL_##n)
 
 #define LUAI_UACNUMBER	long double
 
 #define LUA_NUMBER_FRMLEN	"L"
 #define LUA_NUMBER_FMT		"%.19Lg"
 
-#define l_mathop(op)		op##l
+#define luai_l_mathop(op)		op##l
 
 #define lua_str2number(s,p)	strtold((s), (p))
 
@@ -520,14 +520,14 @@
 
 #define LUA_NUMBER	double
 
-#define l_mathlim(n)		(DBL_##n)
+#define luai_l_mathlim(n)		(DBL_##n)
 
 #define LUAI_UACNUMBER	double
 
 #define LUA_NUMBER_FRMLEN	""
 #define LUA_NUMBER_FMT		"%.14g"
 
-#define l_mathop(op)		op
+#define luai_l_mathop(op)		op
 
 #define lua_str2number(s,p)	strtod((s), (p))
 
@@ -561,7 +561,7 @@
 #define LUAI_UACINT		LUA_INTEGER
 
 #define lua_integer2str(s,sz,n)  \
-	l_sprintf((s), sz, LUA_INTEGER_FMT, (LUAI_UACINT)(n))
+	luai_l_sprintf((s), sz, LUA_INTEGER_FMT, (LUAI_UACINT)(n))
 
 /*
 ** use LUAI_UACINT here to avoid problems with promotions (which
@@ -632,13 +632,13 @@
 */
 
 /*
-@@ l_sprintf is equivalent to 'snprintf' or 'sprintf' in C89.
+@@ luai_l_sprintf is equivalent to 'snprintf' or 'sprintf' in C89.
 ** (All uses in Lua have only one format item.)
 */
 #if !defined(LUA_USE_C89)
-#define l_sprintf(s,sz,f,i)	snprintf(s,sz,f,i)
+#define luai_l_sprintf(s,sz,f,i)	snprintf(s,sz,f,i)
 #else
-#define l_sprintf(s,sz,f,i)	((void)(sz), sprintf(s,f,i))
+#define luai_l_sprintf(s,sz,f,i)	((void)(sz), sprintf(s,f,i))
 #endif
 
 
@@ -661,7 +661,7 @@
 */
 #if !defined(LUA_USE_C89)
 #define lua_number2strx(L,b,sz,f,n)  \
-	((void)L, l_sprintf(b,sz,f,(LUAI_UACNUMBER)(n)))
+	((void)L, luai_l_sprintf(b,sz,f,(LUAI_UACNUMBER)(n)))
 #endif
 
 
@@ -672,9 +672,9 @@
 ** all files that use these macros.)
 */
 #if defined(LUA_USE_C89) || (defined(HUGE_VAL) && !defined(HUGE_VALF))
-#undef l_mathop  /* variants not available */
+#undef luai_l_mathop  /* variants not available */
 #undef lua_str2number
-#define l_mathop(op)		(lua_Number)op  /* no variant */
+#define luai_l_mathop(op)		(lua_Number)op  /* no variant */
 #define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
 #endif
 
@@ -808,41 +808,6 @@
 ** without modifying the main part of the file.
 */
 
-
-/*__lprefix.h__*/
-
-/*
-** Allows POSIX/XSI stuff
-*/
-#if !defined(LUA_USE_C89)	/* { */
-
-#if !defined(_XOPEN_SOURCE)
-#define _XOPEN_SOURCE           600
-#elif _XOPEN_SOURCE == 0
-#undef _XOPEN_SOURCE  /* use -D_XOPEN_SOURCE=0 to undefine it */
-#endif
-
-/*
-** Allows manipulation of large files in gcc and some other compilers
-*/
-#if !defined(LUA_32BITS) && !defined(_FILE_OFFSET_BITS)
-#define _LARGEFILE_SOURCE       1
-#define _FILE_OFFSET_BITS       64
-#endif
-
-#endif				/* } */
-
-
-/*
-** Windows stuff
-*/
-#if defined(_WIN32) 	/* { */
-
-#if !defined(_CRT_SECURE_NO_WARNINGS)
-#define _CRT_SECURE_NO_WARNINGS  /* avoid warnings about ISO C functions */
-#endif
-
-#endif			/* } */
 
 /*__lua.h__*/
 
@@ -1271,10 +1236,10 @@ LUA_API int (lua_gethookcount) (lua_State *L);
 struct lua_Debug {
   int event;
   const char *name;	/* (n) */
-  const char *namewhat;	/* (n) 'global', 'local', 'field', 'method' */
+  const char *namewhat;	/* (n) 'global', 'local', 'luai_field', 'method' */
   const char *what;	/* (S) 'Lua', 'C', 'main', 'tail' */
   const char *source;	/* (S) */
-  int currentline;	/* (l) */
+  int luai_currentline;	/* (l) */
   int linedefined;	/* (S) */
   int lastlinedefined;	/* (S) */
   unsigned char nups;	/* (u) number of upvalues */
@@ -1286,22 +1251,76 @@ struct lua_Debug {
   struct CallInfo *i_ci;  /* active function */
 };
 
+#endif // lua_h
+
+/***************************************************************************
+ * IMPLEMENTATION
+ **************************************************************************/
+
+#ifdef LUA_IMPLEMENTATION
+
+#include <ctype.h>
+#include <errno.h>
+#include <float.h>
+#include <locale.h>
+#include <math.h>
+#include <setjmp.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+/*__lprefix.h__*/
+
+/*
+** Allows POSIX/XSI stuff
+*/
+#if !defined(LUA_USE_C89)	/* { */
+
+#if !defined(_XOPEN_SOURCE)
+#define _XOPEN_SOURCE           600
+#elif _XOPEN_SOURCE == 0
+#undef _XOPEN_SOURCE  /* use -D_XOPEN_SOURCE=0 to undefine it */
+#endif
+
+/*
+** Allows manipulation of large files in gcc and some other compilers
+*/
+#if !defined(LUA_32BITS) && !defined(_FILE_OFFSET_BITS)
+#define _LARGEFILE_SOURCE       1
+#define _FILE_OFFSET_BITS       64
+#endif
+
+#endif				/* } */
+
+
+/*
+** Windows stuff
+*/
+#if defined(_WIN32) 	/* { */
+
+#if !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS  /* avoid warnings about ISO C functions */
+#endif
+
+#endif			/* } */
+
 /*__llimits.h__*/
 
 /*
-** 'lu_mem' and 'l_mem' are unsigned/signed integers big enough to count
+** 'luai_lu_mem' and 'luai_l_mem' are unsigned/signed integers big enough to count
 ** the total memory used by Lua (in bytes). Usually, 'size_t' and
 ** 'ptrdiff_t' should work, but we use 'long' for 16-bit machines.
 */
 #if defined(LUAI_MEM)		/* { external definitions? */
-typedef LUAI_UMEM lu_mem;
-typedef LUAI_MEM l_mem;
+typedef LUAI_UMEM luai_lu_mem;
+typedef LUAI_MEM luai_l_mem;
 #elif LUAI_BITSINT >= 32	/* }{ */
-typedef size_t lu_mem;
-typedef ptrdiff_t l_mem;
+typedef size_t luai_lu_mem;
+typedef ptrdiff_t luai_l_mem;
 #else  /* 16-bit ints */	/* }{ */
-typedef unsigned long lu_mem;
-typedef long l_mem;
+typedef unsigned long luai_lu_mem;
+typedef long luai_l_mem;
 #endif				/* } */
 
 
@@ -1317,9 +1336,9 @@ typedef unsigned char lu_byte;
                           : (size_t)(LUA_MAXINTEGER))
 
 
-#define MAX_LUMEM	((lu_mem)(~(lu_mem)0))
+#define MAX_LUMEM	((luai_lu_mem)(~(luai_lu_mem)0))
 
-#define MAX_LMEM	((l_mem)(MAX_LUMEM >> 1))
+#define MAX_LMEM	((luai_l_mem)(MAX_LUMEM >> 1))
 
 
 #define MAX_INT		INT_MAX  /* maximum value of an int */
@@ -1336,7 +1355,7 @@ typedef unsigned char lu_byte;
 
 /* type to ensure maximum alignment */
 #if defined(LUAI_USER_ALIGNMENT_T)
-typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
+typedef LUAI_USER_ALIGNMENT_T LUAI_L_Umaxalign;
 #else
 typedef union {
   lua_Number n;
@@ -1344,14 +1363,14 @@ typedef union {
   void *s;
   lua_Integer i;
   long l;
-} L_Umaxalign;
+} LUAI_L_Umaxalign;
 #endif
 
 
 
 /* types of 'usual argument conversions' for lua_Number and lua_Integer */
-typedef LUAI_UACNUMBER l_uacNumber;
-typedef LUAI_UACINT l_uacInt;
+typedef LUAI_UACNUMBER luai_l_uacNumber;
+typedef LUAI_UACINT luai_l_uacInt;
 
 
 /* internal assertions for in-house debugging */
@@ -1382,27 +1401,27 @@ typedef LUAI_UACINT l_uacInt;
 
 
 /* type casts (a macro highlights casts in the code) */
-#define cast(t, exp)	((t)(exp))
+#define luai_cast(t, exp)	((t)(exp))
 
-#define cast_void(i)	cast(void, (i))
-#define cast_byte(i)	cast(lu_byte, (i))
-#define cast_num(i)	cast(lua_Number, (i))
-#define cast_int(i)	cast(int, (i))
-#define cast_uchar(i)	cast(unsigned char, (i))
+#define luai_cast_void(i)	luai_cast(void, (i))
+#define luai_cast_byte(i)	luai_cast(lu_byte, (i))
+#define luai_cast_num(i)	luai_cast(lua_Number, (i))
+#define luai_cast_int(i)	luai_cast(int, (i))
+#define luai_cast_uchar(i)	luai_cast(unsigned char, (i))
 
 
-/* cast a signed lua_Integer to lua_Unsigned */
-#if !defined(l_castS2U)
-#define l_castS2U(i)	((lua_Unsigned)(i))
+/* luai_cast a signed lua_Integer to lua_Unsigned */
+#if !defined(luai_l_castS2U)
+#define luai_l_castS2U(i)	((lua_Unsigned)(i))
 #endif
 
 /*
-** cast a lua_Unsigned to a signed lua_Integer; this cast is
+** luai_cast a lua_Unsigned to a signed lua_Integer; this luai_cast is
 ** not strict ISO C, but two-complement architectures should
 ** work fine.
 */
-#if !defined(l_castU2S)
-#define l_castU2S(i)	((lua_Integer)(i))
+#if !defined(luai_l_castU2S)
+#define luai_l_castU2S(i)	((lua_Integer)(i))
 #endif
 
 
@@ -1410,11 +1429,11 @@ typedef LUAI_UACINT l_uacInt;
 ** non-return type
 */
 #if defined(__GNUC__)
-#define l_noret		void __attribute__((noreturn))
+#define luai_l_noret		void __attribute__((noreturn))
 #elif defined(_MSC_VER) && _MSC_VER >= 1200
-#define l_noret		void __declspec(noreturn)
+#define luai_l_noret		void __declspec(noreturn)
 #else
-#define l_noret		void
+#define luai_l_noret		void
 #endif
 
 
@@ -1535,7 +1554,7 @@ typedef unsigned long Instruction;
 
 /* floor division (defined as 'floor(a/b)') */
 #if !defined(luai_numidiv)
-#define luai_numidiv(L,a,b)     ((void)L, l_floor(luai_numdiv(L,a,b)))
+#define luai_numidiv(L,a,b)     ((void)L, luai_l_floor(luai_numdiv(L,a,b)))
 #endif
 
 /* float division */
@@ -1552,12 +1571,12 @@ typedef unsigned long Instruction;
 */
 #if !defined(luai_nummod)
 #define luai_nummod(L,a,b,m)  \
-  { (m) = l_mathop(fmod)(a,b); if ((m)*(b) < 0) (m) += (b); }
+  { (m) = luai_l_mathop(fmod)(a,b); if ((m)*(b) < 0) (m) += (b); }
 #endif
 
 /* exponentiation */
 #if !defined(luai_numpow)
-#define luai_numpow(L,a,b)      ((void)L, l_mathop(pow)(a,b))
+#define luai_numpow(L,a,b)      ((void)L, luai_l_mathop(pow)(a,b))
 #endif
 
 /* the others are quite standard operations */
@@ -1649,20 +1668,20 @@ typedef unsigned long Instruction;
 /*
 ** Common type for all collectable objects
 */
-typedef struct GCObject GCObject;
+typedef struct LUAI_GCObject LUAI_GCObject;
 
 
 /*
-** Common Header for all collectable objects (in macro form, to be
+** Common luai_Header for all collectable objects (in macro form, to be
 ** included in other objects)
 */
-#define CommonHeader	GCObject *next; lu_byte tt; lu_byte marked
+#define CommonHeader	LUAI_GCObject *luai_next; lu_byte tt; lu_byte marked
 
 
 /*
 ** Common type has only the common header
 */
-struct GCObject {
+struct LUAI_GCObject {
   CommonHeader;
 };
 
@@ -1678,7 +1697,7 @@ struct GCObject {
 ** Union of all Lua values
 */
 typedef union lua_Value {
-  GCObject *gc;    /* collectable objects */
+  LUAI_GCObject *gc;    /* collectable objects */
   void *p;         /* light userdata */
   int b;           /* booleans */
   lua_CFunction f; /* light C functions */
@@ -1692,7 +1711,7 @@ typedef union lua_Value {
 
 typedef struct lua_TValue {
   TValuefields;
-} TValue;
+} luai_TValue;
 
 
 
@@ -1703,16 +1722,16 @@ typedef struct lua_TValue {
 #define val_(o)		((o)->value_)
 
 
-/* raw type tag of a TValue */
+/* raw type tag of a luai_TValue */
 #define rttype(o)	((o)->tt_)
 
 /* tag with no variants (bits 0-3) */
 #define novariant(x)	((x) & 0x0F)
 
-/* type tag of a TValue (bits 0-3 for tags + variant bits 4-5) */
+/* type tag of a luai_TValue (bits 0-3 for tags + variant bits 4-5) */
 #define ttype(o)	(rttype(o) & 0x3F)
 
-/* type tag of a TValue with no variants (bits 0-3) */
+/* type tag of a luai_TValue with no variants (bits 0-3) */
 #define ttnov(o)	(novariant(rttype(o)))
 
 
@@ -1743,7 +1762,7 @@ typedef struct lua_TValue {
 #define ivalue(o)	luai_check_exp(ttisinteger(o), val_(o).i)
 #define fltvalue(o)	luai_check_exp(ttisfloat(o), val_(o).n)
 #define nvalue(o)	luai_check_exp(ttisnumber(o), \
-	(ttisinteger(o) ? cast_num(ivalue(o)) : fltvalue(o)))
+	(ttisinteger(o) ? luai_cast_num(ivalue(o)) : fltvalue(o)))
 #define gcvalue(o)	luai_check_exp(iscollectable(o), val_(o).gc)
 #define pvalue(o)	luai_check_exp(ttislightuserdata(o), val_(o).p)
 #define tsvalue(o)	luai_check_exp(ttisstring(o), gco2ts(val_(o).gc))
@@ -1755,10 +1774,10 @@ typedef struct lua_TValue {
 #define hvalue(o)	luai_check_exp(ttistable(o), gco2t(val_(o).gc))
 #define bvalue(o)	luai_check_exp(ttisboolean(o), val_(o).b)
 #define thvalue(o)	luai_check_exp(ttisthread(o), gco2th(val_(o).gc))
-/* a dead value may get the 'gc' field, but cannot access its contents */
-#define deadvalue(o)	luai_check_exp(ttisdeadkey(o), cast(void *, val_(o).gc))
+/* a dead value may get the 'gc' luai_field, but cannot access its contents */
+#define deadvalue(o)	luai_check_exp(ttisdeadkey(o), luai_cast(void *, val_(o).gc))
 
-#define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
+#define luai_l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
 
 #define iscollectable(o)	(rttype(o) & BIT_ISCOLLECTABLE)
@@ -1776,59 +1795,59 @@ typedef struct lua_TValue {
 #define settt_(o,t)	((o)->tt_=(t))
 
 #define setfltvalue(obj,x) \
-  { TValue *io=(obj); val_(io).n=(x); settt_(io, LUA_TNUMFLT); }
+  { luai_TValue *io=(obj); val_(io).n=(x); settt_(io, LUA_TNUMFLT); }
 
 #define chgfltvalue(obj,x) \
-  { TValue *io=(obj); lua_assert(ttisfloat(io)); val_(io).n=(x); }
+  { luai_TValue *io=(obj); lua_assert(ttisfloat(io)); val_(io).n=(x); }
 
 #define setivalue(obj,x) \
-  { TValue *io=(obj); val_(io).i=(x); settt_(io, LUA_TNUMINT); }
+  { luai_TValue *io=(obj); val_(io).i=(x); settt_(io, LUA_TNUMINT); }
 
 #define chgivalue(obj,x) \
-  { TValue *io=(obj); lua_assert(ttisinteger(io)); val_(io).i=(x); }
+  { luai_TValue *io=(obj); lua_assert(ttisinteger(io)); val_(io).i=(x); }
 
 #define setnilvalue(obj) settt_(obj, LUA_TNIL)
 
 #define setfvalue(obj,x) \
-  { TValue *io=(obj); val_(io).f=(x); settt_(io, LUA_TLCF); }
+  { luai_TValue *io=(obj); val_(io).f=(x); settt_(io, LUA_TLCF); }
 
 #define setpvalue(obj,x) \
-  { TValue *io=(obj); val_(io).p=(x); settt_(io, LUA_TLIGHTUSERDATA); }
+  { luai_TValue *io=(obj); val_(io).p=(x); settt_(io, LUA_TLIGHTUSERDATA); }
 
 #define setbvalue(obj,x) \
-  { TValue *io=(obj); val_(io).b=(x); settt_(io, LUA_TBOOLEAN); }
+  { luai_TValue *io=(obj); val_(io).b=(x); settt_(io, LUA_TBOOLEAN); }
 
 #define setgcovalue(L,obj,x) \
-  { TValue *io = (obj); GCObject *i_g=(x); \
+  { luai_TValue *io = (obj); LUAI_GCObject *i_g=(x); \
     val_(io).gc = i_g; settt_(io, ctb(i_g->tt)); }
 
 #define setsvalue(L,obj,x) \
-  { TValue *io = (obj); TString *x_ = (x); \
+  { luai_TValue *io = (obj); luai_TString *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(x_->tt)); \
     checkliveness(L,io); }
 
 #define setuvalue(L,obj,x) \
-  { TValue *io = (obj); Udata *x_ = (x); \
+  { luai_TValue *io = (obj); Udata *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TUSERDATA)); \
     checkliveness(L,io); }
 
 #define setthvalue(L,obj,x) \
-  { TValue *io = (obj); lua_State *x_ = (x); \
+  { luai_TValue *io = (obj); lua_State *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTHREAD)); \
     checkliveness(L,io); }
 
 #define setclLvalue(L,obj,x) \
-  { TValue *io = (obj); LClosure *x_ = (x); \
+  { luai_TValue *io = (obj); LClosure *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TLCL)); \
     checkliveness(L,io); }
 
 #define setclCvalue(L,obj,x) \
-  { TValue *io = (obj); CClosure *x_ = (x); \
+  { luai_TValue *io = (obj); CClosure *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TCCL)); \
     checkliveness(L,io); }
 
 #define sethvalue(L,obj,x) \
-  { TValue *io = (obj); Table *x_ = (x); \
+  { luai_TValue *io = (obj); luai_Table *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTABLE)); \
     checkliveness(L,io); }
 
@@ -1837,7 +1856,7 @@ typedef struct lua_TValue {
 
 
 #define setobj(L,obj1,obj2) \
-	{ TValue *io1=(obj1); *io1 = *(obj2); \
+	{ luai_TValue *io1=(obj1); *io1 = *(obj2); \
 	  (void)L; checkliveness(L,io1); }
 
 
@@ -1871,62 +1890,62 @@ typedef struct lua_TValue {
 */
 
 
-typedef TValue *StkId;  /* index to stack elements */
+typedef luai_TValue *StkId;  /* index to stack elements */
 
 
 
 
 /*
-** Header for string value; string bytes follow the end of this structure
-** (aligned according to 'UTString'; see next).
+** luai_Header for string value; string bytes follow the end of this structure
+** (aligned according to 'UTString'; see luai_next).
 */
-typedef struct TString {
+typedef struct luai_TString {
   CommonHeader;
   lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
   lu_byte shrlen;  /* length for short strings */
   unsigned int hash;
   union {
     size_t lnglen;  /* length for long strings */
-    struct TString *hnext;  /* linked list for hash table */
+    struct luai_TString *hnext;  /* linked list for hash table */
   } u;
-} TString;
+} luai_TString;
 
 
 /*
 ** Ensures that address after this type is always fully aligned.
 */
 typedef union UTString {
-  L_Umaxalign dummy;  /* ensures maximum alignment for strings */
-  TString tsv;
+  LUAI_L_Umaxalign dummy;  /* ensures maximum alignment for strings */
+  luai_TString tsv;
 } UTString;
 
 
 /*
-** Get the actual string (array of bytes) from a 'TString'.
-** (Access to 'extra' ensures that value is really a 'TString'.)
+** Get the actual string (array of bytes) from a 'luai_TString'.
+** (Access to 'extra' ensures that value is really a 'luai_TString'.)
 */
 #define getstr(ts)  \
-  luai_check_exp(sizeof((ts)->extra), cast(char *, (ts)) + sizeof(UTString))
+  luai_check_exp(sizeof((ts)->extra), luai_cast(char *, (ts)) + sizeof(UTString))
 
 
 /* get the actual string (array of bytes) from a Lua value */
 #define svalue(o)       getstr(tsvalue(o))
 
-/* get string length from 'TString *s' */
+/* get string length from 'luai_TString *s' */
 #define tsslen(s)	((s)->tt == LUA_TSHRSTR ? (s)->shrlen : (s)->u.lnglen)
 
-/* get string length from 'TValue *o' */
+/* get string length from 'luai_TValue *o' */
 #define vslen(o)	tsslen(tsvalue(o))
 
 
 /*
-** Header for userdata; memory area follows the end of this structure
-** (aligned according to 'UUdata'; see next).
+** luai_Header for userdata; memory area follows the end of this structure
+** (aligned according to 'UUdata'; see luai_next).
 */
 typedef struct Udata {
   CommonHeader;
   lu_byte ttuv_;  /* user value's tag */
-  struct Table *metatable;
+  struct luai_Table *metatable;
   size_t len;  /* number of bytes */
   union lua_Value user_;  /* user value */
 } Udata;
@@ -1936,26 +1955,26 @@ typedef struct Udata {
 ** Ensures that address after this type is always fully aligned.
 */
 typedef union UUdata {
-  L_Umaxalign dummy;  /* ensures maximum alignment for 'local' udata */
+  LUAI_L_Umaxalign dummy;  /* ensures maximum alignment for 'local' udata */
   Udata uv;
 } UUdata;
 
 
 /*
-**  Get the address of memory block inside 'Udata'.
+**  Get the address of memory luai_getblock inside 'Udata'.
 ** (Access to 'ttuv_' ensures that value is really a 'Udata'.)
 */
 #define getudatamem(u)  \
-  luai_check_exp(sizeof((u)->ttuv_), (cast(char*, (u)) + sizeof(UUdata)))
+  luai_check_exp(sizeof((u)->ttuv_), (luai_cast(char*, (u)) + sizeof(UUdata)))
 
 #define setuservalue(L,u,o) \
-	{ const TValue *io=(o); Udata *iu = (u); \
+	{ const luai_TValue *io=(o); Udata *iu = (u); \
 	  iu->user_ = io->value_; iu->ttuv_ = rttype(io); \
 	  checkliveness(L,io); }
 
 
 #define getuservalue(L,u,o) \
-	{ TValue *io=(o); const Udata *iu = (u); \
+	{ luai_TValue *io=(o); const Udata *iu = (u); \
 	  io->value_ = iu->user_; settt_(io, iu->ttuv_); \
 	  checkliveness(L,io); }
 
@@ -1964,7 +1983,7 @@ typedef union UUdata {
 ** Description of an upvalue for function prototypes
 */
 typedef struct Upvaldesc {
-  TString *name;  /* upvalue name (for debug information) */
+  luai_TString *name;  /* upvalue name (for debug information) */
   lu_byte instack;  /* whether it is in stack (register) */
   lu_byte idx;  /* index of upvalue (in stack or in outer function's list) */
 } Upvaldesc;
@@ -1975,7 +1994,7 @@ typedef struct Upvaldesc {
 ** (used for debug information)
 */
 typedef struct LocVar {
-  TString *varname;
+  luai_TString *varname;
   int startpc;  /* first point where variable is active */
   int endpc;    /* first point where variable is dead */
 } LocVar;
@@ -1984,7 +2003,7 @@ typedef struct LocVar {
 /*
 ** Function Prototypes
 */
-typedef struct Proto {
+typedef struct luai_Proto {
   CommonHeader;
   lu_byte numparams;  /* number of fixed parameters */
   lu_byte is_vararg;
@@ -1997,23 +2016,23 @@ typedef struct Proto {
   int sizelocvars;
   int linedefined;  /* debug information  */
   int lastlinedefined;  /* debug information  */
-  TValue *k;  /* constants used by the function */
+  luai_TValue *k;  /* constants used by the function */
   Instruction *code;  /* opcodes */
-  struct Proto **p;  /* functions defined inside the function */
+  struct luai_Proto **p;  /* functions defined inside the function */
   int *lineinfo;  /* map from opcodes to source lines (debug information) */
   LocVar *locvars;  /* information about local variables (debug information) */
   Upvaldesc *upvalues;  /* upvalue information */
   struct LClosure *cache;  /* last-created closure with this prototype */
-  TString  *source;  /* used for debug information */
-  GCObject *gclist;
-} Proto;
+  luai_TString  *source;  /* used for debug information */
+  LUAI_GCObject *gclist;
+} luai_Proto;
 
 
 
 /*
 ** Lua Upvalues
 */
-typedef struct UpVal UpVal;
+typedef struct luai_UpVal luai_UpVal;
 
 
 /*
@@ -2021,19 +2040,19 @@ typedef struct UpVal UpVal;
 */
 
 #define ClosureHeader \
-	CommonHeader; lu_byte nupvalues; GCObject *gclist
+	CommonHeader; lu_byte nupvalues; LUAI_GCObject *gclist
 
 typedef struct CClosure {
   ClosureHeader;
   lua_CFunction f;
-  TValue upvalue[1];  /* list of upvalues */
+  luai_TValue upvalue[1];  /* list of upvalues */
 } CClosure;
 
 
 typedef struct LClosure {
   ClosureHeader;
-  struct Proto *p;
-  UpVal *upvals[1];  /* list of upvalues */
+  struct luai_Proto *p;
+  luai_UpVal *upvals[1];  /* list of upvalues */
 } LClosure;
 
 
@@ -2052,39 +2071,39 @@ typedef union Closure {
 ** Tables
 */
 
-typedef union TKey {
+typedef union LUAI_TKey {
   struct {
     TValuefields;
-    int next;  /* for chaining (offset for next node) */
+    int luai_next;  /* for chaining (offset for luai_next node) */
   } nk;
-  TValue tvk;
-} TKey;
+  luai_TValue tvk;
+} LUAI_TKey;
 
 
-/* copy a value into a key without messing up field 'next' */
+/* copy a value into a key without messing up luai_field 'luai_next' */
 #define setnodekey(L,key,obj) \
-	{ TKey *k_=(key); const TValue *luai_io_=(obj); \
+	{ LUAI_TKey *k_=(key); const luai_TValue *luai_io_=(obj); \
 	  k_->nk.value_ = luai_io_->value_; k_->nk.tt_ = luai_io_->tt_; \
 	  (void)L; checkliveness(L,luai_io_); }
 
 
-typedef struct Node {
-  TValue i_val;
-  TKey i_key;
-} Node;
+typedef struct luai_Node {
+  luai_TValue i_val;
+  LUAI_TKey i_key;
+} luai_Node;
 
 
-typedef struct Table {
+typedef struct luai_Table {
   CommonHeader;
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */
   lu_byte lsizenode;  /* log2 of size of 'node' array */
   unsigned int sizearray;  /* size of 'array' array */
-  TValue *array;  /* array part */
-  Node *node;
-  Node *lastfree;  /* any free position is before this position */
-  struct Table *metatable;
-  GCObject *gclist;
-} Table;
+  luai_TValue *array;  /* array part */
+  luai_Node *node;
+  luai_Node *lastfree;  /* any free position is before this position */
+  struct luai_Table *metatable;
+  LUAI_GCObject *gclist;
+} luai_Table;
 
 
 
@@ -2092,7 +2111,7 @@ typedef struct Table {
 ** 'module' operation for hashing (size is always a power of 2)
 */
 #define lmod(s,size) \
-	(luai_check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1)))))
+	(luai_check_exp((size&(size-1))==0, (luai_cast(int, (s) & ((size)-1)))))
 
 
 #define twoto(x)	(1<<(x))
@@ -2105,7 +2124,7 @@ typedef struct Table {
 #define luaO_nilobject		(&luaO_nilobject_)
 
 
-LUAI_DDEC const TValue luaO_nilobject_;
+LUAI_DDEC const luai_TValue luaO_nilobject_;
 
 /* size of buffer for 'luaO_utf8esc' function */
 #define UTF8BUFFSZ	8
@@ -2114,9 +2133,9 @@ LUAI_FUNC int luaO_int2fb (unsigned int x);
 LUAI_FUNC int luaO_fb2int (int x);
 LUAI_FUNC int luaO_utf8esc (char *buff, unsigned long x);
 LUAI_FUNC int luaO_ceillog2 (unsigned int x);
-LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
-                           const TValue *p2, TValue *res);
-LUAI_FUNC size_t luaO_str2num (const char *s, TValue *o);
+LUAI_FUNC void luaO_arith (lua_State *L, int op, const luai_TValue *p1,
+                           const luai_TValue *p2, luai_TValue *res);
+LUAI_FUNC size_t luaO_str2num (const char *s, luai_TValue *o);
 LUAI_FUNC int luaO_hexavalue (int c);
 LUAI_FUNC void luaO_tostring (lua_State *L, StkId obj);
 LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
@@ -2170,21 +2189,21 @@ typedef enum {
 LUAI_DDEC const char *const luaT_typenames_[LUA_TOTALTAGS];
 
 
-LUAI_FUNC const char *luaT_objtypename (lua_State *L, const TValue *o);
+LUAI_FUNC const char *luaT_objtypename (lua_State *L, const luai_TValue *o);
 
-LUAI_FUNC const TValue *luaT_gettm (Table *events, TMS event, TString *ename);
-LUAI_FUNC const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o,
+LUAI_FUNC const luai_TValue *luaT_gettm (luai_Table *events, TMS event, luai_TString *ename);
+LUAI_FUNC const luai_TValue *luaT_gettmbyobj (lua_State *L, const luai_TValue *o,
                                                        TMS event);
 LUAI_FUNC void luaT_init (lua_State *L);
 
-LUAI_FUNC void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
-                            const TValue *p2, TValue *p3, int hasres);
-LUAI_FUNC int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
+LUAI_FUNC void luaT_callTM (lua_State *L, const luai_TValue *f, const luai_TValue *p1,
+                            const luai_TValue *p2, luai_TValue *p3, int hasres);
+LUAI_FUNC int luaT_callbinTM (lua_State *L, const luai_TValue *p1, const luai_TValue *p2,
                               StkId res, TMS event);
-LUAI_FUNC void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
+LUAI_FUNC void luaT_trybinTM (lua_State *L, const luai_TValue *p1, const luai_TValue *p2,
                               StkId res, TMS event);
-LUAI_FUNC int luaT_callorderTM (lua_State *L, const TValue *p1,
-                                const TValue *p2, TMS event);
+LUAI_FUNC int luaT_callorderTM (lua_State *L, const luai_TValue *p1,
+                                const luai_TValue *p2, TMS event);
 
 
 /*__lmem.h__*/
@@ -2203,40 +2222,40 @@ LUAI_FUNC int luaT_callorderTM (lua_State *L, const TValue *p1,
 ** avoiding this warning but also this optimization.)
 */
 #define luaM_reallocv(L,b,on,n,e) \
-  (((sizeof(n) >= sizeof(size_t) && cast(size_t, (n)) + 1 > MAX_SIZET/(e)) \
-      ? luaM_toobig(L) : cast_void(0)) , \
+  (((sizeof(n) >= sizeof(size_t) && luai_cast(size_t, (n)) + 1 > MAX_SIZET/(e)) \
+      ? luaM_toobig(L) : luai_cast_void(0)) , \
    luaM_realloc_(L, (b), (on)*(e), (n)*(e)))
 
 /*
 ** Arrays of chars do not need any test
 */
 #define luaM_reallocvchar(L,b,on,n)  \
-    cast(char *, luaM_realloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
+    luai_cast(char *, luaM_realloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
 
 #define luaM_freemem(L, b, s)	luaM_realloc_(L, (b), (s), 0)
 #define luaM_free(L, b)		luaM_realloc_(L, (b), sizeof(*(b)), 0)
 #define luaM_freearray(L, b, n)   luaM_realloc_(L, (b), (n)*sizeof(*(b)), 0)
 
 #define luaM_malloc(L,s)	luaM_realloc_(L, NULL, 0, (s))
-#define luaM_new(L,t)		cast(t *, luaM_malloc(L, sizeof(t)))
+#define luaM_new(L,t)		luai_cast(t *, luaM_malloc(L, sizeof(t)))
 #define luaM_newvector(L,n,t) \
-		cast(t *, luaM_reallocv(L, NULL, 0, n, sizeof(t)))
+		luai_cast(t *, luaM_reallocv(L, NULL, 0, n, sizeof(t)))
 
 #define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
 
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \
           if ((nelems)+1 > (size)) \
-            ((v)=cast(t *, luaM_growaux_(L,v,&(size),sizeof(t),limit,e)))
+            ((v)=luai_cast(t *, luaM_growaux_(L,v,&(size),sizeof(t),limit,e)))
 
 #define luaM_reallocvector(L, v,oldn,n,t) \
-   ((v)=cast(t *, luaM_reallocv(L, v, oldn, n, sizeof(t))))
+   ((v)=luai_cast(t *, luaM_reallocv(L, v, oldn, n, sizeof(t))))
 
-LUAI_FUNC l_noret luaM_toobig (lua_State *L);
+LUAI_FUNC luai_l_noret luaM_toobig (lua_State *L);
 
 /* not to be called directly */
-LUAI_FUNC void *luaM_realloc_ (lua_State *L, void *block, size_t oldsize,
+LUAI_FUNC void *luaM_realloc_ (lua_State *L, void *luai_getblock, size_t oldsize,
                                                           size_t size);
-LUAI_FUNC void *luaM_growaux_ (lua_State *L, void *block, int *size,
+LUAI_FUNC void *luaM_growaux_ (lua_State *L, void *luai_getblock, int *size,
                                size_t size_elem, int limit,
                                const char *what);
 
@@ -2246,7 +2265,7 @@ LUAI_FUNC void *luaM_growaux_ (lua_State *L, void *block, int *size,
 
 typedef struct Zio ZIO;
 
-#define zgetc(z)  (((z)->n--)>0 ?  cast_uchar(*(z)->p++) : luaZ_fill(z))
+#define luai_zgetc(z)  (((z)->n--)>0 ?  luai_cast_uchar(*(z)->p++) : luaZ_fill(z))
 
 
 typedef struct Mbuffer {
@@ -2275,7 +2294,7 @@ typedef struct Mbuffer {
 
 LUAI_FUNC void luaZ_init (lua_State *L, ZIO *z, lua_Reader reader,
                                         void *data);
-LUAI_FUNC size_t luaZ_read (ZIO* z, void *b, size_t n);	/* read next n bytes */
+LUAI_FUNC size_t luaZ_read (ZIO* z, void *b, size_t n);	/* read luai_next n bytes */
 
 
 
@@ -2298,7 +2317,7 @@ LUAI_FUNC int luaZ_fill (ZIO *z);
 
 ** Some notes about garbage-collected objects: All objects in Lua must
 ** be kept somehow accessible until being freed, so all objects always
-** belong to one (and only one) of these lists, using field 'next' of
+** belong to one (and only one) of these lists, using luai_field 'luai_next' of
 ** the 'CommonHeader' for the link:
 **
 ** 'allgc': all objects not marked for finalization;
@@ -2317,9 +2336,9 @@ struct lua_longjmp;  /* defined in ldo.c */
 ** Atomic type (relative to signals) to better ensure that 'lua_sethook'
 ** is thread safe
 */
-#if !defined(l_signalT)
+#if !defined(luai_l_signalT)
 #include <signal.h>
-#define l_signalT	sig_atomic_t
+#define luai_l_signalT	sig_atomic_t
 #endif
 
 
@@ -2336,7 +2355,7 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 
 typedef struct stringtable {
-  TString **hash;
+  luai_TString **hash;
   int nuse;  /* number of elements */
   int size;
 } stringtable;
@@ -2346,7 +2365,7 @@ typedef struct stringtable {
 ** Information about a call.
 ** When a thread yields, 'func' is adjusted to pretend that the
 ** top function has only the yielded values in its stack; in that
-** case, the actual 'func' value is saved in field 'extra'.
+** case, the actual 'func' value is saved in luai_field 'extra'.
 ** When a function calls another with a continuation, 'extra' keeps
 ** the function index so that, in case of errors, the continuation
 ** function can be called with the correct top.
@@ -2354,7 +2373,7 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
-  struct CallInfo *previous, *next;  /* dynamic call link */
+  struct CallInfo *previous, *luai_next;  /* dynamic call link */
   union {
     struct {  /* only for Lua functions */
       StkId base;  /* base for this function */
@@ -2399,38 +2418,38 @@ typedef struct CallInfo {
 typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to 'frealloc' */
-  l_mem totalbytes;  /* number of bytes currently allocated - GCdebt */
-  l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
-  lu_mem GCmemtrav;  /* memory traversed by the GC */
-  lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
+  luai_l_mem totalbytes;  /* number of bytes currently allocated - LUAI_GCdebt */
+  luai_l_mem LUAI_GCdebt;  /* bytes allocated not yet compensated by the collector */
+  luai_lu_mem LUAI_GCmemtrav;  /* memory traversed by the LUAI_GC */
+  luai_lu_mem LUAI_GCestimate;  /* an estimate of the non-garbage memory in use */
   stringtable strt;  /* hash table for strings */
-  TValue l_registry;
+  luai_TValue luai_l_registry;
   unsigned int seed;  /* randomized seed for hashes */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
-  lu_byte gckind;  /* kind of GC running */
-  lu_byte gcrunning;  /* true if GC is running */
-  GCObject *allgc;  /* list of all collectable objects */
-  GCObject **sweepgc;  /* current position of sweep in list */
-  GCObject *finobj;  /* list of collectable objects with finalizers */
-  GCObject *gray;  /* list of gray objects */
-  GCObject *grayagain;  /* list of objects to be traversed atomically */
-  GCObject *weak;  /* list of tables with weak values */
-  GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
-  GCObject *allweak;  /* list of all-weak tables */
-  GCObject *tobefnz;  /* list of userdata to be GC */
-  GCObject *fixedgc;  /* list of objects not to be collected */
+  lu_byte gckind;  /* kind of LUAI_GC running */
+  lu_byte gcrunning;  /* true if LUAI_GC is running */
+  LUAI_GCObject *allgc;  /* list of all collectable objects */
+  LUAI_GCObject **sweepgc;  /* current position of sweep in list */
+  LUAI_GCObject *finobj;  /* list of collectable objects with finalizers */
+  LUAI_GCObject *gray;  /* list of gray objects */
+  LUAI_GCObject *grayagain;  /* list of objects to be traversed atomically */
+  LUAI_GCObject *weak;  /* list of tables with weak values */
+  LUAI_GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
+  LUAI_GCObject *allweak;  /* list of all-weak tables */
+  LUAI_GCObject *tobefnz;  /* list of userdata to be LUAI_GC */
+  LUAI_GCObject *fixedgc;  /* list of objects not to be collected */
   struct lua_State *twups;  /* list of threads with open upvalues */
-  unsigned int gcfinnum;  /* number of finalizers to call in each GC step */
-  int gcpause;  /* size of pause between successive GCs */
-  int gcstepmul;  /* GC 'granularity' */
+  unsigned int gcfinnum;  /* number of finalizers to call in each LUAI_GC step */
+  int gcpause;  /* size of pause between successive LUAI_GCs */
+  int gcstepmul;  /* LUAI_GC 'granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   struct lua_State *mainthread;
   const lua_Number *version;  /* pointer to version number */
-  TString *memerrmsg;  /* memory-error message */
-  TString *tmname[TM_N];  /* array with tag-method names */
-  struct Table *mt[LUA_NUMTAGS];  /* metatables for basic types */
-  TString *strcache[STRCACHE_N][STRCACHE_M];  /* cache for strings in API */
+  luai_TString *memerrmsg;  /* memory-error message */
+  luai_TString *tmname[TM_N];  /* array with tag-method names */
+  struct luai_Table *mt[LUA_NUMTAGS];  /* metatables for basic types */
+  luai_TString *strcache[STRCACHE_N][STRCACHE_M];  /* cache for strings in API */
 } global_State;
 
 
@@ -2442,15 +2461,15 @@ struct lua_State {
   unsigned short nci;  /* number of items in 'ci' list */
   lu_byte status;
   StkId top;  /* first free slot in the stack */
-  global_State *l_G;
+  global_State *luai_l_G;
   CallInfo *ci;  /* call info for current function */
   const Instruction *oldpc;  /* last pc traced */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
-  UpVal *openupval;  /* list of open upvalues in this stack */
-  GCObject *gclist;
+  luai_UpVal *openupval;  /* list of open upvalues in this stack */
+  LUAI_GCObject *gclist;
   struct lua_State *twups;  /* list of threads with open upvalues */
-  struct lua_longjmp *errorJmp;  /* current error recover point */
+  struct lua_longjmp *errorJmp;  /* current error luai_recover point */
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
   volatile lua_Hook hook;
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
@@ -2459,31 +2478,31 @@ struct lua_State {
   int hookcount;
   unsigned short nny;  /* number of non-yieldable calls in stack */
   unsigned short nCcalls;  /* number of nested C calls */
-  l_signalT hookmask;
+  luai_l_signalT hookmask;
   lu_byte allowhook;
 };
 
 
-#define G(L)	(L->l_G)
+#define G(L)	(L->luai_l_G)
 
 
 /*
 ** Union of all collectable objects (only for conversions)
 */
-union GCUnion {
-  GCObject gc;  /* common header */
-  struct TString ts;
+union LUAI_GCUnion {
+  LUAI_GCObject gc;  /* common header */
+  struct luai_TString ts;
   struct Udata u;
   union Closure cl;
-  struct Table h;
-  struct Proto p;
+  struct luai_Table h;
+  struct luai_Proto p;
   struct lua_State th;  /* thread */
 };
 
 
-#define cast_u(o)	cast(union GCUnion *, (o))
+#define cast_u(o)	luai_cast(union LUAI_GCUnion *, (o))
 
-/* macros to convert a GCObject into a specific value */
+/* macros to convert a LUAI_GCObject into a specific value */
 #define gco2ts(o)  \
 	luai_check_exp(novariant((o)->tt) == LUA_TSTRING, &((cast_u(o))->ts))
 #define gco2u(o)  luai_check_exp((o)->tt == LUA_TUSERDATA, &((cast_u(o))->u))
@@ -2496,15 +2515,15 @@ union GCUnion {
 #define gco2th(o)  luai_check_exp((o)->tt == LUA_TTHREAD, &((cast_u(o))->th))
 
 
-/* macro to convert a Lua object into a GCObject */
+/* macro to convert a Lua object into a LUAI_GCObject */
 #define obj2gco(v) \
 	luai_check_exp(novariant((v)->tt) < LUA_TDEADKEY, (&(cast_u(v)->gc)))
 
 
 /* actual number of total bytes allocated */
-#define gettotalbytes(g)	cast(lu_mem, (g)->totalbytes + (g)->GCdebt)
+#define gettotalbytes(g)	luai_cast(luai_lu_mem, (g)->totalbytes + (g)->LUAI_GCdebt)
 
-LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
+LUAI_FUNC void luaE_setdebt (global_State *g, luai_l_mem debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);
@@ -2537,25 +2556,25 @@ LUAI_FUNC void luaE_shrinkCI (lua_State *L);
 */
 enum RESERVED {
   /* terminal symbols denoted by reserved words */
-  TK_AND = FIRST_RESERVED, TK_BREAK,
-  TK_DO, TK_ELSE, TK_ELSEIF, TK_END, TK_FALSE, TK_FOR, TK_FUNCTION,
-  TK_GOTO, TK_IF, TK_IN, TK_LOCAL, TK_NIL, TK_NOT, TK_OR, TK_REPEAT,
-  TK_RETURN, TK_THEN, TK_TRUE, TK_UNTIL, TK_WHILE,
+  LUAI_TK_AND = FIRST_RESERVED, LUAI_TK_BREAK,
+  LUAI_TK_DO, LUAI_TK_ELSE, LUAI_TK_ELSEIF, LUAI_TK_END, LUAI_TK_FALSE, LUAI_TK_FOR, LUAI_TK_FUNCTION,
+  LUAI_TK_GOTO, LUAI_TK_IF, LUAI_TK_IN, LUAI_TK_LOCAL, LUAI_TK_NIL, LUAI_TK_NOT, LUAI_TK_OR, LUAI_TK_REPEAT,
+  LUAI_TK_RETURN, LUAI_TK_THEN, LUAI_TK_TRUE, LUAI_TK_UNTIL, LUAI_TK_WHILE,
   /* other terminal symbols */
-  TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
-  TK_SHL, TK_SHR,
-  TK_DBCOLON, TK_EOS,
-  TK_FLT, TK_INT, TK_NAME, TK_STRING
+  LUAI_TK_IDIV, LUAI_TK_CONCAT, LUAI_TK_DOTS, LUAI_TK_EQ, LUAI_TK_GE, LUAI_TK_LE, LUAI_TK_NE,
+  LUAI_TK_SHL, LUAI_TK_SHR,
+  LUAI_TK_DBCOLON, LUAI_TK_EOS,
+  LUAI_TK_FLT, LUAI_TK_INT, LUAI_TK_NAME, LUAI_TK_STRING
 };
 
 /* number of reserved words */
-#define NUM_RESERVED	(cast(int, TK_WHILE-FIRST_RESERVED+1))
+#define NUM_RESERVED	(luai_cast(int, LUAI_TK_WHILE-FIRST_RESERVED+1))
 
 
 typedef union {
   lua_Number r;
   lua_Integer i;
-  TString *ts;
+  luai_TString *ts;
 } SemInfo;  /* semantics information */
 
 
@@ -2573,24 +2592,24 @@ typedef struct LexState {
   int lastline;  /* line of last token 'consumed' */
   Token t;  /* current token */
   Token lookahead;  /* look ahead token */
-  struct FuncState *fs;  /* current function (parser) */
+  struct luai_FuncState *fs;  /* current function (parser) */
   struct lua_State *L;
   ZIO *z;  /* input stream */
   Mbuffer *buff;  /* buffer for tokens */
-  Table *h;  /* to avoid collection/reuse strings */
-  struct Dyndata *dyd;  /* dynamic structures used by the parser */
-  TString *source;  /* current source name */
-  TString *envn;  /* environment variable name */
+  luai_Table *h;  /* to avoid collection/reuse strings */
+  struct luai_Dyndata *dyd;  /* dynamic structures used by the parser */
+  luai_TString *source;  /* current source name */
+  luai_TString *envn;  /* environment variable name */
 } LexState;
 
 
 LUAI_FUNC void luaX_init (lua_State *L);
 LUAI_FUNC void luaX_setinput (lua_State *L, LexState *ls, ZIO *z,
-                              TString *source, int firstchar);
-LUAI_FUNC TString *luaX_newstring (LexState *ls, const char *str, size_t l);
+                              luai_TString *source, int firstchar);
+LUAI_FUNC luai_TString *luaX_newstring (LexState *ls, const char *str, size_t l);
 LUAI_FUNC void luaX_next (LexState *ls);
 LUAI_FUNC int luaX_lookahead (LexState *ls);
-LUAI_FUNC l_noret luaX_syntaxerror (LexState *ls, const char *s);
+LUAI_FUNC luai_l_noret luaX_syntaxerror (LexState *ls, const char *s);
 LUAI_FUNC const char *luaX_token2str (LexState *ls, int token);
 
 /*__lopcodes.h__*/
@@ -2614,26 +2633,26 @@ LUAI_FUNC const char *luaX_token2str (LexState *ls, int token);
 ===========================================================================*/
 
 
-enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
+enum luai_OpMode {luai_iABC, luai_iABx, luai_iAsBx, luai_iAx};  /* basic instruction format */
 
 
 /*
 ** size and position of opcode arguments.
 */
-#define SIZE_C		9
-#define SIZE_B		9
-#define SIZE_Bx		(SIZE_C + SIZE_B)
-#define SIZE_A		8
-#define SIZE_Ax		(SIZE_C + SIZE_B + SIZE_A)
+#define luai_SIZE_C		9
+#define luai_SIZE_B		9
+#define luai_SIZE_Bx		(luai_SIZE_C + luai_SIZE_B)
+#define luai_SIZE_A		8
+#define luai_SIZE_Ax		(luai_SIZE_C + luai_SIZE_B + luai_SIZE_A)
 
-#define SIZE_OP		6
+#define luai_SIZE_OP		6
 
-#define POS_OP		0
-#define POS_A		(POS_OP + SIZE_OP)
-#define POS_C		(POS_A + SIZE_A)
-#define POS_B		(POS_C + SIZE_C)
-#define POS_Bx		POS_C
-#define POS_Ax		POS_A
+#define luai_POS_OP		0
+#define luai_POS_A		(luai_POS_OP + luai_SIZE_OP)
+#define luai_POS_C		(luai_POS_A + luai_SIZE_A)
+#define luai_POS_B		(luai_POS_C + luai_SIZE_C)
+#define luai_POS_Bx		luai_POS_C
+#define luai_POS_Ax		luai_POS_A
 
 
 /*
@@ -2641,74 +2660,74 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 ** we use (signed) int to manipulate most arguments,
 ** so they must fit in LUAI_BITSINT-1 bits (-1 for sign)
 */
-#if SIZE_Bx < LUAI_BITSINT-1
-#define MAXARG_Bx        ((1<<SIZE_Bx)-1)
-#define MAXARG_sBx        (MAXARG_Bx>>1)         /* 'sBx' is signed */
+#if luai_SIZE_Bx < LUAI_BITSINT-1
+#define luai_MAXARG_Bx        ((1<<luai_SIZE_Bx)-1)
+#define luai_MAXARG_sBx        (luai_MAXARG_Bx>>1)         /* 'sBx' is signed */
 #else
-#define MAXARG_Bx        MAX_INT
-#define MAXARG_sBx        MAX_INT
+#define luai_MAXARG_Bx        MAX_INT
+#define luai_MAXARG_sBx        MAX_INT
 #endif
 
-#if SIZE_Ax < LUAI_BITSINT-1
-#define MAXARG_Ax	((1<<SIZE_Ax)-1)
+#if luai_SIZE_Ax < LUAI_BITSINT-1
+#define luai_MAXARG_Ax	((1<<luai_SIZE_Ax)-1)
 #else
-#define MAXARG_Ax	MAX_INT
+#define luai_MAXARG_Ax	MAX_INT
 #endif
 
 
-#define MAXARG_A        ((1<<SIZE_A)-1)
-#define MAXARG_B        ((1<<SIZE_B)-1)
-#define MAXARG_C        ((1<<SIZE_C)-1)
+#define luai_MAXARG_A        ((1<<luai_SIZE_A)-1)
+#define luai_MAXARG_B        ((1<<luai_SIZE_B)-1)
+#define luai_MAXARG_C        ((1<<luai_SIZE_C)-1)
 
 
 /* creates a mask with 'n' 1 bits at position 'p' */
-#define MASK1(n,p)	((~((~(Instruction)0)<<(n)))<<(p))
+#define luai_MASK1(n,p)	((~((~(Instruction)0)<<(n)))<<(p))
 
 /* creates a mask with 'n' 0 bits at position 'p' */
-#define MASK0(n,p)	(~MASK1(n,p))
+#define luai_MASK0(n,p)	(~luai_MASK1(n,p))
 
 /*
 ** the following macros help to manipulate instructions
 */
 
-#define GET_OPCODE(i)	(cast(OpCode, ((i)>>POS_OP) & MASK1(SIZE_OP,0)))
-#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
-		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
+#define luai_GETOPCODE(i)	(luai_cast(luai_OpCode, ((i)>>luai_POS_OP) & luai_MASK1(luai_SIZE_OP,0)))
+#define luai_SETOPCODE(i,o)	((i) = (((i)&luai_MASK0(luai_SIZE_OP,luai_POS_OP)) | \
+		((luai_cast(Instruction, o)<<luai_POS_OP)&luai_MASK1(luai_SIZE_OP,luai_POS_OP))))
 
-#define getarg(i,pos,size)	(cast(int, ((i)>>pos) & MASK1(size,0)))
-#define setarg(i,v,pos,size)	((i) = (((i)&MASK0(size,pos)) | \
-                ((cast(Instruction, v)<<pos)&MASK1(size,pos))))
+#define luai_getarg(i,pos,size)	(luai_cast(int, ((i)>>pos) & luai_MASK1(size,0)))
+#define luai_setarg(i,v,pos,size)	((i) = (((i)&luai_MASK0(size,pos)) | \
+                ((luai_cast(Instruction, v)<<pos)&luai_MASK1(size,pos))))
 
-#define GETARG_A(i)	getarg(i, POS_A, SIZE_A)
-#define SETARG_A(i,v)	setarg(i, v, POS_A, SIZE_A)
+#define luai_GETARG_A(i)	luai_getarg(i, luai_POS_A, luai_SIZE_A)
+#define luai_SETARG_A(i,v)	luai_setarg(i, v, luai_POS_A, luai_SIZE_A)
 
-#define GETARG_B(i)	getarg(i, POS_B, SIZE_B)
-#define SETARG_B(i,v)	setarg(i, v, POS_B, SIZE_B)
+#define luai_GETARG_B(i)	luai_getarg(i, luai_POS_B, luai_SIZE_B)
+#define luai_SETARG_B(i,v)	luai_setarg(i, v, luai_POS_B, luai_SIZE_B)
 
-#define GETARG_C(i)	getarg(i, POS_C, SIZE_C)
-#define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
+#define luai_GETARG_C(i)	luai_getarg(i, luai_POS_C, luai_SIZE_C)
+#define luai_SETARG_C(i,v)	luai_setarg(i, v, luai_POS_C, luai_SIZE_C)
 
-#define GETARG_Bx(i)	getarg(i, POS_Bx, SIZE_Bx)
-#define SETARG_Bx(i,v)	setarg(i, v, POS_Bx, SIZE_Bx)
+#define luai_GETARG_Bx(i)	luai_getarg(i, luai_POS_Bx, luai_SIZE_Bx)
+#define luai_SETARG_Bx(i,v)	luai_setarg(i, v, luai_POS_Bx, luai_SIZE_Bx)
 
-#define GETARG_Ax(i)	getarg(i, POS_Ax, SIZE_Ax)
-#define SETARG_Ax(i,v)	setarg(i, v, POS_Ax, SIZE_Ax)
+#define luai_GETARG_Ax(i)	luai_getarg(i, luai_POS_Ax, luai_SIZE_Ax)
+#define luai_SETARG_Ax(i,v)	luai_setarg(i, v, luai_POS_Ax, luai_SIZE_Ax)
 
-#define GETARG_sBx(i)	(GETARG_Bx(i)-MAXARG_sBx)
-#define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
+#define luai_GETARG_sBx(i)	(luai_GETARG_Bx(i)-luai_MAXARG_sBx)
+#define luai_SETARG_sBx(i,b)	luai_SETARG_Bx((i),luai_cast(unsigned int, (b)+luai_MAXARG_sBx))
 
 
-#define CREATE_ABC(o,a,b,c)	((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_A) \
-			| (cast(Instruction, b)<<POS_B) \
-			| (cast(Instruction, c)<<POS_C))
+#define luai_CREATE_ABC(o,a,b,c)	((luai_cast(Instruction, o)<<luai_POS_OP) \
+			| (luai_cast(Instruction, a)<<luai_POS_A) \
+			| (luai_cast(Instruction, b)<<luai_POS_B) \
+			| (luai_cast(Instruction, c)<<luai_POS_C))
 
-#define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_A) \
-			| (cast(Instruction, bc)<<POS_Bx))
+#define luai_CREATE_ABx(o,a,bc)	((luai_cast(Instruction, o)<<luai_POS_OP) \
+			| (luai_cast(Instruction, a)<<luai_POS_A) \
+			| (luai_cast(Instruction, bc)<<luai_POS_Bx))
 
-#define CREATE_Ax(o,a)		((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_Ax))
+#define luai_CREATE_Ax(o,a)		((luai_cast(Instruction, o)<<luai_POS_OP) \
+			| (luai_cast(Instruction, a)<<luai_POS_Ax))
 
 
 /*
@@ -2716,32 +2735,32 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 */
 
 /* this bit 1 means constant (0 means register) */
-#define BITRK		(1 << (SIZE_B - 1))
+#define luai_BITRK		(1 << (luai_SIZE_B - 1))
 
 /* test whether value is a constant */
-#define ISK(x)		((x) & BITRK)
+#define luai_ISK(x)		((x) & luai_BITRK)
 
 /* gets the index of the constant */
-#define INDEXK(r)	((int)(r) & ~BITRK)
+#define luai_INDEXK(r)	((int)(r) & ~luai_BITRK)
 
-#if !defined(MAXINDEXRK)  /* (for debugging only) */
-#define MAXINDEXRK	(BITRK - 1)
+#if !defined(luai_MAXINDEXRK)  /* (for debugging only) */
+#define luai_MAXINDEXRK	(luai_BITRK - 1)
 #endif
 
 /* code a constant index as a RK value */
-#define RKASK(x)	((x) | BITRK)
+#define luai_RKASK(x)	((x) | luai_BITRK)
 
 
 /*
 ** invalid register that fits in 8 bits
 */
-#define NO_REG		MAXARG_A
+#define luai_NO_REG		luai_MAXARG_A
 
 
 /*
 ** R(x) - register
 ** Kst(x) - constant (in constant table)
-** RK(x) == if ISK(x) then Kst(INDEXK(x)) else R(x)
+** RK(x) == if luai_ISK(x) then Kst(luai_INDEXK(x)) else R(x)
 */
 
 
@@ -2753,96 +2772,96 @@ typedef enum {
 /*----------------------------------------------------------------------
 name		args	description
 ------------------------------------------------------------------------*/
-OP_MOVE,/*	A B	R(A) := R(B)					*/
-OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
-OP_LOADKX,/*	A 	R(A) := Kst(extra arg)				*/
-OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
-OP_LOADNIL,/*	A B	R(A), R(A+1), ..., R(A+B) := nil		*/
-OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
+luai_OP_MOVE,/*	A B	R(A) := R(B)					*/
+luai_OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
+luai_OP_LOADKX,/*	A 	R(A) := Kst(extra arg)				*/
+luai_OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
+luai_OP_LOADNIL,/*	A B	R(A), R(A+1), ..., R(A+B) := nil		*/
+luai_OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
-OP_GETTABUP,/*	A B C	R(A) := UpValue[B][RK(C)]			*/
-OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
+luai_OP_GETTABUP,/*	A B C	R(A) := UpValue[B][RK(C)]			*/
+luai_OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
 
-OP_SETTABUP,/*	A B C	UpValue[A][RK(B)] := RK(C)			*/
-OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
-OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
+luai_OP_SETTABUP,/*	A B C	UpValue[A][RK(B)] := RK(C)			*/
+luai_OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
+luai_OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
 
-OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
+luai_OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
 
-OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]		*/
+luai_OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]		*/
 
-OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
-OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
-OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
-OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
-OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
-OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
-OP_IDIV,/*	A B C	R(A) := RK(B) // RK(C)				*/
-OP_BAND,/*	A B C	R(A) := RK(B) & RK(C)				*/
-OP_BOR,/*	A B C	R(A) := RK(B) | RK(C)				*/
-OP_BXOR,/*	A B C	R(A) := RK(B) ~ RK(C)				*/
-OP_SHL,/*	A B C	R(A) := RK(B) << RK(C)				*/
-OP_SHR,/*	A B C	R(A) := RK(B) >> RK(C)				*/
-OP_UNM,/*	A B	R(A) := -R(B)					*/
-OP_BNOT,/*	A B	R(A) := ~R(B)					*/
-OP_NOT,/*	A B	R(A) := not R(B)				*/
-OP_LEN,/*	A B	R(A) := length of R(B)				*/
+luai_OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
+luai_OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
+luai_OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
+luai_OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
+luai_OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
+luai_OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
+luai_OP_IDIV,/*	A B C	R(A) := RK(B) // RK(C)				*/
+luai_OP_BAND,/*	A B C	R(A) := RK(B) & RK(C)				*/
+luai_OP_BOR,/*	A B C	R(A) := RK(B) | RK(C)				*/
+luai_OP_BXOR,/*	A B C	R(A) := RK(B) ~ RK(C)				*/
+luai_OP_SHL,/*	A B C	R(A) := RK(B) << RK(C)				*/
+luai_OP_SHR,/*	A B C	R(A) := RK(B) >> RK(C)				*/
+luai_OP_UNM,/*	A B	R(A) := -R(B)					*/
+luai_OP_BNOT,/*	A B	R(A) := ~R(B)					*/
+luai_OP_NOT,/*	A B	R(A) := not R(B)				*/
+luai_OP_LEN,/*	A B	R(A) := length of R(B)				*/
 
-OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
+luai_OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
-OP_JMP,/*	A sBx	pc+=sBx; if (A) close all upvalues >= R(A - 1)	*/
-OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
-OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++		*/
-OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++		*/
+luai_OP_JMP,/*	A sBx	pc+=sBx; if (A) close all upvalues >= R(A - 1)	*/
+luai_OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
+luai_OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++		*/
+luai_OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++		*/
 
-OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/
-OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/
+luai_OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/
+luai_OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/
 
-OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
-OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
-OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
+luai_OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
+luai_OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
+luai_OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
 
-OP_FORLOOP,/*	A sBx	R(A)+=R(A+2);
+luai_OP_FORLOOP,/*	A sBx	R(A)+=R(A+2);
 			if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
-OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
+luai_OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
 
-OP_TFORCALL,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
-OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
+luai_OP_TFORCALL,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
+luai_OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
 
-OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
+luai_OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
-OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
+luai_OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
-OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-2) = vararg		*/
+luai_OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-2) = vararg		*/
 
-OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
-} OpCode;
+luai_OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
+} luai_OpCode;
 
 
-#define NUM_OPCODES	(cast(int, OP_EXTRAARG) + 1)
+#define luai_NUM_OPCODES	(luai_cast(int, luai_OP_EXTRAARG) + 1)
 
 
 
 /*===========================================================================
   Notes:
-  (*) In OP_CALL, if (B == 0) then B = top. If (C == 0), then 'top' is
-  set to last_result+1, so next open instruction (OP_CALL, OP_RETURN,
-  OP_SETLIST) may use 'top'.
+  (*) In luai_OP_CALL, if (B == 0) then B = top. If (C == 0), then 'top' is
+  set to last_result+1, so luai_next open instruction (luai_OP_CALL, luai_OP_RETURN,
+  luai_OP_SETLIST) may use 'top'.
 
-  (*) In OP_VARARG, if (B == 0) then use actual number of varargs and
-  set top (like in OP_CALL with C == 0).
+  (*) In luai_OP_VARARG, if (B == 0) then use actual number of varargs and
+  set top (like in luai_OP_CALL with C == 0).
 
-  (*) In OP_RETURN, if (B == 0) then return up to 'top'.
+  (*) In luai_OP_RETURN, if (B == 0) then return up to 'top'.
 
-  (*) In OP_SETLIST, if (B == 0) then B = 'top'; if (C == 0) then next
+  (*) In luai_OP_SETLIST, if (B == 0) then B = 'top'; if (C == 0) then luai_next
   'instruction' is EXTRAARG(real C).
 
-  (*) In OP_LOADKX, the next 'instruction' is always EXTRAARG.
+  (*) In luai_OP_LOADKX, the luai_next 'instruction' is always EXTRAARG.
 
   (*) For comparisons, A specifies what condition the test should accept
   (true or false).
 
-  (*) All 'skips' (pc++) assume that next instruction is a jump.
+  (*) All 'skips' (pc++) assume that luai_next instruction is a jump.
 
 ===========================================================================*/
 
@@ -2853,37 +2872,37 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 ** bits 2-3: C arg mode
 ** bits 4-5: B arg mode
 ** bit 6: instruction set register A
-** bit 7: operator is a test (next instruction must be a jump)
+** bit 7: operator is a test (luai_next instruction must be a jump)
 */
 
-enum OpArgMask {
-  OpArgN,  /* argument is not used */
-  OpArgU,  /* argument is used */
-  OpArgR,  /* argument is a register or a jump offset */
-  OpArgK   /* argument is a constant or register/constant */
+enum luai_OpArgMask {
+  luai_OpArgN,  /* argument is not used */
+  luai_OpArgU,  /* argument is used */
+  luai_OpArgR,  /* argument is a register or a jump offset */
+  luai_OpArgK   /* argument is a constant or register/constant */
 };
 
-LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
+LUAI_DDEC const lu_byte luaP_opmodes[luai_NUM_OPCODES];
 
-#define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
-#define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
-#define getCMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 2) & 3))
-#define testAMode(m)	(luaP_opmodes[m] & (1 << 6))
-#define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
+#define luai_getOpMode(m)	(luai_cast(enum luai_OpMode, luaP_opmodes[m] & 3))
+#define luai_getBMode(m)	(luai_cast(enum luai_OpArgMask, (luaP_opmodes[m] >> 4) & 3))
+#define luai_getCMode(m)	(luai_cast(enum luai_OpArgMask, (luaP_opmodes[m] >> 2) & 3))
+#define luai_testAMode(m)	(luaP_opmodes[m] & (1 << 6))
+#define luai_testTMode(m)	(luaP_opmodes[m] & (1 << 7))
 
 
-LUAI_DDEC const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
+LUAI_DDEC const char *const luaP_opnames[luai_NUM_OPCODES+1];  /* opcode names */
 
 
 /* number of list items to accumulate before a SETLIST instruction */
-#define LFIELDS_PER_FLUSH	50
+#define LUAI_LFIELDS_PER_FLUSH	50
 
 /*__lparser.h__*/
 
 /*
 ** Expression and variable descriptor.
 ** Code generation for variables and expressions can be delayed to allow
-** optimizations; An 'expdesc' structure describes a potentially-delayed
+** optimizations; An 'luai_expdesc' structure describes a potentially-delayed
 ** variable/expression. It has a description of its "main" value plus a
 ** list of conditional jumps that can also produce its value (generated
 ** by short-circuit operators 'and'/'or').
@@ -2891,111 +2910,111 @@ LUAI_DDEC const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
 
 /* kinds of variables/expressions */
 typedef enum {
-  VVOID,  /* when 'expdesc' describes the last expression a list,
+  LUAI_VVOID,  /* when 'luai_expdesc' describes the last expression a list,
              this kind means an empty list (so, no expression) */
-  VNIL,  /* constant nil */
-  VTRUE,  /* constant true */
-  VFALSE,  /* constant false */
-  VK,  /* constant in 'k'; info = index of constant in 'k' */
-  VKFLT,  /* floating constant; nval = numerical float value */
-  VKINT,  /* integer constant; nval = numerical integer value */
-  VNONRELOC,  /* expression has its value in a fixed register;
+  LUAI_VNIL,  /* constant nil */
+  LUAI_VTRUE,  /* constant true */
+  LUAI_VFALSE,  /* constant false */
+  LUAI_VK,  /* constant in 'k'; info = index of constant in 'k' */
+  LUAI_VKFLT,  /* floating constant; nval = numerical float value */
+  LUAI_VKINT,  /* integer constant; nval = numerical integer value */
+  LUAI_VNONRELOC,  /* expression has its value in a fixed register;
                  info = result register */
-  VLOCAL,  /* local variable; info = local register */
-  VUPVAL,  /* upvalue variable; info = index of upvalue in 'upvalues' */
-  VINDEXED,  /* indexed variable;
+  LUAI_VLOCAL,  /* local variable; info = local register */
+  LUAI_VUPVAL,  /* upvalue variable; info = index of upvalue in 'upvalues' */
+  LUAI_VINDEXED,  /* indexed variable;
                 ind.vt = whether 't' is register or upvalue;
                 ind.t = table register or upvalue;
                 ind.idx = key's R/K index */
-  VJMP,  /* expression is a test/comparison;
+  LUAI_VJMP,  /* expression is a test/comparison;
             info = pc of corresponding jump instruction */
-  VRELOCABLE,  /* expression can put result in any register;
+  LUAI_VRELOCABLE,  /* expression can put result in any register;
                   info = instruction pc */
-  VCALL,  /* expression is a function call; info = instruction pc */
-  VVARARG  /* vararg expression; info = instruction pc */
-} expkind;
+  LUAI_VCALL,  /* expression is a function call; info = instruction pc */
+  LUAI_VVARARG  /* vararg expression; info = instruction pc */
+} luai_expkind;
 
 
-#define vkisvar(k)	(VLOCAL <= (k) && (k) <= VINDEXED)
-#define vkisinreg(k)	((k) == VNONRELOC || (k) == VLOCAL)
+#define luai_vkisvar(k)	(LUAI_VLOCAL <= (k) && (k) <= LUAI_VINDEXED)
+#define luai_vkisinreg(k)	((k) == LUAI_VNONRELOC || (k) == LUAI_VLOCAL)
 
-typedef struct expdesc {
-  expkind k;
+typedef struct luai_expdesc {
+  luai_expkind k;
   union {
-    lua_Integer ival;    /* for VKINT */
-    lua_Number nval;  /* for VKFLT */
+    lua_Integer ival;    /* for LUAI_VKINT */
+    lua_Number nval;  /* for LUAI_VKFLT */
     int info;  /* for generic use */
-    struct {  /* for indexed variables (VINDEXED) */
+    struct {  /* for indexed variables (LUAI_VINDEXED) */
       short idx;  /* index (R/K) */
       lu_byte t;  /* table (register or upvalue) */
-      lu_byte vt;  /* whether 't' is register (VLOCAL) or upvalue (VUPVAL) */
+      lu_byte vt;  /* whether 't' is register (LUAI_VLOCAL) or upvalue (LUAI_VUPVAL) */
     } ind;
   } u;
   int t;  /* patch list of 'exit when true' */
   int f;  /* patch list of 'exit when false' */
-} expdesc;
+} luai_expdesc;
 
 
 /* description of active local variable */
-typedef struct Vardesc {
+typedef struct luai_Vardesc {
   short idx;  /* variable index in stack */
-} Vardesc;
+} luai_Vardesc;
 
 
 /* description of pending goto statements and label statements */
-typedef struct Labeldesc {
-  TString *name;  /* label identifier */
+typedef struct luai_Labeldesc {
+  luai_TString *name;  /* label identifier */
   int pc;  /* position in code */
   int line;  /* line where it appeared */
-  lu_byte nactvar;  /* local level where it appears in current block */
-} Labeldesc;
+  lu_byte nactvar;  /* local level where it appears in current luai_getblock */
+} luai_Labeldesc;
 
 
 /* list of labels or gotos */
-typedef struct Labellist {
-  Labeldesc *arr;  /* array */
+typedef struct luai_Labellist {
+  luai_Labeldesc *arr;  /* array */
   int n;  /* number of entries in use */
   int size;  /* array size */
-} Labellist;
+} luai_Labellist;
 
 
 /* dynamic structures used by the parser */
-typedef struct Dyndata {
+typedef struct luai_Dyndata {
   struct {  /* list of active local variables */
-    Vardesc *arr;
+    luai_Vardesc *arr;
     int n;
     int size;
   } actvar;
-  Labellist gt;  /* list of pending gotos */
-  Labellist label;   /* list of active labels */
-} Dyndata;
+  luai_Labellist gt;  /* list of pending gotos */
+  luai_Labellist label;   /* list of active labels */
+} luai_Dyndata;
 
 
 /* control of blocks */
-struct BlockCnt;  /* defined in lparser.c */
+struct luai_BlockCnt;  /* defined in lparser.c */
 
 
 /* state needed to generate code for a given function */
-typedef struct FuncState {
-  Proto *f;  /* current function header */
-  struct FuncState *prev;  /* enclosing function */
+typedef struct luai_FuncState {
+  luai_Proto *f;  /* current function header */
+  struct luai_FuncState *prev;  /* enclosing function */
   struct LexState *ls;  /* lexical state */
-  struct BlockCnt *bl;  /* chain of current blocks */
-  int pc;  /* next position to code (equivalent to 'ncode') */
+  struct luai_BlockCnt *bl;  /* chain of current blocks */
+  int pc;  /* luai_next position to code (equivalent to 'ncode') */
   int lasttarget;   /* 'label' of last 'jump label' */
   int jpc;  /* list of pending jumps to 'pc' */
   int nk;  /* number of elements in 'k' */
   int np;  /* number of elements in 'p' */
-  int firstlocal;  /* index of first local var (in Dyndata array) */
+  int firstlocal;  /* index of first local var (in luai_Dyndata array) */
   short nlocvars;  /* number of elements in 'f->locvars' */
   lu_byte nactvar;  /* number of active local variables */
   lu_byte nups;  /* number of upvalues */
-  lu_byte freereg;  /* first free register */
-} FuncState;
+  lu_byte luai_freereg;  /* first free register */
+} luai_FuncState;
 
 
 LUAI_FUNC LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
-                                 Dyndata *dyd, const char *name, int firstchar);
+                                 luai_Dyndata *dyd, const char *name, int firstchar);
 
 /*__lcode.h__*/
 
@@ -3003,72 +3022,72 @@ LUAI_FUNC LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
 ** Marks the end of a patch list. It is an invalid value both as an absolute
 ** address, and as a list link (would link an element to itself).
 */
-#define NO_JUMP (-1)
+#define LUAI_NO_JUMP (-1)
 
 
 /*
 ** grep "ORDER OPR" if you change these enums  (ORDER OP)
 */
-typedef enum BinOpr {
-  OPR_ADD, OPR_SUB, OPR_MUL, OPR_MOD, OPR_POW,
-  OPR_DIV,
-  OPR_IDIV,
-  OPR_BAND, OPR_BOR, OPR_BXOR,
-  OPR_SHL, OPR_SHR,
-  OPR_CONCAT,
-  OPR_EQ, OPR_LT, OPR_LE,
-  OPR_NE, OPR_GT, OPR_GE,
-  OPR_AND, OPR_OR,
-  OPR_NOBINOPR
-} BinOpr;
+typedef enum luai_BinOpr {
+  LUAI_OPRADD, LUAI_OPRSUB, LUAI_OPRMUL, LUAI_OPRMOD, LUAI_OPRPOW,
+  LUAI_OPRDIV,
+  LUAI_OPRIDIV,
+  LUAI_OPRBAND, LUAI_OPRBOR, LUAI_OPRBXOR,
+  LUAI_OPRSHL, LUAI_OPRSHR,
+  LUAI_OPRCONCAT,
+  LUAI_OPREQ, LUAI_OPRLT, LUAI_OPRLE,
+  LUAI_OPRNE, LUAI_OPRGT, LUAI_OPRGE,
+  LUAI_OPRAND, LUAI_OPROR,
+  LUAI_OPRNOBINOPR
+} luai_BinOpr;
 
 
-typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
+typedef enum laui_UnOpr { LUAI_OPRMINUS, LUAI_OPRBNOT, LUAI_OPRNOT, LUAI_OPRLEN, LUAI_OPRNOUNOPR } laui_UnOpr;
 
 
-/* get (pointer to) instruction of given 'expdesc' */
-#define getinstruction(fs,e)	((fs)->f->code[(e)->u.info])
+/* get (pointer to) instruction of given 'luai_expdesc' */
+#define luai_getinstruction(fs,e)	((fs)->f->code[(e)->u.info])
 
-#define luaK_codeAsBx(fs,o,A,sBx)	luaK_codeABx(fs,o,A,(sBx)+MAXARG_sBx)
+#define luaK_codeAsBx(fs,o,A,sBx)	luaK_codeABx(fs,o,A,(sBx)+luai_MAXARG_sBx)
 
 #define luaK_setmultret(fs,e)	luaK_setreturns(fs, e, LUA_MULTRET)
 
 #define luaK_jumpto(fs,t)	luaK_patchlist(fs, luaK_jump(fs), t)
 
-LUAI_FUNC int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bx);
-LUAI_FUNC int luaK_codeABC (FuncState *fs, OpCode o, int A, int B, int C);
-LUAI_FUNC int luaK_codek (FuncState *fs, int reg, int k);
-LUAI_FUNC void luaK_fixline (FuncState *fs, int line);
-LUAI_FUNC void luaK_nil (FuncState *fs, int from, int n);
-LUAI_FUNC void luaK_reserveregs (FuncState *fs, int n);
-LUAI_FUNC void luaK_checkstack (FuncState *fs, int n);
-LUAI_FUNC int luaK_stringK (FuncState *fs, TString *s);
-LUAI_FUNC int luaK_intK (FuncState *fs, lua_Integer n);
-LUAI_FUNC void luaK_dischargevars (FuncState *fs, expdesc *e);
-LUAI_FUNC int luaK_exp2anyreg (FuncState *fs, expdesc *e);
-LUAI_FUNC void luaK_exp2anyregup (FuncState *fs, expdesc *e);
-LUAI_FUNC void luaK_exp2nextreg (FuncState *fs, expdesc *e);
-LUAI_FUNC void luaK_exp2val (FuncState *fs, expdesc *e);
-LUAI_FUNC int luaK_exp2RK (FuncState *fs, expdesc *e);
-LUAI_FUNC void luaK_self (FuncState *fs, expdesc *e, expdesc *key);
-LUAI_FUNC void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k);
-LUAI_FUNC void luaK_goiftrue (FuncState *fs, expdesc *e);
-LUAI_FUNC void luaK_goiffalse (FuncState *fs, expdesc *e);
-LUAI_FUNC void luaK_storevar (FuncState *fs, expdesc *var, expdesc *e);
-LUAI_FUNC void luaK_setreturns (FuncState *fs, expdesc *e, int nresults);
-LUAI_FUNC void luaK_setoneret (FuncState *fs, expdesc *e);
-LUAI_FUNC int luaK_jump (FuncState *fs);
-LUAI_FUNC void luaK_ret (FuncState *fs, int first, int nret);
-LUAI_FUNC void luaK_patchlist (FuncState *fs, int list, int target);
-LUAI_FUNC void luaK_patchtohere (FuncState *fs, int list);
-LUAI_FUNC void luaK_patchclose (FuncState *fs, int list, int level);
-LUAI_FUNC void luaK_concat (FuncState *fs, int *l1, int l2);
-LUAI_FUNC int luaK_getlabel (FuncState *fs);
-LUAI_FUNC void luaK_prefix (FuncState *fs, UnOpr op, expdesc *v, int line);
-LUAI_FUNC void luaK_infix (FuncState *fs, BinOpr op, expdesc *v);
-LUAI_FUNC void luaK_posfix (FuncState *fs, BinOpr op, expdesc *v1,
-                            expdesc *v2, int line);
-LUAI_FUNC void luaK_setlist (FuncState *fs, int base, int nelems, int tostore);
+LUAI_FUNC int luaK_codeABx (luai_FuncState *fs, luai_OpCode o, int A, unsigned int Bx);
+LUAI_FUNC int luaK_codeABC (luai_FuncState *fs, luai_OpCode o, int A, int B, int C);
+LUAI_FUNC int luaK_codek (luai_FuncState *fs, int reg, int k);
+LUAI_FUNC void luaK_fixline (luai_FuncState *fs, int line);
+LUAI_FUNC void luaK_nil (luai_FuncState *fs, int from, int n);
+LUAI_FUNC void luaK_reserveregs (luai_FuncState *fs, int n);
+LUAI_FUNC void luaK_checkstack (luai_FuncState *fs, int n);
+LUAI_FUNC int luaK_stringK (luai_FuncState *fs, luai_TString *s);
+LUAI_FUNC int luaK_intK (luai_FuncState *fs, lua_Integer n);
+LUAI_FUNC void luaK_dischargevars (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC int luaK_exp2anyreg (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC void luaK_exp2anyregup (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC void luaK_exp2nextreg (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC void luaK_exp2val (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC int luaK_exp2RK (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC void luaK_self (luai_FuncState *fs, luai_expdesc *e, luai_expdesc *key);
+LUAI_FUNC void luaK_indexed (luai_FuncState *fs, luai_expdesc *t, luai_expdesc *k);
+LUAI_FUNC void luaK_goiftrue (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC void luaK_goiffalse (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC void luaK_storevar (luai_FuncState *fs, luai_expdesc *var, luai_expdesc *e);
+LUAI_FUNC void luaK_setreturns (luai_FuncState *fs, luai_expdesc *e, int nresults);
+LUAI_FUNC void luaK_setoneret (luai_FuncState *fs, luai_expdesc *e);
+LUAI_FUNC int luaK_jump (luai_FuncState *fs);
+LUAI_FUNC void luaK_ret (luai_FuncState *fs, int first, int nret);
+LUAI_FUNC void luaK_patchlist (luai_FuncState *fs, int list, int target);
+LUAI_FUNC void luaK_patchtohere (luai_FuncState *fs, int list);
+LUAI_FUNC void luaK_patchclose (luai_FuncState *fs, int list, int level);
+LUAI_FUNC void luaK_concat (luai_FuncState *fs, int *l1, int l2);
+LUAI_FUNC int luaK_getlabel (luai_FuncState *fs);
+LUAI_FUNC void luaK_prefix (luai_FuncState *fs, laui_UnOpr op, luai_expdesc *v, int line);
+LUAI_FUNC void luaK_infix (luai_FuncState *fs, luai_BinOpr op, luai_expdesc *v);
+LUAI_FUNC void luaK_posfix (luai_FuncState *fs, luai_BinOpr op, luai_expdesc *v1,
+                            luai_expdesc *v2, int line);
+LUAI_FUNC void luaK_setlist (luai_FuncState *fs, int base, int nelems, int tostore);
 
 /*__lctype.h__*/
 
@@ -3093,35 +3112,35 @@ LUAI_FUNC void luaK_setlist (FuncState *fs, int base, int nelems, int tostore);
 
 #if !LUA_USE_CTYPE	/* { */
 
-#define ALPHABIT	0
-#define DIGITBIT	1
-#define PRINTBIT	2
-#define SPACEBIT	3
-#define XDIGITBIT	4
+#define LUAI_ALPHABIT	0
+#define LUAI_DIGITBIT	1
+#define LUAI_PRINTBIT	2
+#define LUAI_SPACEBIT	3
+#define LUAI_XDIGITBIT	4
 
 
-#define MASK(B)		(1 << (B))
+#define LUAI_MASK(B)		(1 << (B))
 
 
 /*
 ** add 1 to char to allow index -1 (EOZ)
 */
-#define testprop(c,p)	(luai_ctype_[(c)+1] & (p))
+#define luai_testprop(c,p)	(luai_ctype_[(c)+1] & (p))
 
 /*
 ** 'lalpha' (Lua alphabetic) and 'lalnum' (Lua alphanumeric) both include '_'
 */
-#define lislalpha(c)	testprop(c, MASK(ALPHABIT))
-#define lislalnum(c)	testprop(c, (MASK(ALPHABIT) | MASK(DIGITBIT)))
-#define lisdigit(c)	testprop(c, MASK(DIGITBIT))
-#define lisspace(c)	testprop(c, MASK(SPACEBIT))
-#define lisprint(c)	testprop(c, MASK(PRINTBIT))
-#define lisxdigit(c)	testprop(c, MASK(XDIGITBIT))
+#define luai_lislalpha(c)	luai_testprop(c, LUAI_MASK(LUAI_ALPHABIT))
+#define luai_lislalnum(c)	luai_testprop(c, (LUAI_MASK(LUAI_ALPHABIT) | LUAI_MASK(LUAI_DIGITBIT)))
+#define luai_lisdigit(c)	luai_testprop(c, LUAI_MASK(LUAI_DIGITBIT))
+#define luai_lisspace(c)	luai_testprop(c, LUAI_MASK(LUAI_SPACEBIT))
+#define luai_lisprint(c)	luai_testprop(c, LUAI_MASK(LUAI_PRINTBIT))
+#define luai_lisxdigit(c)	luai_testprop(c, LUAI_MASK(LUAI_XDIGITBIT))
 
 /*
-** this 'ltolower' only works for alphabetic characters
+** this 'luai_tolower' only works for alphabetic characters
 */
-#define ltolower(c)	((c) | ('A' ^ 'a'))
+#define luai_tolower(c)	((c) | ('A' ^ 'a'))
 
 
 /* two more entries for 0 and -1 (EOZ) */
@@ -3137,63 +3156,63 @@ LUAI_DDEC const lu_byte luai_ctype_[UCHAR_MAX + 2];
 #include <ctype.h>
 
 
-#define lislalpha(c)	(isalpha(c) || (c) == '_')
-#define lislalnum(c)	(isalnum(c) || (c) == '_')
-#define lisdigit(c)	(isdigit(c))
-#define lisspace(c)	(isspace(c))
-#define lisprint(c)	(isprint(c))
-#define lisxdigit(c)	(isxdigit(c))
+#define luai_lislalpha(c)	(isalpha(c) || (c) == '_')
+#define luai_lislalnum(c)	(isalnum(c) || (c) == '_')
+#define luai_lisdigit(c)	(isdigit(c))
+#define luai_lisspace(c)	(isspace(c))
+#define luai_lisprint(c)	(isprint(c))
+#define luai_lisxdigit(c)	(isxdigit(c))
 
-#define ltolower(c)	(tolower(c))
+#define luai_tolower(c)	(tolower(c))
 
 #endif			/* } */
 
 /*__ldebug.h__*/
 
-#define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)
+#define luai_pcRel(pc, p)	(luai_cast(int, (pc) - (p)->code) - 1)
 
-#define getfuncline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : -1)
+#define luai_getfuncline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : -1)
 
-#define resethookcount(L)	(L->hookcount = L->basehookcount)
+#define luai_resethookcount(L)	(L->hookcount = L->basehookcount)
 
 
-LUAI_FUNC l_noret luaG_typeerror (lua_State *L, const TValue *o,
+LUAI_FUNC luai_l_noret luaG_typeerror (lua_State *L, const luai_TValue *o,
                                                 const char *opname);
-LUAI_FUNC l_noret luaG_concaterror (lua_State *L, const TValue *p1,
-                                                  const TValue *p2);
-LUAI_FUNC l_noret luaG_opinterror (lua_State *L, const TValue *p1,
-                                                 const TValue *p2,
+LUAI_FUNC luai_l_noret luaG_concaterror (lua_State *L, const luai_TValue *p1,
+                                                  const luai_TValue *p2);
+LUAI_FUNC luai_l_noret luaG_opinterror (lua_State *L, const luai_TValue *p1,
+                                                 const luai_TValue *p2,
                                                  const char *msg);
-LUAI_FUNC l_noret luaG_tointerror (lua_State *L, const TValue *p1,
-                                                 const TValue *p2);
-LUAI_FUNC l_noret luaG_ordererror (lua_State *L, const TValue *p1,
-                                                 const TValue *p2);
-LUAI_FUNC l_noret luaG_runerror (lua_State *L, const char *fmt, ...);
+LUAI_FUNC luai_l_noret luaG_tointerror (lua_State *L, const luai_TValue *p1,
+                                                 const luai_TValue *p2);
+LUAI_FUNC luai_l_noret luaG_ordererror (lua_State *L, const luai_TValue *p1,
+                                                 const luai_TValue *p2);
+LUAI_FUNC luai_l_noret luaG_runerror (lua_State *L, const char *fmt, ...);
 LUAI_FUNC const char *luaG_addinfo (lua_State *L, const char *msg,
-                                                  TString *src, int line);
-LUAI_FUNC l_noret luaG_errormsg (lua_State *L);
+                                                  luai_TString *src, int line);
+LUAI_FUNC luai_l_noret luaG_errormsg (lua_State *L);
 LUAI_FUNC void luaG_traceexec (lua_State *L);
 
 /*__ldo.h__*/
 
 /*
-** Macro to check stack size and grow stack if needed.  Parameters
+** Macro to luai_check stack size and grow stack if needed.  Parameters
 ** 'pre'/'pos' allow the macro to preserve a pointer into the
 ** stack across reallocations, doing the work only when needed.
 ** 'condmovestack' is used in heavy tests to force a stack reallocation
-** at every check.
+** at every luai_check.
 */
 #define luaD_checkstackaux(L,n,pre,pos)  \
 	if (L->stack_last - L->top <= (n)) \
 	  { pre; luaD_growstack(L, n); pos; } else { condmovestack(L,pre,pos); }
 
-/* In general, 'pre'/'pos' are empty (nothing to save) */
+/* In general, 'pre'/'pos' are empty (nothing to luai_save) */
 #define luaD_checkstack(L,n)	luaD_checkstackaux(L,n,(void)0,(void)0)
 
 
 
-#define savestack(L,p)		((char *)(p) - (char *)L->stack)
-#define restorestack(L,n)	((TValue *)((char *)L->stack + (n)))
+#define luai_savestack(L,p)		((char *)(p) - (char *)L->stack)
+#define luai_restorestack(L,n)	((luai_TValue *)((char *)L->stack + (n)))
 
 
 /* type of protected functions, to be ran by 'runprotected' */
@@ -3214,55 +3233,55 @@ LUAI_FUNC void luaD_growstack (lua_State *L, int n);
 LUAI_FUNC void luaD_shrinkstack (lua_State *L);
 LUAI_FUNC void luaD_inctop (lua_State *L);
 
-LUAI_FUNC l_noret luaD_throw (lua_State *L, int errcode);
+LUAI_FUNC luai_l_noret luaD_throw (lua_State *L, int errcode);
 LUAI_FUNC int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud);
 
 /*__lfunc.h__*/
 
-#define sizeCclosure(n)	(cast(int, sizeof(CClosure)) + \
-                         cast(int, sizeof(TValue)*((n)-1)))
+#define luai_sizeCclosure(n)	(luai_cast(int, sizeof(CClosure)) + \
+                         luai_cast(int, sizeof(luai_TValue)*((n)-1)))
 
-#define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
-                         cast(int, sizeof(TValue *)*((n)-1)))
+#define luai_sizeLclosure(n)	(luai_cast(int, sizeof(LClosure)) + \
+                         luai_cast(int, sizeof(luai_TValue *)*((n)-1)))
 
 
 /* test whether thread is in 'twups' list */
-#define isintwups(L)	(L->twups != L)
+#define luai_isintwups(L)	(L->twups != L)
 
 
 /*
 ** maximum number of upvalues in a closure (both C and Lua). (Value
 ** must fit in a VM register.)
 */
-#define MAXUPVAL	255
+#define LUAI_MAXUPVAL	255
 
 
 /*
 ** Upvalues for Lua closures
 */
-struct UpVal {
-  TValue *v;  /* points to stack or to its own value */
-  lu_mem refcount;  /* reference counter */
+struct luai_UpVal {
+  luai_TValue *v;  /* points to stack or to its own value */
+  luai_lu_mem refcount;  /* reference counter */
   union {
     struct {  /* (when open) */
-      UpVal *next;  /* linked list */
+      luai_UpVal *luai_next;  /* linked list */
       int touched;  /* mark to avoid cycles with dead threads */
     } open;
-    TValue value;  /* the value (when closed) */
+    luai_TValue value;  /* the value (when closed) */
   } u;
 };
 
-#define upisopen(up)	((up)->v != &(up)->u.value)
+#define luai_upisopen(up)	((up)->v != &(up)->u.value)
 
 
-LUAI_FUNC Proto *luaF_newproto (lua_State *L);
+LUAI_FUNC luai_Proto *luaF_newproto (lua_State *L);
 LUAI_FUNC CClosure *luaF_newCclosure (lua_State *L, int nelems);
 LUAI_FUNC LClosure *luaF_newLclosure (lua_State *L, int nelems);
 LUAI_FUNC void luaF_initupvals (lua_State *L, LClosure *cl);
-LUAI_FUNC UpVal *luaF_findupval (lua_State *L, StkId level);
+LUAI_FUNC luai_UpVal *luaF_findupval (lua_State *L, StkId level);
 LUAI_FUNC void luaF_close (lua_State *L, StkId level);
-LUAI_FUNC void luaF_freeproto (lua_State *L, Proto *f);
-LUAI_FUNC const char *luaF_getlocalname (const Proto *func, int local_number,
+LUAI_FUNC void luaF_freeproto (lua_State *L, luai_Proto *f);
+LUAI_FUNC const char *luaF_getlocalname (const luai_Proto *func, int local_number,
                                          int pc);
 
 /*__lgc.h__*/
@@ -3282,28 +3301,28 @@ LUAI_FUNC const char *luaF_getlocalname (const Proto *func, int local_number,
 
 
 
-/* how much to allocate before next GC step */
-#if !defined(GCSTEPSIZE)
+/* how much to allocate before luai_next LUAI_GC step */
+#if !defined(LUA_GCSTEPSIZE)
 /* ~100 small strings */
-#define GCSTEPSIZE	(cast_int(100 * sizeof(TString)))
+#define LUA_GCSTEPSIZE	(luai_cast_int(100 * sizeof(luai_TString)))
 #endif
 
 
 /*
 ** Possible states of the Garbage Collector
 */
-#define GCSpropagate	0
-#define GCSatomic	1
-#define GCSswpallgc	2
-#define GCSswpfinobj	3
-#define GCSswptobefnz	4
-#define GCSswpend	5
-#define GCScallfin	6
-#define GCSpause	7
+#define LUAI_GCSpropagate	0
+#define LUAI_GCSatomic	1
+#define LUAI_GCSswpallgc	2
+#define LUAI_GCSswpfinobj	3
+#define LUAI_GCSswptobefnz	4
+#define LUAI_GCSswpend	5
+#define LUAI_GCScallfin	6
+#define LUAI_GCSpause	7
 
 
 #define issweepphase(g)  \
-	(GCSswpallgc <= (g)->gcstate && (g)->gcstate <= GCSswpend)
+	(LUAI_GCSswpallgc <= (g)->gcstate && (g)->gcstate <= LUAI_GCSswpend)
 
 
 /*
@@ -3314,23 +3333,23 @@ LUAI_FUNC const char *luaF_getlocalname (const Proto *func, int local_number,
 ** all objects are white again.
 */
 
-#define keepinvariant(g)	((g)->gcstate <= GCSatomic)
+#define keepinvariant(g)	((g)->gcstate <= LUAI_GCSatomic)
 
 
 /*
 ** some useful bit tricks
 */
-#define resetbits(x,m)		((x) &= cast(lu_byte, ~(m)))
+#define resetbits(x,m)		((x) &= luai_cast(lu_byte, ~(m)))
 #define setbits(x,m)		((x) |= (m))
 #define testbits(x,m)		((x) & (m))
 #define bitmask(b)		(1<<(b))
 #define bit2mask(b1,b2)		(bitmask(b1) | bitmask(b2))
-#define l_setbit(x,b)		setbits(x, bitmask(b))
+#define luai_l_setbit(x,b)		setbits(x, bitmask(b))
 #define resetbit(x,b)		resetbits(x, bitmask(b))
 #define testbit(x,b)		testbits(x, bitmask(b))
 
 
-/* Layout for bit use in 'marked' field: */
+/* Layout for bit use in 'marked' luai_field: */
 #define WHITE0BIT	0  /* object is white (type 0) */
 #define WHITE1BIT	1  /* object is white (type 1) */
 #define BLACKBIT	2  /* object is black */
@@ -3352,19 +3371,19 @@ LUAI_FUNC const char *luaF_getlocalname (const Proto *func, int local_number,
 #define isdead(g,v)	isdeadm(otherwhite(g), (v)->marked)
 
 #define changewhite(x)	((x)->marked ^= WHITEBITS)
-#define gray2black(x)	l_setbit((x)->marked, BLACKBIT)
+#define gray2black(x)	luai_l_setbit((x)->marked, BLACKBIT)
 
-#define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
+#define luaC_white(g)	luai_cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
 /*
 ** Does one step of collection when debt becomes positive. 'pre'/'pos'
 ** allows some adjustments to be done only when needed. macro
 ** 'condchangemem' is used only for heavy tests (forcing a full
-** GC cycle on every opportunity)
+** LUAI_GC cycle on every opportunity)
 */
 #define luaC_condGC(L,pre,pos) \
-	{ if (G(L)->GCdebt > 0) { pre; luaC_step(L); pos;}; \
+	{ if (G(L)->LUAI_GCdebt > 0) { pre; luaC_step(L); pos;}; \
 	  condchangemem(L,pre,pos); }
 
 /* more often than not, 'pre'/'pos' are empty */
@@ -3373,38 +3392,38 @@ LUAI_FUNC const char *luaF_getlocalname (const Proto *func, int local_number,
 
 #define luaC_barrier(L,p,v) (  \
 	(iscollectable(v) && isblack(p) && iswhite(gcvalue(v))) ?  \
-	luaC_barrier_(L,obj2gco(p),gcvalue(v)) : cast_void(0))
+	luaC_barrier_(L,obj2gco(p),gcvalue(v)) : luai_cast_void(0))
 
 #define luaC_barrierback(L,p,v) (  \
 	(iscollectable(v) && isblack(p) && iswhite(gcvalue(v))) ? \
-	luaC_barrierback_(L,p) : cast_void(0))
+	luaC_barrierback_(L,p) : luai_cast_void(0))
 
 #define luaC_objbarrier(L,p,o) (  \
 	(isblack(p) && iswhite(o)) ? \
-	luaC_barrier_(L,obj2gco(p),obj2gco(o)) : cast_void(0))
+	luaC_barrier_(L,obj2gco(p),obj2gco(o)) : luai_cast_void(0))
 
 #define luaC_upvalbarrier(L,uv) ( \
-	(iscollectable((uv)->v) && !upisopen(uv)) ? \
-         luaC_upvalbarrier_(L,uv) : cast_void(0))
+	(iscollectable((uv)->v) && !luai_upisopen(uv)) ? \
+         luaC_upvalbarrier_(L,uv) : luai_cast_void(0))
 
-LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
+LUAI_FUNC void luaC_fix (lua_State *L, LUAI_GCObject *o);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
-LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
-LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
-LUAI_FUNC void luaC_barrierback_ (lua_State *L, Table *o);
-LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, UpVal *uv);
-LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
-LUAI_FUNC void luaC_upvdeccount (lua_State *L, UpVal *uv);
+LUAI_FUNC LUAI_GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
+LUAI_FUNC void luaC_barrier_ (lua_State *L, LUAI_GCObject *o, LUAI_GCObject *v);
+LUAI_FUNC void luaC_barrierback_ (lua_State *L, luai_Table *o);
+LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, luai_UpVal *uv);
+LUAI_FUNC void luaC_checkfinalizer (lua_State *L, LUAI_GCObject *o, luai_Table *mt);
+LUAI_FUNC void luaC_upvdeccount (lua_State *L, luai_UpVal *uv);
 
 /*__lstring.h__*/
 
-#define sizelstring(l)  (sizeof(union UTString) + ((l) + 1) * sizeof(char))
+#define luai_sizelstring(l)  (sizeof(union UTString) + ((l) + 1) * sizeof(char))
 
-#define sizeludata(l)	(sizeof(union UUdata) + (l))
-#define sizeudata(u)	sizeludata((u)->len)
+#define luai_sizeludata(l)	(sizeof(union UUdata) + (l))
+#define luai_sizeudata(u)	luai_sizeludata((u)->len)
 
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))
@@ -3413,80 +3432,80 @@ LUAI_FUNC void luaC_upvdeccount (lua_State *L, UpVal *uv);
 /*
 ** test whether a string is a reserved word
 */
-#define isreserved(s)	((s)->tt == LUA_TSHRSTR && (s)->extra > 0)
+#define luai_isreserved(s)	((s)->tt == LUA_TSHRSTR && (s)->extra > 0)
 
 
 /*
 ** equality for short strings, which are always internalized
 */
-#define eqshrstr(a,b)	luai_check_exp((a)->tt == LUA_TSHRSTR, (a) == (b))
+#define luai_eqshrstr(a,b)	luai_check_exp((a)->tt == LUA_TSHRSTR, (a) == (b))
 
 
 LUAI_FUNC unsigned int luaS_hash (const char *str, size_t l, unsigned int seed);
-LUAI_FUNC unsigned int luaS_hashlongstr (TString *ts);
-LUAI_FUNC int luaS_eqlngstr (TString *a, TString *b);
+LUAI_FUNC unsigned int luaS_hashlongstr (luai_TString *ts);
+LUAI_FUNC int luaS_eqlngstr (luai_TString *a, luai_TString *b);
 LUAI_FUNC void luaS_resize (lua_State *L, int newsize);
 LUAI_FUNC void luaS_clearcache (global_State *g);
 LUAI_FUNC void luaS_init (lua_State *L);
-LUAI_FUNC void luaS_remove (lua_State *L, TString *ts);
+LUAI_FUNC void luaS_remove (lua_State *L, luai_TString *ts);
 LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s);
-LUAI_FUNC TString *luaS_newlstr (lua_State *L, const char *str, size_t l);
-LUAI_FUNC TString *luaS_new (lua_State *L, const char *str);
-LUAI_FUNC TString *luaS_createlngstrobj (lua_State *L, size_t l);
+LUAI_FUNC luai_TString *luaS_newlstr (lua_State *L, const char *str, size_t l);
+LUAI_FUNC luai_TString *luaS_new (lua_State *L, const char *str);
+LUAI_FUNC luai_TString *luaS_createlngstrobj (lua_State *L, size_t l);
 
 /*__ltable.h__*/
 
 
-#define gnode(t,i)	(&(t)->node[i])
-#define gval(n)		(&(n)->i_val)
-#define gnext(n)	((n)->i_key.nk.next)
+#define luai_gnode(t,i)	(&(t)->node[i])
+#define luai_gval(n)		(&(n)->i_val)
+#define luai_gnext(n)	((n)->i_key.nk.luai_next)
 
 
-/* 'const' to avoid wrong writings that can mess up field 'next' */
-#define gkey(n)		cast(const TValue*, (&(n)->i_key.tvk))
+/* 'const' to avoid wrong writings that can mess up luai_field 'luai_next' */
+#define luai_gkey(n)		luai_cast(const luai_TValue*, (&(n)->i_key.tvk))
 
 /*
-** writable version of 'gkey'; allows updates to individual fields,
+** writable version of 'luai_gkey'; allows updates to individual fields,
 ** but not to the whole (which has incompatible type)
 */
-#define wgkey(n)		(&(n)->i_key.nk)
+#define luai_wgkey(n)		(&(n)->i_key.nk)
 
-#define invalidateTMcache(t)	((t)->flags = 0)
+#define luai_invalidateTMcache(t)	((t)->flags = 0)
 
 
-/* true when 't' is using 'dummynode' as its hash part */
-#define isdummy(t)		((t)->lastfree == NULL)
+/* true when 't' is using 'luai_dummynode' as its hash part */
+#define luai_isdummy(t)		((t)->lastfree == NULL)
 
 
 /* allocated size for hash nodes */
-#define allocsizenode(t)	(isdummy(t) ? 0 : sizenode(t))
+#define luai_allocsizenode(t)	(luai_isdummy(t) ? 0 : sizenode(t))
 
 
 /* returns the key, given the value of a table entry */
-#define keyfromval(v) \
-  (gkey(cast(Node *, cast(char *, (v)) - offsetof(Node, i_val))))
+#define luai_keyfromval(v) \
+  (luai_gkey(luai_cast(luai_Node *, luai_cast(char *, (v)) - offsetof(luai_Node, i_val))))
 
 
-LUAI_FUNC const TValue *luaH_getint (Table *t, lua_Integer key);
-LUAI_FUNC void luaH_setint (lua_State *L, Table *t, lua_Integer key,
-                                                    TValue *value);
-LUAI_FUNC const TValue *luaH_getshortstr (Table *t, TString *key);
-LUAI_FUNC const TValue *luaH_getstr (Table *t, TString *key);
-LUAI_FUNC const TValue *luaH_get (Table *t, const TValue *key);
-LUAI_FUNC TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key);
-LUAI_FUNC TValue *luaH_set (lua_State *L, Table *t, const TValue *key);
-LUAI_FUNC Table *luaH_new (lua_State *L);
-LUAI_FUNC void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
+LUAI_FUNC const luai_TValue *luaH_getint (luai_Table *t, lua_Integer key);
+LUAI_FUNC void luaH_setint (lua_State *L, luai_Table *t, lua_Integer key,
+                                                    luai_TValue *value);
+LUAI_FUNC const luai_TValue *luaH_getshortstr (luai_Table *t, luai_TString *key);
+LUAI_FUNC const luai_TValue *luaH_getstr (luai_Table *t, luai_TString *key);
+LUAI_FUNC const luai_TValue *luaH_get (luai_Table *t, const luai_TValue *key);
+LUAI_FUNC luai_TValue *luaH_newkey (lua_State *L, luai_Table *t, const luai_TValue *key);
+LUAI_FUNC luai_TValue *luaH_set (lua_State *L, luai_Table *t, const luai_TValue *key);
+LUAI_FUNC luai_Table *luaH_new (lua_State *L);
+LUAI_FUNC void luaH_resize (lua_State *L, luai_Table *t, unsigned int nasize,
                                                     unsigned int nhsize);
-LUAI_FUNC void luaH_resizearray (lua_State *L, Table *t, unsigned int nasize);
-LUAI_FUNC void luaH_free (lua_State *L, Table *t);
-LUAI_FUNC int luaH_next (lua_State *L, Table *t, StkId key);
-LUAI_FUNC int luaH_getn (Table *t);
+LUAI_FUNC void luaH_resizearray (lua_State *L, luai_Table *t, unsigned int nasize);
+LUAI_FUNC void luaH_free (lua_State *L, luai_Table *t);
+LUAI_FUNC int luaH_next (lua_State *L, luai_Table *t, StkId key);
+LUAI_FUNC int luaH_getn (luai_Table *t);
 
 
 #if defined(LUA_DEBUG)
-LUAI_FUNC Node *luaH_mainposition (const Table *t, const TValue *key);
-LUAI_FUNC int luaH_isdummy (const Table *t);
+LUAI_FUNC luai_Node *luaH_mainposition (const luai_Table *t, const luai_TValue *key);
+LUAI_FUNC int luaH_isdummy (const luai_Table *t);
 #endif
 
 /*__lundump.h__*/
@@ -3495,7 +3514,7 @@ LUAI_FUNC int luaH_isdummy (const Table *t);
 #define LUAC_DATA	"\x19\x93\r\n\x1a\n"
 
 #define LUAC_INT	0x5678
-#define LUAC_NUM	cast_num(370.5)
+#define LUAC_NUM	luai_cast_num(370.5)
 
 #define MYINT(s)	(s[0]-'0')
 #define LUAC_VERSION	(MYINT(LUA_VERSION_MAJOR)*16+MYINT(LUA_VERSION_MINOR))
@@ -3505,7 +3524,7 @@ LUAI_FUNC int luaH_isdummy (const Table *t);
 LUAI_FUNC LClosure* luaU_undump (lua_State* L, ZIO* Z, const char* name);
 
 /* dump one chunk; from ldump.c */
-LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w,
+LUAI_FUNC int luaU_dump (lua_State* L, const luai_Proto* f, lua_Writer w,
                          void* data, int strip);
 
 /*__lvm.h__*/
@@ -3540,7 +3559,7 @@ LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w,
 #define tointeger(o,i) \
     (ttisinteger(o) ? (*(i) = ivalue(o), 1) : luaV_tointeger(o,i,LUA_FLOORN2I))
 
-#define intop(op,v1,v2) l_castU2S(l_castS2U(v1) op l_castS2U(v2))
+#define intop(op,v1,v2) luai_l_castU2S(luai_l_castS2U(v1) op luai_l_castS2U(v2))
 
 #define luaV_rawequalobj(t1,t2)		luaV_equalobj(NULL,t1,t2)
 
@@ -3548,7 +3567,7 @@ LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w,
 /*
 ** fast track for 'gettable': if 't' is a table and 't[k]' is not nil,
 ** return 1 with 'slot' pointing to 't[k]' (final result).  Otherwise,
-** return 0 (meaning it will have to check metamethod) with 'slot'
+** return 0 (meaning it will have to luai_check metamethod) with 'slot'
 ** pointing to a nil 't[k]' (if 't' is a table) or NULL (otherwise).
 ** 'f' is the raw get function to use.
 */
@@ -3561,17 +3580,17 @@ LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w,
 /*
 ** standard implementation for 'gettable'
 */
-#define luaV_gettable(L,t,k,v) { const TValue *slot; \
+#define luaV_gettable(L,t,k,v) { const luai_TValue *slot; \
   if (luaV_fastget(L,t,k,slot,luaH_get)) { setobj2s(L, v, slot); } \
   else luaV_finishget(L,t,k,v,slot); }
 
 
 /*
 ** Fast track for set table. If 't' is a table and 't[k]' is not nil,
-** call GC barrier, do a raw 't[k]=v', and return true; otherwise,
+** call LUAI_GC barrier, do a raw 't[k]=v', and return true; otherwise,
 ** return false with 'slot' equal to NULL (if 't' is not a table) or
 ** 'nil'. (This is needed by 'luaV_finishget'.) Note that, if the macro
-** returns true, there is no need to 'invalidateTMcache', because the
+** returns true, there is no need to 'luai_invalidateTMcache', because the
 ** call is not creating a new entry.
 */
 #define luaV_fastset(L,t,k,slot,f,v) \
@@ -3580,32 +3599,32 @@ LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w,
    : (slot = f(hvalue(t), k), \
      ttisnil(slot) ? 0 \
      : (luaC_barrierback(L, hvalue(t), v), \
-        setobj2t(L, cast(TValue *,slot), v), \
+        setobj2t(L, luai_cast(luai_TValue *,slot), v), \
         1)))
 
 
-#define luaV_settable(L,t,k,v) { const TValue *slot; \
+#define luaV_settable(L,t,k,v) { const luai_TValue *slot; \
   if (!luaV_fastset(L,t,k,slot,luaH_get,v)) \
     luaV_finishset(L,t,k,v,slot); }
 
 
 
-LUAI_FUNC int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2);
-LUAI_FUNC int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
-LUAI_FUNC int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r);
-LUAI_FUNC int luaV_tonumber_ (const TValue *obj, lua_Number *n);
-LUAI_FUNC int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode);
-LUAI_FUNC void luaV_finishget (lua_State *L, const TValue *t, TValue *key,
-                               StkId val, const TValue *slot);
-LUAI_FUNC void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
-                               StkId val, const TValue *slot);
+LUAI_FUNC int luaV_equalobj (lua_State *L, const luai_TValue *t1, const luai_TValue *t2);
+LUAI_FUNC int luaV_lessthan (lua_State *L, const luai_TValue *l, const luai_TValue *r);
+LUAI_FUNC int luaV_lessequal (lua_State *L, const luai_TValue *l, const luai_TValue *r);
+LUAI_FUNC int luaV_tonumber_ (const luai_TValue *obj, lua_Number *n);
+LUAI_FUNC int luaV_tointeger (const luai_TValue *obj, lua_Integer *p, int mode);
+LUAI_FUNC void luaV_finishget (lua_State *L, const luai_TValue *t, luai_TValue *key,
+                               StkId val, const luai_TValue *slot);
+LUAI_FUNC void luaV_finishset (lua_State *L, const luai_TValue *t, luai_TValue *key,
+                               StkId val, const luai_TValue *slot);
 LUAI_FUNC void luaV_finishOp (lua_State *L);
 LUAI_FUNC void luaV_execute (lua_State *L);
 LUAI_FUNC void luaV_concat (lua_State *L, int total);
 LUAI_FUNC lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y);
 LUAI_FUNC lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y);
 LUAI_FUNC lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y);
-LUAI_FUNC void luaV_objlen (lua_State *L, StkId ra, const TValue *rb);
+LUAI_FUNC void luaV_objlen (lua_State *L, StkId ra, const luai_TValue *rb);
 
 /*__lualib.h__*/
 
@@ -3898,26 +3917,6 @@ LUALIB_API void (luaL_openlib) (lua_State *L, const char *libname,
 #endif
 /* }============================================================ */
 
-
-#endif // lua_h
-
-/***************************************************************************
- * IMPLEMENTATION
- **************************************************************************/
-
-#ifdef LUA_IMPLEMENTATION
-
-#include <ctype.h>
-#include <errno.h>
-#include <float.h>
-#include <locale.h>
-#include <math.h>
-#include <setjmp.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
 /*__lapi.c__*/
 
 const char lua_ident[] =
@@ -3926,7 +3925,7 @@ const char lua_ident[] =
 
 
 /* value at a non-valid index */
-#define LUA_NONVALIDVALUE		cast(TValue *, luaO_nilobject)
+#define LUA_NONVALIDVALUE		luai_cast(luai_TValue *, luaO_nilobject)
 
 /* corresponding test */
 #define lua_isvalid(o)	((o) != luaO_nilobject)
@@ -3946,10 +3945,10 @@ const char lua_ident[] =
 	api_check(l, lua_isstackindex(i, o), "index not in the stack")
 
 
-static TValue *lua_index2addr (lua_State *L, int idx) {
+static luai_TValue *lua_index2addr (lua_State *L, int idx) {
   CallInfo *ci = L->ci;
   if (idx > 0) {
-    TValue *o = ci->func + idx;
+    luai_TValue *o = ci->func + idx;
     api_check(L, idx <= ci->top - (ci->func + 1), "unacceptable index");
     if (o >= L->top) return LUA_NONVALIDVALUE;
     else return o;
@@ -3959,10 +3958,10 @@ static TValue *lua_index2addr (lua_State *L, int idx) {
     return L->top + idx;
   }
   else if (idx == LUA_REGISTRYINDEX)
-    return &G(L)->l_registry;
+    return &G(L)->luai_l_registry;
   else {  /* upvalues */
     idx = LUA_REGISTRYINDEX - idx;
-    api_check(L, idx <= MAXUPVAL + 1, "upvalue index too large");
+    api_check(L, idx <= LUAI_MAXUPVAL + 1, "upvalue index too large");
     if (ttislcf(ci->func))  /* light C function? */
       return LUA_NONVALIDVALUE;  /* it has no upvalues */
     else {
@@ -3989,9 +3988,9 @@ LUA_API int lua_checkstack (lua_State *L, int n) {
   lua_lock(L);
   api_check(L, n >= 0, "negative 'n'");
   if (L->stack_last - L->top > n)  /* stack large enough? */
-    res = 1;  /* yes; check is OK */
+    res = 1;  /* yes; luai_check is OK */
   else {  /* no; need to grow stack */
-    int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
+    int inuse = luai_cast_int(L->top - L->stack) + EXTRA_STACK;
     if (inuse > LUAI_MAXSTACK - n)  /* can grow without overflow? */
       res = 0;  /* no */
     else  /* try to grow stack */
@@ -4049,12 +4048,12 @@ LUA_API const lua_Number *lua_version (lua_State *L) {
 LUA_API int lua_absindex (lua_State *L, int idx) {
   return (idx > 0 || lua_ispseudo(idx))
          ? idx
-         : cast_int(L->top - L->ci->func) + idx;
+         : luai_cast_int(L->top - L->ci->func) + idx;
 }
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  return cast_int(L->top - (L->ci->func + 1));
+  return luai_cast_int(L->top - (L->ci->func + 1));
 }
 
 
@@ -4079,9 +4078,9 @@ LUA_API void lua_settop (lua_State *L, int idx) {
 ** Reverse the stack segment from 'from' to 'to'
 ** (auxiliary to 'lua_rotate')
 */
-static void reverse (lua_State *L, StkId from, StkId to) {
+static void luai_reverse (lua_State *L, StkId from, StkId to) {
   for (; from < to; from++, to--) {
-    TValue temp;
+    luai_TValue temp;
     setobj(L, &temp, from);
     setobjs2s(L, from, to);
     setobj2s(L, to, &temp);
@@ -4101,15 +4100,15 @@ LUA_API void lua_rotate (lua_State *L, int idx, int n) {
   lua_api_checkstackindex(L, idx, p);
   api_check(L, (n >= 0 ? n : -n) <= (t - p + 1), "invalid 'n'");
   m = (n >= 0 ? t - n : p - n - 1);  /* end of prefix */
-  reverse(L, p, m);  /* reverse the prefix with length 'n' */
-  reverse(L, m + 1, t);  /* reverse the suffix */
-  reverse(L, p, t);  /* reverse the entire segment */
+  luai_reverse(L, p, m);  /* reverse the prefix with length 'n' */
+  luai_reverse(L, m + 1, t);  /* reverse the suffix */
+  luai_reverse(L, p, t);  /* reverse the entire segment */
   lua_unlock(L);
 }
 
 
 LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
-  TValue *fr, *to;
+  luai_TValue *fr, *to;
   lua_lock(L);
   fr = lua_index2addr(L, fromidx);
   to = lua_index2addr(L, toidx);
@@ -4164,19 +4163,19 @@ LUA_API int lua_isinteger (lua_State *L, int idx) {
 
 LUA_API int lua_isnumber (lua_State *L, int idx) {
   lua_Number n;
-  const TValue *o = lua_index2addr(L, idx);
+  const luai_TValue *o = lua_index2addr(L, idx);
   return tonumber(o, &n);
 }
 
 
 LUA_API int lua_isstring (lua_State *L, int idx) {
-  const TValue *o = lua_index2addr(L, idx);
+  const luai_TValue *o = lua_index2addr(L, idx);
   return (ttisstring(o) || cvt2str(o));
 }
 
 
 LUA_API int lua_isuserdata (lua_State *L, int idx) {
-  const TValue *o = lua_index2addr(L, idx);
+  const luai_TValue *o = lua_index2addr(L, idx);
   return (ttisfulluserdata(o) || ttislightuserdata(o));
 }
 
@@ -4233,7 +4232,7 @@ LUA_API size_t lua_stringtonumber (lua_State *L, const char *s) {
 
 LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
   lua_Number n;
-  const TValue *o = lua_index2addr(L, idx);
+  const luai_TValue *o = lua_index2addr(L, idx);
   int isnum = tonumber(o, &n);
   if (!isnum)
     n = 0;  /* call to 'tonumber' may change 'n' even if it fails */
@@ -4244,7 +4243,7 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
 
 LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
   lua_Integer res;
-  const TValue *o = lua_index2addr(L, idx);
+  const luai_TValue *o = lua_index2addr(L, idx);
   int isnum = tointeger(o, &res);
   if (!isnum)
     res = 0;  /* call to 'tointeger' may change 'n' even if it fails */
@@ -4254,8 +4253,8 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
 
 
 LUA_API int lua_toboolean (lua_State *L, int idx) {
-  const TValue *o = lua_index2addr(L, idx);
-  return !l_isfalse(o);
+  const luai_TValue *o = lua_index2addr(L, idx);
+  return !luai_l_isfalse(o);
 }
 
 
@@ -4321,7 +4320,7 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
     case LUA_TTABLE: return hvalue(o);
     case LUA_TLCL: return clLvalue(o);
     case LUA_TCCL: return clCvalue(o);
-    case LUA_TLCF: return cast(void *, cast(size_t, fvalue(o)));
+    case LUA_TLCF: return luai_cast(void *, luai_cast(size_t, fvalue(o)));
     case LUA_TTHREAD: return thvalue(o);
     case LUA_TUSERDATA: return getudatamem(uvalue(o));
     case LUA_TLIGHTUSERDATA: return pvalue(o);
@@ -4366,7 +4365,7 @@ LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
 ** 'memcmp' and 'memcpy'.
 */
 LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
-  TString *ts;
+  luai_TString *ts;
   lua_lock(L);
   ts = (len == 0) ? luaS_new(L, "") : luaS_newlstr(L, s, len);
   setsvalue2s(L, L->top, ts);
@@ -4382,7 +4381,7 @@ LUA_API const char *lua_pushstring (lua_State *L, const char *s) {
   if (s == NULL)
     setnilvalue(L->top);
   else {
-    TString *ts;
+    luai_TString *ts;
     ts = luaS_new(L, s);
     setsvalue2s(L, L->top, ts);
     s = getstr(ts);  /* internal copy's address */
@@ -4426,7 +4425,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   else {
     CClosure *cl;
     api_checknelems(L, n);
-    api_check(L, n <= MAXUPVAL, "upvalue index too large");
+    api_check(L, n <= LUAI_MAXUPVAL, "upvalue index too large");
     cl = luaF_newCclosure(L, n);
     cl->f = fn;
     L->top -= n;
@@ -4473,9 +4472,9 @@ LUA_API int lua_pushthread (lua_State *L) {
 */
 
 
-static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
-  const TValue *slot;
-  TString *str = luaS_new(L, k);
+static int luai_auxgetstr (lua_State *L, const luai_TValue *t, const char *k) {
+  const luai_TValue *slot;
+  luai_TString *str = luaS_new(L, k);
   if (luaV_fastget(L, t, str, slot, luaH_getstr)) {
     setobj2s(L, L->top, slot);
     api_incr_top(L);
@@ -4491,9 +4490,9 @@ static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
 
 
 LUA_API int lua_getglobal (lua_State *L, const char *name) {
-  Table *reg = hvalue(&G(L)->l_registry);
+  luai_Table *reg = hvalue(&G(L)->luai_l_registry);
   lua_lock(L);
-  return auxgetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
+  return luai_auxgetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
 }
 
 
@@ -4509,13 +4508,13 @@ LUA_API int lua_gettable (lua_State *L, int idx) {
 
 LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
   lua_lock(L);
-  return auxgetstr(L, lua_index2addr(L, idx), k);
+  return luai_auxgetstr(L, lua_index2addr(L, idx), k);
 }
 
 
 LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
-  const TValue *slot;
+  const luai_TValue *slot;
   lua_lock(L);
   t = lua_index2addr(L, idx);
   if (luaV_fastget(L, t, n, slot, luaH_getint)) {
@@ -4557,11 +4556,11 @@ LUA_API int lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
 
 LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
   StkId t;
-  TValue k;
+  luai_TValue k;
   lua_lock(L);
   t = lua_index2addr(L, idx);
   api_check(L, ttistable(t), "table expected");
-  setpvalue(&k, cast(void *, p));
+  setpvalue(&k, luai_cast(void *, p));
   setobj2s(L, L->top, luaH_get(hvalue(t), &k));
   api_incr_top(L);
   lua_unlock(L);
@@ -4570,7 +4569,7 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
 
 
 LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
-  Table *t;
+  luai_Table *t;
   lua_lock(L);
   t = luaH_new(L);
   sethvalue(L, L->top, t);
@@ -4583,8 +4582,8 @@ LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
 
 
 LUA_API int lua_getmetatable (lua_State *L, int objindex) {
-  const TValue *obj;
-  Table *mt;
+  const luai_TValue *obj;
+  luai_Table *mt;
   int res = 0;
   lua_lock(L);
   obj = lua_index2addr(L, objindex);
@@ -4628,14 +4627,14 @@ LUA_API int lua_getuservalue (lua_State *L, int idx) {
 /*
 ** t[k] = value at the top of the stack (where 'k' is a string)
 */
-static void luai_auxsetstr (lua_State *L, const TValue *t, const char *k) {
-  const TValue *slot;
-  TString *str = luaS_new(L, k);
+static void luai_auxsetstr (lua_State *L, const luai_TValue *t, const char *k) {
+  const luai_TValue *slot;
+  luai_TString *str = luaS_new(L, k);
   api_checknelems(L, 1);
   if (luaV_fastset(L, t, str, slot, luaH_getstr, L->top - 1))
     L->top--;  /* pop value */
   else {
-    setsvalue2s(L, L->top, str);  /* push 'str' (to make it a TValue) */
+    setsvalue2s(L, L->top, str);  /* push 'str' (to make it a luai_TValue) */
     api_incr_top(L);
     luaV_finishset(L, t, L->top - 1, L->top - 2, slot);
     L->top -= 2;  /* pop value and key */
@@ -4645,7 +4644,7 @@ static void luai_auxsetstr (lua_State *L, const TValue *t, const char *k) {
 
 
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
-  Table *reg = hvalue(&G(L)->l_registry);
+  luai_Table *reg = hvalue(&G(L)->luai_l_registry);
   lua_lock(L);  /* unlock done in 'luai_auxsetstr' */
   luai_auxsetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
 }
@@ -4670,7 +4669,7 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
 
 LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
-  const TValue *slot;
+  const luai_TValue *slot;
   lua_lock(L);
   api_checknelems(L, 1);
   t = lua_index2addr(L, idx);
@@ -4688,14 +4687,14 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
 
 LUA_API void lua_rawset (lua_State *L, int idx) {
   StkId o;
-  TValue *slot;
+  luai_TValue *slot;
   lua_lock(L);
   api_checknelems(L, 2);
   o = lua_index2addr(L, idx);
   api_check(L, ttistable(o), "table expected");
   slot = luaH_set(L, hvalue(o), L->top - 2);
   setobj2t(L, slot, L->top - 1);
-  invalidateTMcache(hvalue(o));
+  luai_invalidateTMcache(hvalue(o));
   luaC_barrierback(L, hvalue(o), L->top-1);
   L->top -= 2;
   lua_unlock(L);
@@ -4717,12 +4716,12 @@ LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
 
 LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
   StkId o;
-  TValue k, *slot;
+  luai_TValue k, *slot;
   lua_lock(L);
   api_checknelems(L, 1);
   o = lua_index2addr(L, idx);
   api_check(L, ttistable(o), "table expected");
-  setpvalue(&k, cast(void *, p));
+  setpvalue(&k, luai_cast(void *, p));
   slot = luaH_set(L, hvalue(o), &k);
   setobj2t(L, slot, L->top - 1);
   luaC_barrierback(L, hvalue(o), L->top - 1);
@@ -4732,8 +4731,8 @@ LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
 
 
 LUA_API int lua_setmetatable (lua_State *L, int objindex) {
-  TValue *obj;
-  Table *mt;
+  luai_TValue *obj;
+  luai_Table *mt;
   lua_lock(L);
   api_checknelems(L, 1);
   obj = lua_index2addr(L, objindex);
@@ -4805,8 +4804,8 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
   lua_checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
   if (k != NULL && L->nny == 0) {  /* need to prepare continuation? */
-    L->ci->u.c.k = k;  /* save continuation */
-    L->ci->u.c.ctx = ctx;  /* save context */
+    L->ci->u.c.k = k;  /* luai_save continuation */
+    L->ci->u.c.ctx = ctx;  /* luai_save context */
     luaD_call(L, func, nresults);  /* do the call */
   }
   else  /* no continuation or no yieldable */
@@ -4827,7 +4826,7 @@ struct CallS {  /* data to 'luai_f_call' */
 
 
 static void luai_f_call (lua_State *L, void *ud) {
-  struct CallS *c = cast(struct CallS *, ud);
+  struct CallS *c = luai_cast(struct CallS *, ud);
   luaD_callnoyield(L, c->func, c->nresults);
 }
 
@@ -4849,22 +4848,22 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
   else {
     StkId o = lua_index2addr(L, errfunc);
     lua_api_checkstackindex(L, errfunc, o);
-    func = savestack(L, o);
+    func = luai_savestack(L, o);
   }
   c.func = L->top - (nargs+1);  /* function to be called */
   if (k == NULL || L->nny > 0) {  /* no continuation or no yieldable? */
     c.nresults = nresults;  /* do a 'conventional' protected call */
-    status = luaD_pcall(L, luai_f_call, &c, savestack(L, c.func), func);
+    status = luaD_pcall(L, luai_f_call, &c, luai_savestack(L, c.func), func);
   }
-  else {  /* prepare continuation (call is already protected by 'resume') */
+  else {  /* prepare continuation (call is already protected by 'luai_resume') */
     CallInfo *ci = L->ci;
-    ci->u.c.k = k;  /* save continuation */
-    ci->u.c.ctx = ctx;  /* save context */
-    /* save information for error recovery */
-    ci->extra = savestack(L, c.func);
+    ci->u.c.k = k;  /* luai_save continuation */
+    ci->u.c.ctx = ctx;  /* luai_save context */
+    /* luai_save information for error recovery */
+    ci->extra = luai_savestack(L, c.func);
     ci->u.c.old_errfunc = L->errfunc;
     L->errfunc = func;
-    setoah(ci->callstatus, L->allowhook);  /* save value of 'allowhook' */
+    setoah(ci->callstatus, L->allowhook);  /* luai_save value of 'allowhook' */
     ci->callstatus |= CIST_YPCALL;  /* function can do error recovery */
     luaD_call(L, c.func, nresults);  /* do the call */
     ci->callstatus &= ~CIST_YPCALL;
@@ -4889,8 +4888,8 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
     LClosure *f = clLvalue(L->top - 1);  /* get newly created function */
     if (f->nupvalues >= 1) {  /* does it have an upvalue? */
       /* get global table from registry */
-      Table *reg = hvalue(&G(L)->l_registry);
-      const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
+      luai_Table *reg = hvalue(&G(L)->luai_l_registry);
+      const luai_TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
       /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
       setobj(L, f->upvals[0]->v, gt);
       luaC_upvalbarrier(L, f->upvals[0]);
@@ -4903,7 +4902,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
 
 LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data, int strip) {
   int status;
-  TValue *o;
+  luai_TValue *o;
   lua_lock(L);
   api_checknelems(L, 1);
   o = L->top - 1;
@@ -4945,29 +4944,29 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCCOUNT: {
-      /* GC values are expressed in Kbytes: #bytes/2^10 */
-      res = cast_int(gettotalbytes(g) >> 10);
+      /* LUAI_GC values are expressed in Kbytes: #bytes/2^10 */
+      res = luai_cast_int(gettotalbytes(g) >> 10);
       break;
     }
     case LUA_GCCOUNTB: {
-      res = cast_int(gettotalbytes(g) & 0x3ff);
+      res = luai_cast_int(gettotalbytes(g) & 0x3ff);
       break;
     }
     case LUA_GCSTEP: {
-      l_mem debt = 1;  /* =1 to signal that it did an actual step */
+      luai_l_mem debt = 1;  /* =1 to signal that it did an actual step */
       lu_byte oldrunning = g->gcrunning;
-      g->gcrunning = 1;  /* allow GC to run */
+      g->gcrunning = 1;  /* allow LUAI_GC to run */
       if (data == 0) {
-        luaE_setdebt(g, -GCSTEPSIZE);  /* to do a "small" step */
+        luaE_setdebt(g, -LUA_GCSTEPSIZE);  /* to do a "small" step */
         luaC_step(L);
       }
       else {  /* add 'data' to total debt */
-        debt = cast(l_mem, data) * 1024 + g->GCdebt;
+        debt = luai_cast(luai_l_mem, data) * 1024 + g->LUAI_GCdebt;
         luaE_setdebt(g, debt);
         luaC_checkGC(L);
       }
       g->gcrunning = oldrunning;  /* restore previous state */
-      if (debt > 0 && g->gcstate == GCSpause)  /* end of cycle? */
+      if (debt > 0 && g->gcstate == LUAI_GCSpause)  /* end of cycle? */
         res = 1;  /* signal it */
       break;
     }
@@ -5082,8 +5081,8 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 
-static const char *luai_aux_upvalue (StkId fi, int n, TValue **val,
-                                CClosure **owner, UpVal **uv) {
+static const char *luai_aux_upvalue (StkId fi, int n, luai_TValue **val,
+                                CClosure **owner, luai_UpVal **uv) {
   switch (ttype(fi)) {
     case LUA_TCCL: {  /* C closure */
       CClosure *f = clCvalue(fi);
@@ -5094,8 +5093,8 @@ static const char *luai_aux_upvalue (StkId fi, int n, TValue **val,
     }
     case LUA_TLCL: {  /* Lua closure */
       LClosure *f = clLvalue(fi);
-      TString *name;
-      Proto *p = f->p;
+      luai_TString *name;
+      luai_Proto *p = f->p;
       if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
       *val = f->upvals[n-1]->v;
       if (uv) *uv = f->upvals[n - 1];
@@ -5109,7 +5108,7 @@ static const char *luai_aux_upvalue (StkId fi, int n, TValue **val,
 
 LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
-  TValue *val = NULL;  /* to avoid warnings */
+  luai_TValue *val = NULL;  /* to avoid warnings */
   lua_lock(L);
   name = luai_aux_upvalue(lua_index2addr(L, funcindex), n, &val, NULL, NULL);
   if (name) {
@@ -5123,9 +5122,9 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
 
 LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
-  TValue *val = NULL;  /* to avoid warnings */
+  luai_TValue *val = NULL;  /* to avoid warnings */
   CClosure *owner = NULL;
-  UpVal *uv = NULL;
+  luai_UpVal *uv = NULL;
   StkId fi;
   lua_lock(L);
   fi = lua_index2addr(L, funcindex);
@@ -5142,7 +5141,7 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
 }
 
 
-static UpVal **luai_getupvalref (lua_State *L, int fidx, int n, LClosure **pf) {
+static luai_UpVal **luai_getupvalref (lua_State *L, int fidx, int n, LClosure **pf) {
   LClosure *f;
   StkId fi = lua_index2addr(L, fidx);
   api_check(L, ttisLclosure(fi), "Lua function expected");
@@ -5175,12 +5174,12 @@ LUA_API void *lua_upvalueid (lua_State *L, int fidx, int n) {
 LUA_API void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
                                             int fidx2, int n2) {
   LClosure *f1;
-  UpVal **up1 = luai_getupvalref(L, fidx1, n1, &f1);
-  UpVal **up2 = luai_getupvalref(L, fidx2, n2, NULL);
+  luai_UpVal **up1 = luai_getupvalref(L, fidx1, n1, &f1);
+  luai_UpVal **up2 = luai_getupvalref(L, fidx2, n2, NULL);
   luaC_upvdeccount(L, *up1);
   *up1 = *up2;
   (*up1)->refcount++;
-  if (upisopen(*up1)) (*up1)->u.open.touched = 1;
+  if (luai_upisopen(*up1)) (*up1)->u.open.touched = 1;
   luaC_upvalbarrier(L, *up1);
 }
 
@@ -5205,7 +5204,7 @@ LUA_API void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
 static int luai_findfield (lua_State *L, int objidx, int level) {
   if (level == 0 || !lua_istable(L, -1))
     return 0;  /* not found */
-  lua_pushnil(L);  /* start 'next' loop */
+  lua_pushnil(L);  /* start 'luai_next' loop */
   while (lua_next(L, -2)) {  /* for each pair in table */
     if (lua_type(L, -2) == LUA_TSTRING) {  /* ignore non-string keys */
       if (lua_rawequal(L, objidx, -1)) {  /* found object? */
@@ -5299,8 +5298,8 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1,
     else {
       lua_getinfo(L1, "Slnt", &ar);
       lua_pushfstring(L, "\n\t%s:", ar.short_src);
-      if (ar.currentline > 0)
-        lua_pushfstring(L, "%d:", ar.currentline);
+      if (ar.luai_currentline > 0)
+        lua_pushfstring(L, "%d:", ar.luai_currentline);
       lua_pushliteral(L, " in ");
       luai_pushfuncname(L, &ar);
       if (ar.istailcall)
@@ -5363,10 +5362,10 @@ static void luai_tagerror (lua_State *L, int arg, int tag) {
 */
 LUALIB_API void luaL_where (lua_State *L, int level) {
   lua_Debug ar;
-  if (lua_getstack(L, level, &ar)) {  /* check function at level */
+  if (lua_getstack(L, level, &ar)) {  /* luai_check function at level */
     lua_getinfo(L, "Sl", &ar);  /* get info about it */
-    if (ar.currentline > 0) {  /* is there info? */
-      lua_pushfstring(L, "%s:%d: ", ar.short_src, ar.currentline);
+    if (ar.luai_currentline > 0) {  /* is there info? */
+      lua_pushfstring(L, "%s:%d: ", ar.short_src, ar.luai_currentline);
       return;
     }
   }
@@ -5408,7 +5407,7 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
 }
 
 
-#if !defined(l_inspectstat)	/* { */
+#if !defined(luai_l_inspectstat)	/* { */
 
 #if defined(LUA_USE_POSIX)
 
@@ -5417,13 +5416,13 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
 /*
 ** use appropriate macros to interpret 'pclose' return status
 */
-#define l_inspectstat(stat,what)  \
+#define luai_l_inspectstat(stat,what)  \
    if (WIFEXITED(stat)) { stat = WEXITSTATUS(stat); } \
    else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); what = "signal"; }
 
 #else
 
-#define l_inspectstat(stat,what)  /* no op */
+#define luai_l_inspectstat(stat,what)  /* no op */
 
 #endif
 
@@ -5435,7 +5434,7 @@ LUALIB_API int luaL_execresult (lua_State *L, int stat) {
   if (stat == -1)  /* error? */
     return luaL_fileresult(L, 0, NULL);
   else {
-    l_inspectstat(stat, what);  /* interpret result */
+    luai_l_inspectstat(stat, what);  /* interpret result */
     if (*what == 'e' && stat == 0)  /* successful termination? */
       lua_pushboolean(L, 1);
     else
@@ -5500,7 +5499,7 @@ LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
 
 /*
 ** {======================================================
-** Argument check functions
+** Argument luai_check functions
 ** =======================================================
 */
 
@@ -5652,7 +5651,7 @@ static void *luai_newbox (lua_State *L, size_t newsize) {
 
 
 /*
-** check whether buffer is using a userdata on the stack as a temporary
+** luai_check whether buffer is using a userdata on the stack as a temporary
 ** buffer
 */
 #define lua_buffonstack(B)	((B)->b != (B)->initb)
@@ -5762,7 +5761,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
   ref = (int)lua_tointeger(L, -1);  /* ref = t[lua_freelist] */
   lua_pop(L, 1);  /* remove it from stack */
   if (ref != 0) {  /* any free element? */
-    lua_rawgeti(L, t, ref);  /* remove it from list */
+    lua_rawgeti(L, t, ref);  /* remove it luai_list */
     lua_rawseti(L, t, lua_freelist);  /* (t[lua_freelist] = t[ref]) */
   }
   else  /* no free elements */
@@ -5805,12 +5804,12 @@ static const char *luai_getF (lua_State *L, void *ud, size_t *size) {
     *size = lf->n;  /* return them (chars already in buffer) */
     lf->n = 0;  /* no more pre-read characters */
   }
-  else {  /* read a block from file */
-    /* 'fread' can return > 0 *and* set the EOF flag. If next call to
+  else {  /* read a luai_getblock from file */
+    /* 'fread' can return > 0 *and* set the EOF flag. If luai_next call to
        'luai_getF' called 'fread', it might still wait for user input.
-       The next check avoids this problem. */
+       The luai_next luai_check avoids this problem. */
     if (feof(lf->f)) return NULL;
-    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);  /* read block */
+    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);  /* read luai_getblock */
   }
   return lf->buff;
 }
@@ -5835,7 +5834,7 @@ static int luai_skipBOM (luai_LoadF *lf) {
     lf->buff[lf->n++] = c;  /* to be read by the parser */
   } while (*p != '\0');
   lf->n = 0;  /* prefix matched; discard it */
-  return getc(lf->f);  /* return next character */
+  return getc(lf->f);  /* return luai_next character */
 }
 
 
@@ -6019,14 +6018,14 @@ static const char *luaL_findtable (lua_State *L, int idx,
     e = strchr(fname, '.');
     if (e == NULL) e = fname + strlen(fname);
     lua_pushlstring(L, fname, e - fname);
-    if (lua_rawget(L, -2) == LUA_TNIL) {  /* no such field? */
+    if (lua_rawget(L, -2) == LUA_TNIL) {  /* no such luai_field? */
       lua_pop(L, 1);  /* remove this nil */
-      lua_createtable(L, 0, (*e == '.' ? 1 : szhint)); /* new table for field */
+      lua_createtable(L, 0, (*e == '.' ? 1 : szhint)); /* new table for luai_field */
       lua_pushlstring(L, fname, e - fname);
       lua_pushvalue(L, -2);
-      lua_settable(L, -4);  /* set new table into field */
+      lua_settable(L, -4);  /* set new table into luai_field */
     }
-    else if (!lua_istable(L, -1)) {  /* field has a non-table value? */
+    else if (!lua_istable(L, -1)) {  /* luai_field has a non-table value? */
       lua_pop(L, 2);  /* remove table and value */
       return fname;  /* return problematic part of the name */
     }
@@ -6115,7 +6114,7 @@ LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
     idx = lua_absindex(L, idx);
     lua_newtable(L);
     lua_pushvalue(L, -1);  /* copy to be left at top */
-    lua_setfield(L, idx, fname);  /* assign new table to field */
+    lua_setfield(L, idx, fname);  /* assign new table to luai_field */
     return 0;  /* false, because did not find table there */
   }
 }
@@ -6132,7 +6131,7 @@ LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
   luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
   lua_getfield(L, -1, modname);  /* LOADED[modname] */
   if (!lua_toboolean(L, -1)) {  /* package not already loaded? */
-    lua_pop(L, 1);  /* remove field */
+    lua_pop(L, 1);  /* remove luai_field */
     lua_pushcfunction(L, openf);
     lua_pushstring(L, modname);  /* argument to open function */
     lua_call(L, 1, 1);  /* call 'openf' to open module */
@@ -6191,7 +6190,7 @@ LUALIB_API lua_State *luaL_newstate (void) {
 
 LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver, size_t sz) {
   const lua_Number *v = lua_version(L);
-  if (sz != LUAL_NUMSIZES)  /* check numeric types */
+  if (sz != LUAL_NUMSIZES)  /* luai_check numeric types */
     luaL_error(L, "core and library have incompatible numeric types");
   if (v != lua_version(NULL))
     luaL_error(L, "multiple Lua VMs detected");
@@ -6232,13 +6231,13 @@ static const char *luai_b_str2int (const char *s, int base, lua_Integer *pn) {
   s += strspn(s, LUA_SPACECHARS);  /* skip initial spaces */
   if (*s == '-') { s++; neg = 1; }  /* handle signal */
   else if (*s == '+') s++;
-  if (!isalnum((unsigned char)*s))  /* no digit? */
+  if (!isalnum((unsigned char)*s))  /* no luai_digit? */
     return NULL;
   do {
-    int digit = (isdigit((unsigned char)*s)) ? *s - '0'
+    int luai_digit = (isdigit((unsigned char)*s)) ? *s - '0'
                    : (toupper((unsigned char)*s) - 'A') + 10;
-    if (digit >= base) return NULL;  /* invalid numeral */
-    n = n * base + digit;
+    if (luai_digit >= base) return NULL;  /* invalid numeral */
+    n = n * base + luai_digit;
     s++;
   } while (isalnum((unsigned char)*s));
   s += strspn(s, LUA_SPACECHARS);  /* skip trailing spaces */
@@ -6299,7 +6298,7 @@ static int luaB_getmetatable (lua_State *L) {
     return 1;  /* no metatable */
   }
   luaL_getmetafield(L, 1, "__metatable");
-  return 1;  /* returns either __metatable field (if present) or metatable */
+  return 1;  /* returns either __metatable luai_field (if present) or metatable */
 }
 
 
@@ -6353,7 +6352,7 @@ static int luaB_rawset (lua_State *L) {
 
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "setpause", "setstepmul",
+    "count", "step", "luai_setpause", "setstepmul",
     "isrunning", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
@@ -6507,7 +6506,7 @@ static const char *luai_generic_reader (lua_State *L, void *ud, size_t *size) {
   }
   else if (!lua_isstring(L, -1))
     luaL_error(L, "reader function must return a string");
-  lua_replace(L, LUA_RESERVEDSLOT);  /* save string in reserved slot */
+  lua_replace(L, LUA_RESERVEDSLOT);  /* luai_save string in reserved slot */
   return lua_tolstring(L, LUA_RESERVEDSLOT, size);
 }
 
@@ -6615,7 +6614,7 @@ static int luaB_pcall (lua_State *L) {
 static int luaB_xpcall (lua_State *L) {
   int status;
   int n = lua_gettop(L);
-  luaL_checktype(L, 2, LUA_TFUNCTION);  /* check error function */
+  luaL_checktype(L, 2, LUA_TFUNCTION);  /* luai_check error function */
   lua_pushboolean(L, 1);  /* first result */
   lua_pushvalue(L, 1);  /* function */
   lua_rotate(L, 3, 2);  /* move them below function's arguments */
@@ -6643,7 +6642,7 @@ static const luaL_Reg luai_base_funcs[] = {
 #if defined(LUA_COMPAT_LOADSTRING)
   {"loadstring", luaB_load},
 #endif
-  {"next", luaB_next},
+  {"luai_next", luaB_next},
   {"pairs", luaB_pairs},
   {"pcall", luaB_pcall},
   {"print", luaB_print},
@@ -6823,7 +6822,7 @@ static int lua_b_rrot (lua_State *L) {
 
 
 /*
-** get field and width arguments for field-manipulation functions,
+** get luai_field and width arguments for luai_field-manipulation functions,
 ** checking whether they are valid.
 ** ('luaL_error' called without 'return' to avoid later warnings about
 ** 'width' being used uninitialized.)
@@ -6831,7 +6830,7 @@ static int lua_b_rrot (lua_State *L) {
 static int lua_fieldargs (lua_State *L, int farg, int *width) {
   lua_Integer f = luaL_checkinteger(L, farg);
   lua_Integer w = luaL_optinteger(L, farg + 1, 1);
-  luaL_argcheck(L, 0 <= f, farg, "field cannot be negative");
+  luaL_argcheck(L, 0 <= f, farg, "luai_field cannot be negative");
   luaL_argcheck(L, 0 < w, farg + 1, "width must be positive");
   if (f + w > LUA_NBITS)
     luaL_error(L, "trying to access non-existent bits");
@@ -6909,14 +6908,14 @@ LUAMOD_API int luaopen_bit32 (lua_State *L) {
 ** If expression is a numeric constant, fills 'v' with its value
 ** and returns 1. Otherwise, returns 0.
 */
-static int lua_tonumeral(const expdesc *e, TValue *v) {
+static int lua_tonumeral(const luai_expdesc *e, luai_TValue *v) {
   if (lua_hasjumps(e))
     return 0;  /* not a numeral */
   switch (e->k) {
-    case VKINT:
+    case LUAI_VKINT:
       if (v) setivalue(v, e->u.ival);
       return 1;
-    case VKFLT:
+    case LUAI_VKFLT:
       if (v) setfltvalue(v, e->u.nval);
       return 1;
     default: return 0;
@@ -6925,30 +6924,30 @@ static int lua_tonumeral(const expdesc *e, TValue *v) {
 
 
 /*
-** Create a OP_LOADNIL instruction, but try to optimize: if the previous
-** instruction is also OP_LOADNIL and ranges are compatible, adjust
+** Create a luai_OP_LOADNIL instruction, but try to optimize: if the previous
+** instruction is also luai_OP_LOADNIL and ranges are compatible, adjust
 ** range of previous instruction instead of emitting a new one. (For
 ** instance, 'local a; local b' will generate a single opcode.)
 */
-void luaK_nil (FuncState *fs, int from, int n) {
+void luaK_nil (luai_FuncState *fs, int from, int n) {
   Instruction *previous;
   int l = from + n - 1;  /* last register to set nil */
   if (fs->pc > fs->lasttarget) {  /* no jumps to current position? */
     previous = &fs->f->code[fs->pc-1];
-    if (GET_OPCODE(*previous) == OP_LOADNIL) {  /* previous is LOADNIL? */
-      int pfrom = GETARG_A(*previous);  /* get previous range */
-      int pl = pfrom + GETARG_B(*previous);
+    if (luai_GETOPCODE(*previous) == luai_OP_LOADNIL) {  /* previous is LOADNIL? */
+      int pfrom = luai_GETARG_A(*previous);  /* get previous range */
+      int pl = pfrom + luai_GETARG_B(*previous);
       if ((pfrom <= from && from <= pl + 1) ||
           (from <= pfrom && pfrom <= l + 1)) {  /* can connect both? */
         if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */
         if (pl > l) l = pl;  /* l = max(l, pl) */
-        SETARG_A(*previous, from);
-        SETARG_B(*previous, l - from);
+        luai_SETARG_A(*previous, from);
+        luai_SETARG_B(*previous, l - from);
         return;
       }
     }  /* else go through */
   }
-  luaK_codeABC(fs, OP_LOADNIL, from, n - 1, 0);  /* else no optimization */
+  luaK_codeABC(fs, luai_OP_LOADNIL, from, n - 1, 0);  /* else no optimization */
 }
 
 
@@ -6956,10 +6955,10 @@ void luaK_nil (FuncState *fs, int from, int n) {
 ** Gets the destination address of a jump instruction. Used to traverse
 ** a list of jumps.
 */
-static int getjump (FuncState *fs, int pc) {
-  int offset = GETARG_sBx(fs->f->code[pc]);
-  if (offset == NO_JUMP)  /* point to itself represents end of list */
-    return NO_JUMP;  /* end of list */
+static int luai_getjump (luai_FuncState *fs, int pc) {
+  int offset = luai_GETARG_sBx(fs->f->code[pc]);
+  if (offset == LUAI_NO_JUMP)  /* point to itself represents end of list */
+    return LUAI_NO_JUMP;  /* end of list */
   else
     return (pc+1)+offset;  /* turn offset into absolute position */
 }
@@ -6969,44 +6968,44 @@ static int getjump (FuncState *fs, int pc) {
 ** Fix jump instruction at position 'pc' to jump to 'dest'.
 ** (Jump addresses are relative in Lua)
 */
-static void fixjump (FuncState *fs, int pc, int dest) {
+static void luai_fixjump (luai_FuncState *fs, int pc, int dest) {
   Instruction *jmp = &fs->f->code[pc];
   int offset = dest - (pc + 1);
-  lua_assert(dest != NO_JUMP);
-  if (abs(offset) > MAXARG_sBx)
+  lua_assert(dest != LUAI_NO_JUMP);
+  if (abs(offset) > luai_MAXARG_sBx)
     luaX_syntaxerror(fs->ls, "control structure too long");
-  SETARG_sBx(*jmp, offset);
+  luai_SETARG_sBx(*jmp, offset);
 }
 
 
 /*
 ** Concatenate jump-list 'l2' into jump-list 'l1'
 */
-void luaK_concat (FuncState *fs, int *l1, int l2) {
-  if (l2 == NO_JUMP) return;  /* nothing to concatenate? */
-  else if (*l1 == NO_JUMP)  /* no original list? */
+void luaK_concat (luai_FuncState *fs, int *l1, int l2) {
+  if (l2 == LUAI_NO_JUMP) return;  /* nothing to concatenate? */
+  else if (*l1 == LUAI_NO_JUMP)  /* no original list? */
     *l1 = l2;  /* 'l1' points to 'l2' */
   else {
     int list = *l1;
-    int next;
-    while ((next = getjump(fs, list)) != NO_JUMP)  /* find last element */
-      list = next;
-    fixjump(fs, list, l2);  /* last element links to 'l2' */
+    int luai_next;
+    while ((luai_next = luai_getjump(fs, list)) != LUAI_NO_JUMP)  /* find last element */
+      list = luai_next;
+    luai_fixjump(fs, list, l2);  /* last element links to 'l2' */
   }
 }
 
 
 /*
 ** Create a jump instruction and return its position, so its destination
-** can be fixed later (with 'fixjump'). If there are jumps to
+** can be fixed later (with 'luai_fixjump'). If there are jumps to
 ** this position (kept in 'jpc'), link them all together so that
-** 'patchlistaux' will fix all them directly to the final destination.
+** 'luai_patchlistaux' will fix all them directly to the final destination.
 */
-int luaK_jump (FuncState *fs) {
-  int jpc = fs->jpc;  /* save list of jumps to here */
+int luaK_jump (luai_FuncState *fs) {
+  int jpc = fs->jpc;  /* luai_save list of jumps to here */
   int j;
-  fs->jpc = NO_JUMP;  /* no more jumps to here */
-  j = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);
+  fs->jpc = LUAI_NO_JUMP;  /* no more jumps to here */
+  j = luaK_codeAsBx(fs, luai_OP_JMP, 0, LUAI_NO_JUMP);
   luaK_concat(fs, &j, jpc);  /* keep them on hold */
   return j;
 }
@@ -7015,8 +7014,8 @@ int luaK_jump (FuncState *fs) {
 /*
 ** Code a 'return' instruction
 */
-void luaK_ret (FuncState *fs, int first, int nret) {
-  luaK_codeABC(fs, OP_RETURN, first, nret+1, 0);
+void luaK_ret (luai_FuncState *fs, int first, int nret) {
+  luaK_codeABC(fs, luai_OP_RETURN, first, nret+1, 0);
 }
 
 
@@ -7024,7 +7023,7 @@ void luaK_ret (FuncState *fs, int first, int nret) {
 ** Code a "conditional jump", that is, a test or comparison opcode
 ** followed by a jump. Return jump position.
 */
-static int condjump (FuncState *fs, OpCode op, int A, int B, int C) {
+static int luai_condjump (luai_FuncState *fs, luai_OpCode op, int A, int B, int C) {
   luaK_codeABC(fs, op, A, B, C);
   return luaK_jump(fs);
 }
@@ -7032,9 +7031,9 @@ static int condjump (FuncState *fs, OpCode op, int A, int B, int C) {
 
 /*
 ** returns current 'pc' and marks it as a jump target (to avoid wrong
-** optimizations with consecutive instructions not in the same basic block).
+** optimizations with consecutive instructions not in the same basic luai_getblock).
 */
-int luaK_getlabel (FuncState *fs) {
+int luaK_getlabel (luai_FuncState *fs) {
   fs->lasttarget = fs->pc;
   return fs->pc;
 }
@@ -7045,9 +7044,9 @@ int luaK_getlabel (FuncState *fs) {
 ** jump (that is, its condition), or the jump itself if it is
 ** unconditional.
 */
-static Instruction *getjumpcontrol (FuncState *fs, int pc) {
+static Instruction *luai_getjumpcontrol (luai_FuncState *fs, int pc) {
   Instruction *pi = &fs->f->code[pc];
-  if (pc >= 1 && testTMode(GET_OPCODE(*(pi-1))))
+  if (pc >= 1 && luai_testTMode(luai_GETOPCODE(*(pi-1))))
     return pi-1;
   else
     return pi;
@@ -7057,20 +7056,20 @@ static Instruction *getjumpcontrol (FuncState *fs, int pc) {
 /*
 ** Patch destination register for a TESTSET instruction.
 ** If instruction in position 'node' is not a TESTSET, return 0 ("fails").
-** Otherwise, if 'reg' is not 'NO_REG', set it as the destination
+** Otherwise, if 'reg' is not 'luai_NO_REG', set it as the destination
 ** register. Otherwise, change instruction to a simple 'TEST' (produces
 ** no register value)
 */
-static int patchtestreg (FuncState *fs, int node, int reg) {
-  Instruction *i = getjumpcontrol(fs, node);
-  if (GET_OPCODE(*i) != OP_TESTSET)
+static int luai_patchtestreg (luai_FuncState *fs, int node, int reg) {
+  Instruction *i = luai_getjumpcontrol(fs, node);
+  if (luai_GETOPCODE(*i) != luai_OP_TESTSET)
     return 0;  /* cannot patch other instructions */
-  if (reg != NO_REG && reg != GETARG_B(*i))
-    SETARG_A(*i, reg);
+  if (reg != luai_NO_REG && reg != luai_GETARG_B(*i))
+    luai_SETARG_A(*i, reg);
   else {
      /* no register to put value or register already has the value;
         change instruction to simple test */
-    *i = CREATE_ABC(OP_TEST, GETARG_B(*i), 0, GETARG_C(*i));
+    *i = luai_CREATE_ABC(luai_OP_TEST, luai_GETARG_B(*i), 0, luai_GETARG_C(*i));
   }
   return 1;
 }
@@ -7079,9 +7078,9 @@ static int patchtestreg (FuncState *fs, int node, int reg) {
 /*
 ** Traverse a list of tests ensuring no one produces a value
 */
-static void removevalues (FuncState *fs, int list) {
-  for (; list != NO_JUMP; list = getjump(fs, list))
-      patchtestreg(fs, list, NO_REG);
+static void luai_removevalues (luai_FuncState *fs, int list) {
+  for (; list != LUAI_NO_JUMP; list = luai_getjump(fs, list))
+      luai_patchtestreg(fs, list, luai_NO_REG);
 }
 
 
@@ -7090,15 +7089,15 @@ static void removevalues (FuncState *fs, int list) {
 ** registers: tests producing values jump to 'vtarget' (and put their
 ** values in 'reg'), other tests jump to 'dtarget'.
 */
-static void patchlistaux (FuncState *fs, int list, int vtarget, int reg,
+static void luai_patchlistaux (luai_FuncState *fs, int list, int vtarget, int reg,
                           int dtarget) {
-  while (list != NO_JUMP) {
-    int next = getjump(fs, list);
-    if (patchtestreg(fs, list, reg))
-      fixjump(fs, list, vtarget);
+  while (list != LUAI_NO_JUMP) {
+    int luai_next = luai_getjump(fs, list);
+    if (luai_patchtestreg(fs, list, reg))
+      luai_fixjump(fs, list, vtarget);
     else
-      fixjump(fs, list, dtarget);  /* jump to default target */
-    list = next;
+      luai_fixjump(fs, list, dtarget);  /* jump to default target */
+    list = luai_next;
   }
 }
 
@@ -7108,9 +7107,9 @@ static void patchlistaux (FuncState *fs, int list, int vtarget, int reg,
 ** to current position with no values) and reset list of pending
 ** jumps
 */
-static void dischargejpc (FuncState *fs) {
-  patchlistaux(fs, fs->jpc, fs->pc, NO_REG, fs->pc);
-  fs->jpc = NO_JUMP;
+static void luai_dischargejpc (luai_FuncState *fs) {
+  luai_patchlistaux(fs, fs->jpc, fs->pc, luai_NO_REG, fs->pc);
+  fs->jpc = LUAI_NO_JUMP;
 }
 
 
@@ -7118,7 +7117,7 @@ static void dischargejpc (FuncState *fs) {
 ** Add elements in 'list' to list of pending jumps to "here"
 ** (current position)
 */
-void luaK_patchtohere (FuncState *fs, int list) {
+void luaK_patchtohere (luai_FuncState *fs, int list) {
   luaK_getlabel(fs);  /* mark "here" as a jump target */
   luaK_concat(fs, &fs->jpc, list);
 }
@@ -7129,12 +7128,12 @@ void luaK_patchtohere (FuncState *fs, int list) {
 ** (The assert means that we cannot fix a jump to a forward address
 ** because we only know addresses once code is generated.)
 */
-void luaK_patchlist (FuncState *fs, int list, int target) {
+void luaK_patchlist (luai_FuncState *fs, int list, int target) {
   if (target == fs->pc)  /* 'target' is current position? */
     luaK_patchtohere(fs, list);  /* add list to pending jumps */
   else {
     lua_assert(target < fs->pc);
-    patchlistaux(fs, list, target, NO_REG, target);
+    luai_patchlistaux(fs, list, target, luai_NO_REG, target);
   }
 }
 
@@ -7144,13 +7143,13 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
 ** (The assertion checks that jumps either were closing nothing
 ** or were closing higher levels, from inner blocks.)
 */
-void luaK_patchclose (FuncState *fs, int list, int level) {
+void luaK_patchclose (luai_FuncState *fs, int list, int level) {
   level++;  /* argument is +1 to reserve 0 as non-op */
-  for (; list != NO_JUMP; list = getjump(fs, list)) {
-    lua_assert(GET_OPCODE(fs->f->code[list]) == OP_JMP &&
-                (GETARG_A(fs->f->code[list]) == 0 ||
-                 GETARG_A(fs->f->code[list]) >= level));
-    SETARG_A(fs->f->code[list], level);
+  for (; list != LUAI_NO_JUMP; list = luai_getjump(fs, list)) {
+    lua_assert(luai_GETOPCODE(fs->f->code[list]) == luai_OP_JMP &&
+                (luai_GETARG_A(fs->f->code[list]) == 0 ||
+                 luai_GETARG_A(fs->f->code[list]) >= level));
+    luai_SETARG_A(fs->f->code[list], level);
   }
 }
 
@@ -7159,14 +7158,14 @@ void luaK_patchclose (FuncState *fs, int list, int level) {
 ** Emit instruction 'i', checking for array sizes and saving also its
 ** line information. Return 'i' position.
 */
-static int luaK_code (FuncState *fs, Instruction i) {
-  Proto *f = fs->f;
-  dischargejpc(fs);  /* 'pc' will change */
+static int luaK_code (luai_FuncState *fs, Instruction i) {
+  luai_Proto *f = fs->f;
+  luai_dischargejpc(fs);  /* 'pc' will change */
   /* put new instruction in code array */
   luaM_growvector(fs->ls->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "opcodes");
   f->code[fs->pc] = i;
-  /* save corresponding line information */
+  /* luai_save corresponding line information */
   luaM_growvector(fs->ls->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
                   MAX_INT, "opcodes");
   f->lineinfo[fs->pc] = fs->ls->lastline;
@@ -7175,49 +7174,49 @@ static int luaK_code (FuncState *fs, Instruction i) {
 
 
 /*
-** Format and emit an 'iABC' instruction. (Assertions check consistency
+** Format and emit an 'luai_iABC' instruction. (Assertions luai_check consistency
 ** of parameters versus opcode.)
 */
-int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
-  lua_assert(getOpMode(o) == iABC);
-  lua_assert(getBMode(o) != OpArgN || b == 0);
-  lua_assert(getCMode(o) != OpArgN || c == 0);
-  lua_assert(a <= MAXARG_A && b <= MAXARG_B && c <= MAXARG_C);
-  return luaK_code(fs, CREATE_ABC(o, a, b, c));
+int luaK_codeABC (luai_FuncState *fs, luai_OpCode o, int a, int b, int c) {
+  lua_assert(luai_getOpMode(o) == luai_iABC);
+  lua_assert(luai_getBMode(o) != luai_OpArgN || b == 0);
+  lua_assert(luai_getCMode(o) != luai_OpArgN || c == 0);
+  lua_assert(a <= luai_MAXARG_A && b <= luai_MAXARG_B && c <= luai_MAXARG_C);
+  return luaK_code(fs, luai_CREATE_ABC(o, a, b, c));
 }
 
 
 /*
-** Format and emit an 'iABx' instruction.
+** Format and emit an 'luai_iABx' instruction.
 */
-int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
-  lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
-  lua_assert(getCMode(o) == OpArgN);
-  lua_assert(a <= MAXARG_A && bc <= MAXARG_Bx);
-  return luaK_code(fs, CREATE_ABx(o, a, bc));
+int luaK_codeABx (luai_FuncState *fs, luai_OpCode o, int a, unsigned int bc) {
+  lua_assert(luai_getOpMode(o) == luai_iABx || luai_getOpMode(o) == luai_iAsBx);
+  lua_assert(luai_getCMode(o) == luai_OpArgN);
+  lua_assert(a <= luai_MAXARG_A && bc <= luai_MAXARG_Bx);
+  return luaK_code(fs, luai_CREATE_ABx(o, a, bc));
 }
 
 
 /*
-** Emit an "extra argument" instruction (format 'iAx')
+** Emit an "extra argument" instruction (format 'luai_iAx')
 */
-static int codeextraarg (FuncState *fs, int a) {
-  lua_assert(a <= MAXARG_Ax);
-  return luaK_code(fs, CREATE_Ax(OP_EXTRAARG, a));
+static int luai_codeextraarg (luai_FuncState *fs, int a) {
+  lua_assert(a <= luai_MAXARG_Ax);
+  return luaK_code(fs, luai_CREATE_Ax(luai_OP_EXTRAARG, a));
 }
 
 
 /*
-** Emit a "load constant" instruction, using either 'OP_LOADK'
-** (if constant index 'k' fits in 18 bits) or an 'OP_LOADKX'
+** Emit a "load constant" instruction, using either 'luai_OP_LOADK'
+** (if constant index 'k' fits in 18 bits) or an 'luai_OP_LOADKX'
 ** instruction with "extra argument".
 */
-int luaK_codek (FuncState *fs, int reg, int k) {
-  if (k <= MAXARG_Bx)
-    return luaK_codeABx(fs, OP_LOADK, reg, k);
+int luaK_codek (luai_FuncState *fs, int reg, int k) {
+  if (k <= luai_MAXARG_Bx)
+    return luaK_codeABx(fs, luai_OP_LOADK, reg, k);
   else {
-    int p = luaK_codeABx(fs, OP_LOADKX, reg, 0);
-    codeextraarg(fs, k);
+    int p = luaK_codeABx(fs, luai_OP_LOADKX, reg, 0);
+    luai_codeextraarg(fs, k);
     return p;
   }
 }
@@ -7225,15 +7224,15 @@ int luaK_codek (FuncState *fs, int reg, int k) {
 
 /*
 ** Check register-stack level, keeping track of its maximum size
-** in field 'maxstacksize'
+** in luai_field 'maxstacksize'
 */
-void luaK_checkstack (FuncState *fs, int n) {
-  int newstack = fs->freereg + n;
+void luaK_checkstack (luai_FuncState *fs, int n) {
+  int newstack = fs->luai_freereg + n;
   if (newstack > fs->f->maxstacksize) {
     if (newstack >= LUA_MAXREGS)
       luaX_syntaxerror(fs->ls,
         "function or expression needs too many registers");
-    fs->f->maxstacksize = cast_byte(newstack);
+    fs->f->maxstacksize = luai_cast_byte(newstack);
   }
 }
 
@@ -7241,9 +7240,9 @@ void luaK_checkstack (FuncState *fs, int n) {
 /*
 ** Reserve 'n' registers in register stack
 */
-void luaK_reserveregs (FuncState *fs, int n) {
+void luaK_reserveregs (luai_FuncState *fs, int n) {
   luaK_checkstack(fs, n);
-  fs->freereg += n;
+  fs->luai_freereg += n;
 }
 
 
@@ -7252,10 +7251,10 @@ void luaK_reserveregs (FuncState *fs, int n) {
 ** a local variable.
 )
 */
-static void freereg (FuncState *fs, int reg) {
-  if (!ISK(reg) && reg >= fs->nactvar) {
-    fs->freereg--;
-    lua_assert(reg == fs->freereg);
+static void luai_freereg (luai_FuncState *fs, int reg) {
+  if (!luai_ISK(reg) && reg >= fs->nactvar) {
+    fs->luai_freereg--;
+    lua_assert(reg == fs->luai_freereg);
   }
 }
 
@@ -7263,9 +7262,9 @@ static void freereg (FuncState *fs, int reg) {
 /*
 ** Free register used by expression 'e' (if any)
 */
-static void freeexp (FuncState *fs, expdesc *e) {
-  if (e->k == VNONRELOC)
-    freereg(fs, e->u.info);
+static void luai_freeexp (luai_FuncState *fs, luai_expdesc *e) {
+  if (e->k == LUAI_VNONRELOC)
+    luai_freereg(fs, e->u.info);
 }
 
 
@@ -7273,34 +7272,34 @@ static void freeexp (FuncState *fs, expdesc *e) {
 ** Free registers used by expressions 'e1' and 'e2' (if any) in proper
 ** order.
 */
-static void freeexps (FuncState *fs, expdesc *e1, expdesc *e2) {
-  int r1 = (e1->k == VNONRELOC) ? e1->u.info : -1;
-  int r2 = (e2->k == VNONRELOC) ? e2->u.info : -1;
+static void luai_freeexps (luai_FuncState *fs, luai_expdesc *e1, luai_expdesc *e2) {
+  int r1 = (e1->k == LUAI_VNONRELOC) ? e1->u.info : -1;
+  int r2 = (e2->k == LUAI_VNONRELOC) ? e2->u.info : -1;
   if (r1 > r2) {
-    freereg(fs, r1);
-    freereg(fs, r2);
+    luai_freereg(fs, r1);
+    luai_freereg(fs, r2);
   }
   else {
-    freereg(fs, r2);
-    freereg(fs, r1);
+    luai_freereg(fs, r2);
+    luai_freereg(fs, r1);
   }
 }
 
 
 /*
-** Add constant 'v' to prototype's list of constants (field 'k').
+** Add constant 'v' to prototype's list of constants (luai_field 'k').
 ** Use scanner's table to cache position of constants in constant list
 ** and try to reuse constants. Because some values should not be used
 ** as keys (nil cannot be a key, integer keys can collapse with float
 ** keys), the caller must provide a useful 'key' for indexing the cache.
 */
-static int addk (FuncState *fs, TValue *key, TValue *v) {
+static int luai_addk (luai_FuncState *fs, luai_TValue *key, luai_TValue *v) {
   lua_State *L = fs->ls->L;
-  Proto *f = fs->f;
-  TValue *idx = luaH_set(L, fs->ls->h, key);  /* index scanner table */
+  luai_Proto *f = fs->f;
+  luai_TValue *idx = luaH_set(L, fs->ls->h, key);  /* index scanner table */
   int k, oldsize;
   if (ttisinteger(idx)) {  /* is there an index there? */
-    k = cast_int(ivalue(idx));
+    k = luai_cast_int(ivalue(idx));
     /* correct value? (warning: must distinguish floats from integers!) */
     if (k < fs->nk && ttype(&f->k[k]) == ttype(v) &&
                       luaV_rawequalobj(&f->k[k], v))
@@ -7309,10 +7308,10 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   /* constant not found; create a new entry */
   oldsize = f->sizek;
   k = fs->nk;
-  /* numerical value does not need GC barrier;
+  /* numerical value does not need LUAI_GC barrier;
      table has no metatable, so it does not need to invalidate cache */
   setivalue(idx, k);
-  luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
+  luaM_growvector(L, f->k, k, f->sizek, luai_TValue, luai_MAXARG_Ax, "constants");
   while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
   setobj(L, &f->k[k], v);
   fs->nk++;
@@ -7324,10 +7323,10 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
 /*
 ** Add a string to list of constants and return its index.
 */
-int luaK_stringK (FuncState *fs, TString *s) {
-  TValue o;
+int luaK_stringK (luai_FuncState *fs, luai_TString *s) {
+  luai_TValue o;
   setsvalue(fs->ls->L, &o, s);
-  return addk(fs, &o, &o);  /* use string itself as key */
+  return luai_addk(fs, &o, &o);  /* use string itself as key */
 }
 
 
@@ -7337,42 +7336,42 @@ int luaK_stringK (FuncState *fs, TString *s) {
 ** same value; conversion to 'void*' is used only for hashing, so there
 ** are no "precision" problems.
 */
-int luaK_intK (FuncState *fs, lua_Integer n) {
-  TValue k, o;
-  setpvalue(&k, cast(void*, cast(size_t, n)));
+int luaK_intK (luai_FuncState *fs, lua_Integer n) {
+  luai_TValue k, o;
+  setpvalue(&k, luai_cast(void*, luai_cast(size_t, n)));
   setivalue(&o, n);
-  return addk(fs, &k, &o);
+  return luai_addk(fs, &k, &o);
 }
 
 /*
 ** Add a float to list of constants and return its index.
 */
-static int luaK_numberK (FuncState *fs, lua_Number r) {
-  TValue o;
+static int luaK_numberK (luai_FuncState *fs, lua_Number r) {
+  luai_TValue o;
   setfltvalue(&o, r);
-  return addk(fs, &o, &o);  /* use number itself as key */
+  return luai_addk(fs, &o, &o);  /* use number itself as key */
 }
 
 
 /*
 ** Add a boolean to list of constants and return its index.
 */
-static int boolK (FuncState *fs, int b) {
-  TValue o;
+static int luai_boolK (luai_FuncState *fs, int b) {
+  luai_TValue o;
   setbvalue(&o, b);
-  return addk(fs, &o, &o);  /* use boolean itself as key */
+  return luai_addk(fs, &o, &o);  /* use boolean itself as key */
 }
 
 
 /*
 ** Add nil to list of constants and return its index.
 */
-static int nilK (FuncState *fs) {
-  TValue k, v;
+static int luai_nilK (luai_FuncState *fs) {
+  luai_TValue k, v;
   setnilvalue(&v);
   /* cannot use nil as key; instead use table itself to represent nil */
   sethvalue(fs->ls->L, &k, fs->ls->h);
-  return addk(fs, &k, &v);
+  return luai_addk(fs, &k, &v);
 }
 
 
@@ -7381,14 +7380,14 @@ static int nilK (FuncState *fs) {
 ** Either 'e' is a multi-ret expression (function call or vararg)
 ** or 'nresults' is LUA_MULTRET (as any expression can satisfy that).
 */
-void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
-  if (e->k == VCALL) {  /* expression is an open function call? */
-    SETARG_C(getinstruction(fs, e), nresults + 1);
+void luaK_setreturns (luai_FuncState *fs, luai_expdesc *e, int nresults) {
+  if (e->k == LUAI_VCALL) {  /* expression is an open function call? */
+    luai_SETARG_C(luai_getinstruction(fs, e), nresults + 1);
   }
-  else if (e->k == VVARARG) {
-    Instruction *pc = &getinstruction(fs, e);
-    SETARG_B(*pc, nresults + 1);
-    SETARG_A(*pc, fs->freereg);
+  else if (e->k == LUAI_VVARARG) {
+    Instruction *pc = &luai_getinstruction(fs, e);
+    luai_SETARG_B(*pc, nresults + 1);
+    luai_SETARG_A(*pc, fs->luai_freereg);
     luaK_reserveregs(fs, 1);
   }
   else lua_assert(nresults == LUA_MULTRET);
@@ -7399,22 +7398,22 @@ void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
 ** Fix an expression to return one result.
 ** If expression is not a multi-ret expression (function call or
 ** vararg), it already returns one result, so nothing needs to be done.
-** Function calls become VNONRELOC expressions (as its result comes
+** Function calls become LUAI_VNONRELOC expressions (as its result comes
 ** fixed in the base register of the call), while vararg expressions
-** become VRELOCABLE (as OP_VARARG puts its results where it wants).
+** become LUAI_VRELOCABLE (as luai_OP_VARARG puts its results where it wants).
 ** (Calls are created returning one result, so that does not need
 ** to be fixed.)
 */
-void luaK_setoneret (FuncState *fs, expdesc *e) {
-  if (e->k == VCALL) {  /* expression is an open function call? */
+void luaK_setoneret (luai_FuncState *fs, luai_expdesc *e) {
+  if (e->k == LUAI_VCALL) {  /* expression is an open function call? */
     /* already returns 1 value */
-    lua_assert(GETARG_C(getinstruction(fs, e)) == 2);
-    e->k = VNONRELOC;  /* result has fixed position */
-    e->u.info = GETARG_A(getinstruction(fs, e));
+    lua_assert(luai_GETARG_C(luai_getinstruction(fs, e)) == 2);
+    e->k = LUAI_VNONRELOC;  /* result has fixed position */
+    e->u.info = luai_GETARG_A(luai_getinstruction(fs, e));
   }
-  else if (e->k == VVARARG) {
-    SETARG_B(getinstruction(fs, e), 2);
-    e->k = VRELOCABLE;  /* can relocate its simple result */
+  else if (e->k == LUAI_VVARARG) {
+    luai_SETARG_B(luai_getinstruction(fs, e), 2);
+    e->k = LUAI_VRELOCABLE;  /* can relocate its simple result */
   }
 }
 
@@ -7422,33 +7421,33 @@ void luaK_setoneret (FuncState *fs, expdesc *e) {
 /*
 ** Ensure that expression 'e' is not a variable.
 */
-void luaK_dischargevars (FuncState *fs, expdesc *e) {
+void luaK_dischargevars (luai_FuncState *fs, luai_expdesc *e) {
   switch (e->k) {
-    case VLOCAL: {  /* already in a register */
-      e->k = VNONRELOC;  /* becomes a non-relocatable value */
+    case LUAI_VLOCAL: {  /* already in a register */
+      e->k = LUAI_VNONRELOC;  /* becomes a non-relocatable value */
       break;
     }
-    case VUPVAL: {  /* move value to some (pending) register */
-      e->u.info = luaK_codeABC(fs, OP_GETUPVAL, 0, e->u.info, 0);
-      e->k = VRELOCABLE;
+    case LUAI_VUPVAL: {  /* move value to some (pending) register */
+      e->u.info = luaK_codeABC(fs, luai_OP_GETUPVAL, 0, e->u.info, 0);
+      e->k = LUAI_VRELOCABLE;
       break;
     }
-    case VINDEXED: {
-      OpCode op;
-      freereg(fs, e->u.ind.idx);
-      if (e->u.ind.vt == VLOCAL) {  /* is 't' in a register? */
-        freereg(fs, e->u.ind.t);
-        op = OP_GETTABLE;
+    case LUAI_VINDEXED: {
+      luai_OpCode op;
+      luai_freereg(fs, e->u.ind.idx);
+      if (e->u.ind.vt == LUAI_VLOCAL) {  /* is 't' in a register? */
+        luai_freereg(fs, e->u.ind.t);
+        op = luai_OP_GETTABLE;
       }
       else {
-        lua_assert(e->u.ind.vt == VUPVAL);
-        op = OP_GETTABUP;  /* 't' is in an upvalue */
+        lua_assert(e->u.ind.vt == LUAI_VUPVAL);
+        op = luai_OP_GETTABUP;  /* 't' is in an upvalue */
       }
       e->u.info = luaK_codeABC(fs, op, 0, e->u.ind.t, e->u.ind.idx);
-      e->k = VRELOCABLE;
+      e->k = LUAI_VRELOCABLE;
       break;
     }
-    case VVARARG: case VCALL: {
+    case LUAI_VVARARG: case LUAI_VCALL: {
       luaK_setoneret(fs, e);
       break;
     }
@@ -7461,74 +7460,74 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
 ** Ensures expression value is in register 'reg' (and therefore
 ** 'e' will become a non-relocatable expression).
 */
-static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
+static void luai_discharge2reg (luai_FuncState *fs, luai_expdesc *e, int reg) {
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VNIL: {
+    case LUAI_VNIL: {
       luaK_nil(fs, reg, 1);
       break;
     }
-    case VFALSE: case VTRUE: {
-      luaK_codeABC(fs, OP_LOADBOOL, reg, e->k == VTRUE, 0);
+    case LUAI_VFALSE: case LUAI_VTRUE: {
+      luaK_codeABC(fs, luai_OP_LOADBOOL, reg, e->k == LUAI_VTRUE, 0);
       break;
     }
-    case VK: {
+    case LUAI_VK: {
       luaK_codek(fs, reg, e->u.info);
       break;
     }
-    case VKFLT: {
+    case LUAI_VKFLT: {
       luaK_codek(fs, reg, luaK_numberK(fs, e->u.nval));
       break;
     }
-    case VKINT: {
+    case LUAI_VKINT: {
       luaK_codek(fs, reg, luaK_intK(fs, e->u.ival));
       break;
     }
-    case VRELOCABLE: {
-      Instruction *pc = &getinstruction(fs, e);
-      SETARG_A(*pc, reg);  /* instruction will put result in 'reg' */
+    case LUAI_VRELOCABLE: {
+      Instruction *pc = &luai_getinstruction(fs, e);
+      luai_SETARG_A(*pc, reg);  /* instruction will put result in 'reg' */
       break;
     }
-    case VNONRELOC: {
+    case LUAI_VNONRELOC: {
       if (reg != e->u.info)
-        luaK_codeABC(fs, OP_MOVE, reg, e->u.info, 0);
+        luaK_codeABC(fs, luai_OP_MOVE, reg, e->u.info, 0);
       break;
     }
     default: {
-      lua_assert(e->k == VJMP);
+      lua_assert(e->k == LUAI_VJMP);
       return;  /* nothing to do... */
     }
   }
   e->u.info = reg;
-  e->k = VNONRELOC;
+  e->k = LUAI_VNONRELOC;
 }
 
 
 /*
 ** Ensures expression value is in any register.
 */
-static void discharge2anyreg (FuncState *fs, expdesc *e) {
-  if (e->k != VNONRELOC) {  /* no fixed register yet? */
+static void luai_discharge2anyreg (luai_FuncState *fs, luai_expdesc *e) {
+  if (e->k != LUAI_VNONRELOC) {  /* no fixed register yet? */
     luaK_reserveregs(fs, 1);  /* get a register */
-    discharge2reg(fs, e, fs->freereg-1);  /* put value there */
+    luai_discharge2reg(fs, e, fs->luai_freereg-1);  /* put value there */
   }
 }
 
 
-static int code_loadbool (FuncState *fs, int A, int b, int jump) {
+static int luai_code_loadbool (luai_FuncState *fs, int A, int b, int jump) {
   luaK_getlabel(fs);  /* those instructions may be jump targets */
-  return luaK_codeABC(fs, OP_LOADBOOL, A, b, jump);
+  return luaK_codeABC(fs, luai_OP_LOADBOOL, A, b, jump);
 }
 
 
 /*
-** check whether list has any jump that do not produce a value
+** luai_check whether list has any jump that do not produce a value
 ** or produce an inverted value
 */
-static int need_value (FuncState *fs, int list) {
-  for (; list != NO_JUMP; list = getjump(fs, list)) {
-    Instruction i = *getjumpcontrol(fs, list);
-    if (GET_OPCODE(i) != OP_TESTSET) return 1;
+static int luai_need_value (luai_FuncState *fs, int list) {
+  for (; list != LUAI_NO_JUMP; list = luai_getjump(fs, list)) {
+    Instruction i = *luai_getjumpcontrol(fs, list);
+    if (luai_GETOPCODE(i) != luai_OP_TESTSET) return 1;
   }
   return 0;  /* not found */
 }
@@ -7541,39 +7540,39 @@ static int need_value (FuncState *fs, int list) {
 ** its final position or to "load" instructions (for those tests
 ** that do not produce values).
 */
-static void exp2reg (FuncState *fs, expdesc *e, int reg) {
-  discharge2reg(fs, e, reg);
-  if (e->k == VJMP)  /* expression itself is a test? */
+static void luai_exp2reg (luai_FuncState *fs, luai_expdesc *e, int reg) {
+  luai_discharge2reg(fs, e, reg);
+  if (e->k == LUAI_VJMP)  /* expression itself is a test? */
     luaK_concat(fs, &e->t, e->u.info);  /* put this jump in 't' list */
   if (lua_hasjumps(e)) {
     int final;  /* position after whole expression */
-    int p_f = NO_JUMP;  /* position of an eventual LOAD false */
-    int p_t = NO_JUMP;  /* position of an eventual LOAD true */
-    if (need_value(fs, e->t) || need_value(fs, e->f)) {
-      int fj = (e->k == VJMP) ? NO_JUMP : luaK_jump(fs);
-      p_f = code_loadbool(fs, reg, 0, 1);
-      p_t = code_loadbool(fs, reg, 1, 0);
+    int p_f = LUAI_NO_JUMP;  /* position of an eventual LOAD false */
+    int p_t = LUAI_NO_JUMP;  /* position of an eventual LOAD true */
+    if (luai_need_value(fs, e->t) || luai_need_value(fs, e->f)) {
+      int fj = (e->k == LUAI_VJMP) ? LUAI_NO_JUMP : luaK_jump(fs);
+      p_f = luai_code_loadbool(fs, reg, 0, 1);
+      p_t = luai_code_loadbool(fs, reg, 1, 0);
       luaK_patchtohere(fs, fj);
     }
     final = luaK_getlabel(fs);
-    patchlistaux(fs, e->f, final, reg, p_f);
-    patchlistaux(fs, e->t, final, reg, p_t);
+    luai_patchlistaux(fs, e->f, final, reg, p_f);
+    luai_patchlistaux(fs, e->t, final, reg, p_t);
   }
-  e->f = e->t = NO_JUMP;
+  e->f = e->t = LUAI_NO_JUMP;
   e->u.info = reg;
-  e->k = VNONRELOC;
+  e->k = LUAI_VNONRELOC;
 }
 
 
 /*
 ** Ensures final expression result (including results from its jump
-** lists) is in next available register.
+** lists) is in luai_next available register.
 */
-void luaK_exp2nextreg (FuncState *fs, expdesc *e) {
+void luaK_exp2nextreg (luai_FuncState *fs, luai_expdesc *e) {
   luaK_dischargevars(fs, e);
-  freeexp(fs, e);
+  luai_freeexp(fs, e);
   luaK_reserveregs(fs, 1);
-  exp2reg(fs, e, fs->freereg - 1);
+  luai_exp2reg(fs, e, fs->luai_freereg - 1);
 }
 
 
@@ -7581,17 +7580,17 @@ void luaK_exp2nextreg (FuncState *fs, expdesc *e) {
 ** Ensures final expression result (including results from its jump
 ** lists) is in some (any) register and return that register.
 */
-int luaK_exp2anyreg (FuncState *fs, expdesc *e) {
+int luaK_exp2anyreg (luai_FuncState *fs, luai_expdesc *e) {
   luaK_dischargevars(fs, e);
-  if (e->k == VNONRELOC) {  /* expression already has a register? */
+  if (e->k == LUAI_VNONRELOC) {  /* expression already has a register? */
     if (!lua_hasjumps(e))  /* no jumps? */
       return e->u.info;  /* result is already in a register */
     if (e->u.info >= fs->nactvar) {  /* reg. is not a local? */
-      exp2reg(fs, e, e->u.info);  /* put final result in it */
+      luai_exp2reg(fs, e, e->u.info);  /* put final result in it */
       return e->u.info;
     }
   }
-  luaK_exp2nextreg(fs, e);  /* otherwise, use next available register */
+  luaK_exp2nextreg(fs, e);  /* otherwise, use luai_next available register */
   return e->u.info;
 }
 
@@ -7600,8 +7599,8 @@ int luaK_exp2anyreg (FuncState *fs, expdesc *e) {
 ** Ensures final expression result is either in a register or in an
 ** upvalue.
 */
-void luaK_exp2anyregup (FuncState *fs, expdesc *e) {
-  if (e->k != VUPVAL || lua_hasjumps(e))
+void luaK_exp2anyregup (luai_FuncState *fs, luai_expdesc *e) {
+  if (e->k != LUAI_VUPVAL || lua_hasjumps(e))
     luaK_exp2anyreg(fs, e);
 }
 
@@ -7610,7 +7609,7 @@ void luaK_exp2anyregup (FuncState *fs, expdesc *e) {
 ** Ensures final expression result is either in a register or it is
 ** a constant.
 */
-void luaK_exp2val (FuncState *fs, expdesc *e) {
+void luaK_exp2val (luai_FuncState *fs, luai_expdesc *e) {
   if (lua_hasjumps(e))
     luaK_exp2anyreg(fs, e);
   else
@@ -7624,19 +7623,19 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
 ** in the range of R/K indices).
 ** Returns R/K index.
 */
-int luaK_exp2RK (FuncState *fs, expdesc *e) {
+int luaK_exp2RK (luai_FuncState *fs, luai_expdesc *e) {
   luaK_exp2val(fs, e);
   switch (e->k) {  /* move constants to 'k' */
-    case VTRUE: e->u.info = boolK(fs, 1); goto vk;
-    case VFALSE: e->u.info = boolK(fs, 0); goto vk;
-    case VNIL: e->u.info = nilK(fs); goto vk;
-    case VKINT: e->u.info = luaK_intK(fs, e->u.ival); goto vk;
-    case VKFLT: e->u.info = luaK_numberK(fs, e->u.nval); goto vk;
-    case VK:
+    case LUAI_VTRUE: e->u.info = luai_boolK(fs, 1); goto vk;
+    case LUAI_VFALSE: e->u.info = luai_boolK(fs, 0); goto vk;
+    case LUAI_VNIL: e->u.info = luai_nilK(fs); goto vk;
+    case LUAI_VKINT: e->u.info = luaK_intK(fs, e->u.ival); goto vk;
+    case LUAI_VKFLT: e->u.info = luaK_numberK(fs, e->u.nval); goto vk;
+    case LUAI_VK:
      vk:
-      e->k = VK;
-      if (e->u.info <= MAXINDEXRK)  /* constant fits in 'argC'? */
-        return RKASK(e->u.info);
+      e->k = LUAI_VK;
+      if (e->u.info <= luai_MAXINDEXRK)  /* constant fits in 'argC'? */
+        return luai_RKASK(e->u.info);
       else break;
     default: break;
   }
@@ -7648,54 +7647,54 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
 /*
 ** Generate code to store result of expression 'ex' into variable 'var'.
 */
-void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
+void luaK_storevar (luai_FuncState *fs, luai_expdesc *var, luai_expdesc *ex) {
   switch (var->k) {
-    case VLOCAL: {
-      freeexp(fs, ex);
-      exp2reg(fs, ex, var->u.info);  /* compute 'ex' into proper place */
+    case LUAI_VLOCAL: {
+      luai_freeexp(fs, ex);
+      luai_exp2reg(fs, ex, var->u.info);  /* compute 'ex' into proper place */
       return;
     }
-    case VUPVAL: {
+    case LUAI_VUPVAL: {
       int e = luaK_exp2anyreg(fs, ex);
-      luaK_codeABC(fs, OP_SETUPVAL, e, var->u.info, 0);
+      luaK_codeABC(fs, luai_OP_SETUPVAL, e, var->u.info, 0);
       break;
     }
-    case VINDEXED: {
-      OpCode op = (var->u.ind.vt == VLOCAL) ? OP_SETTABLE : OP_SETTABUP;
+    case LUAI_VINDEXED: {
+      luai_OpCode op = (var->u.ind.vt == LUAI_VLOCAL) ? luai_OP_SETTABLE : luai_OP_SETTABUP;
       int e = luaK_exp2RK(fs, ex);
       luaK_codeABC(fs, op, var->u.ind.t, var->u.ind.idx, e);
       break;
     }
     default: lua_assert(0);  /* invalid var kind to store */
   }
-  freeexp(fs, ex);
+  luai_freeexp(fs, ex);
 }
 
 
 /*
 ** Emit SELF instruction (convert expression 'e' into 'e:key(e,').
 */
-void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
+void luaK_self (luai_FuncState *fs, luai_expdesc *e, luai_expdesc *key) {
   int ereg;
   luaK_exp2anyreg(fs, e);
   ereg = e->u.info;  /* register where 'e' was placed */
-  freeexp(fs, e);
-  e->u.info = fs->freereg;  /* base register for op_self */
-  e->k = VNONRELOC;  /* self expression has a fixed register */
+  luai_freeexp(fs, e);
+  e->u.info = fs->luai_freereg;  /* base register for op_self */
+  e->k = LUAI_VNONRELOC;  /* self expression has a fixed register */
   luaK_reserveregs(fs, 2);  /* function and 'self' produced by op_self */
-  luaK_codeABC(fs, OP_SELF, e->u.info, ereg, luaK_exp2RK(fs, key));
-  freeexp(fs, key);
+  luaK_codeABC(fs, luai_OP_SELF, e->u.info, ereg, luaK_exp2RK(fs, key));
+  luai_freeexp(fs, key);
 }
 
 
 /*
 ** Negate condition 'e' (where 'e' is a comparison).
 */
-static void negatecondition (FuncState *fs, expdesc *e) {
-  Instruction *pc = getjumpcontrol(fs, e->u.info);
-  lua_assert(testTMode(GET_OPCODE(*pc)) && GET_OPCODE(*pc) != OP_TESTSET &&
-                                           GET_OPCODE(*pc) != OP_TEST);
-  SETARG_A(*pc, !(GETARG_A(*pc)));
+static void luai_negatecondition (luai_FuncState *fs, luai_expdesc *e) {
+  Instruction *pc = luai_getjumpcontrol(fs, e->u.info);
+  lua_assert(luai_testTMode(luai_GETOPCODE(*pc)) && luai_GETOPCODE(*pc) != luai_OP_TESTSET &&
+                                           luai_GETOPCODE(*pc) != luai_OP_TEST);
+  luai_SETARG_A(*pc, !(luai_GETARG_A(*pc)));
 }
 
 
@@ -7705,106 +7704,106 @@ static void negatecondition (FuncState *fs, expdesc *e) {
 ** Optimize when 'e' is 'not' something, inverting the condition
 ** and removing the 'not'.
 */
-static int jumponcond (FuncState *fs, expdesc *e, int cond) {
-  if (e->k == VRELOCABLE) {
-    Instruction ie = getinstruction(fs, e);
-    if (GET_OPCODE(ie) == OP_NOT) {
-      fs->pc--;  /* remove previous OP_NOT */
-      return condjump(fs, OP_TEST, GETARG_B(ie), 0, !cond);
+static int luai_jumponcond (luai_FuncState *fs, luai_expdesc *e, int cond) {
+  if (e->k == LUAI_VRELOCABLE) {
+    Instruction ie = luai_getinstruction(fs, e);
+    if (luai_GETOPCODE(ie) == luai_OP_NOT) {
+      fs->pc--;  /* remove previous luai_OP_NOT */
+      return luai_condjump(fs, luai_OP_TEST, luai_GETARG_B(ie), 0, !cond);
     }
     /* else go through */
   }
-  discharge2anyreg(fs, e);
-  freeexp(fs, e);
-  return condjump(fs, OP_TESTSET, NO_REG, e->u.info, cond);
+  luai_discharge2anyreg(fs, e);
+  luai_freeexp(fs, e);
+  return luai_condjump(fs, luai_OP_TESTSET, luai_NO_REG, e->u.info, cond);
 }
 
 
 /*
 ** Emit code to go through if 'e' is true, jump otherwise.
 */
-void luaK_goiftrue (FuncState *fs, expdesc *e) {
+void luaK_goiftrue (luai_FuncState *fs, luai_expdesc *e) {
   int pc;  /* pc of new jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VJMP: {  /* condition? */
-      negatecondition(fs, e);  /* jump when it is false */
-      pc = e->u.info;  /* save jump position */
+    case LUAI_VJMP: {  /* condition? */
+      luai_negatecondition(fs, e);  /* jump when it is false */
+      pc = e->u.info;  /* luai_save jump position */
       break;
     }
-    case VK: case VKFLT: case VKINT: case VTRUE: {
-      pc = NO_JUMP;  /* always true; do nothing */
+    case LUAI_VK: case LUAI_VKFLT: case LUAI_VKINT: case LUAI_VTRUE: {
+      pc = LUAI_NO_JUMP;  /* always true; do nothing */
       break;
     }
     default: {
-      pc = jumponcond(fs, e, 0);  /* jump when false */
+      pc = luai_jumponcond(fs, e, 0);  /* jump when false */
       break;
     }
   }
   luaK_concat(fs, &e->f, pc);  /* insert new jump in false list */
   luaK_patchtohere(fs, e->t);  /* true list jumps to here (to go through) */
-  e->t = NO_JUMP;
+  e->t = LUAI_NO_JUMP;
 }
 
 
 /*
 ** Emit code to go through if 'e' is false, jump otherwise.
 */
-void luaK_goiffalse (FuncState *fs, expdesc *e) {
+void luaK_goiffalse (luai_FuncState *fs, luai_expdesc *e) {
   int pc;  /* pc of new jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VJMP: {
+    case LUAI_VJMP: {
       pc = e->u.info;  /* already jump if true */
       break;
     }
-    case VNIL: case VFALSE: {
-      pc = NO_JUMP;  /* always false; do nothing */
+    case LUAI_VNIL: case LUAI_VFALSE: {
+      pc = LUAI_NO_JUMP;  /* always false; do nothing */
       break;
     }
     default: {
-      pc = jumponcond(fs, e, 1);  /* jump if true */
+      pc = luai_jumponcond(fs, e, 1);  /* jump if true */
       break;
     }
   }
   luaK_concat(fs, &e->t, pc);  /* insert new jump in 't' list */
   luaK_patchtohere(fs, e->f);  /* false list jumps to here (to go through) */
-  e->f = NO_JUMP;
+  e->f = LUAI_NO_JUMP;
 }
 
 
 /*
 ** Code 'not e', doing constant folding.
 */
-static void codenot (FuncState *fs, expdesc *e) {
+static void luai_codenot (luai_FuncState *fs, luai_expdesc *e) {
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VNIL: case VFALSE: {
-      e->k = VTRUE;  /* true == not nil == not false */
+    case LUAI_VNIL: case LUAI_VFALSE: {
+      e->k = LUAI_VTRUE;  /* true == not nil == not false */
       break;
     }
-    case VK: case VKFLT: case VKINT: case VTRUE: {
-      e->k = VFALSE;  /* false == not "x" == not 0.5 == not 1 == not true */
+    case LUAI_VK: case LUAI_VKFLT: case LUAI_VKINT: case LUAI_VTRUE: {
+      e->k = LUAI_VFALSE;  /* false == not "x" == not 0.5 == not 1 == not true */
       break;
     }
-    case VJMP: {
-      negatecondition(fs, e);
+    case LUAI_VJMP: {
+      luai_negatecondition(fs, e);
       break;
     }
-    case VRELOCABLE:
-    case VNONRELOC: {
-      discharge2anyreg(fs, e);
-      freeexp(fs, e);
-      e->u.info = luaK_codeABC(fs, OP_NOT, 0, e->u.info, 0);
-      e->k = VRELOCABLE;
+    case LUAI_VRELOCABLE:
+    case LUAI_VNONRELOC: {
+      luai_discharge2anyreg(fs, e);
+      luai_freeexp(fs, e);
+      e->u.info = luaK_codeABC(fs, luai_OP_NOT, 0, e->u.info, 0);
+      e->k = LUAI_VRELOCABLE;
       break;
     }
     default: lua_assert(0);  /* cannot happen */
   }
   /* interchange true and false lists */
   { int temp = e->f; e->f = e->t; e->t = temp; }
-  removevalues(fs, e->f);  /* values are useless when negated */
-  removevalues(fs, e->t);
+  luai_removevalues(fs, e->f);  /* values are useless when negated */
+  luai_removevalues(fs, e->t);
 }
 
 
@@ -7812,12 +7811,12 @@ static void codenot (FuncState *fs, expdesc *e) {
 ** Create expression 't[k]'. 't' must have its final result already in a
 ** register or upvalue.
 */
-void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
-  lua_assert(!lua_hasjumps(t) && (vkisinreg(t->k) || t->k == VUPVAL));
+void luaK_indexed (luai_FuncState *fs, luai_expdesc *t, luai_expdesc *k) {
+  lua_assert(!lua_hasjumps(t) && (luai_vkisinreg(t->k) || t->k == LUAI_VUPVAL));
   t->u.ind.t = t->u.info;  /* register or upvalue index */
   t->u.ind.idx = luaK_exp2RK(fs, k);  /* R/K index for key */
-  t->u.ind.vt = (t->k == VUPVAL) ? VUPVAL : VLOCAL;
-  t->k = VINDEXED;
+  t->u.ind.vt = (t->k == LUAI_VUPVAL) ? LUAI_VUPVAL : LUAI_VLOCAL;
+  t->k = LUAI_VINDEXED;
 }
 
 
@@ -7826,7 +7825,7 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 ** Bitwise operations need operands convertible to integers; division
 ** operations cannot have 0 as divisor.
 */
-static int validop (int op, TValue *v1, TValue *v2) {
+static int luai_validop (int op, luai_TValue *v1, luai_TValue *v2) {
   switch (op) {
     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
     case LUA_OPSHL: case LUA_OPSHR: case LUA_OPBNOT: {  /* conversion errors */
@@ -7844,21 +7843,21 @@ static int validop (int op, TValue *v1, TValue *v2) {
 ** Try to "constant-fold" an operation; return 1 iff successful.
 ** (In this case, 'e1' has the final result.)
 */
-static int constfolding (FuncState *fs, int op, expdesc *e1,
-                                                const expdesc *e2) {
-  TValue v1, v2, res;
-  if (!lua_tonumeral(e1, &v1) || !lua_tonumeral(e2, &v2) || !validop(op, &v1, &v2))
+static int luai_constfolding (luai_FuncState *fs, int op, luai_expdesc *e1,
+                                                const luai_expdesc *e2) {
+  luai_TValue v1, v2, res;
+  if (!lua_tonumeral(e1, &v1) || !lua_tonumeral(e2, &v2) || !luai_validop(op, &v1, &v2))
     return 0;  /* non-numeric operands or not safe to fold */
   luaO_arith(fs->ls->L, op, &v1, &v2, &res);  /* does operation */
   if (ttisinteger(&res)) {
-    e1->k = VKINT;
+    e1->k = LUAI_VKINT;
     e1->u.ival = ivalue(&res);
   }
   else {  /* folds neither NaN nor 0.0 (to avoid problems with -0.0) */
     lua_Number n = fltvalue(&res);
     if (luai_numisnan(n) || n == 0)
       return 0;
-    e1->k = VKFLT;
+    e1->k = LUAI_VKFLT;
     e1->u.nval = n;
   }
   return 1;
@@ -7870,11 +7869,11 @@ static int constfolding (FuncState *fs, int op, expdesc *e1,
 ** (everything but 'not').
 ** Expression to produce final result will be encoded in 'e'.
 */
-static void codeunexpval (FuncState *fs, OpCode op, expdesc *e, int line) {
+static void luai_codeunexpval (luai_FuncState *fs, luai_OpCode op, luai_expdesc *e, int line) {
   int r = luaK_exp2anyreg(fs, e);  /* opcodes operate only on registers */
-  freeexp(fs, e);
+  luai_freeexp(fs, e);
   e->u.info = luaK_codeABC(fs, op, 0, r, 0);  /* generate opcode */
-  e->k = VRELOCABLE;  /* all those operations are relocatable */
+  e->k = LUAI_VRELOCABLE;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
 }
 
@@ -7888,13 +7887,13 @@ static void codeunexpval (FuncState *fs, OpCode op, expdesc *e, int line) {
 ** in "stack order" (that is, first on 'e2', which may have more
 ** recent registers to be released).
 */
-static void codebinexpval (FuncState *fs, OpCode op,
-                           expdesc *e1, expdesc *e2, int line) {
+static void luai_codebinexpval (luai_FuncState *fs, luai_OpCode op,
+                           luai_expdesc *e1, luai_expdesc *e2, int line) {
   int rk2 = luaK_exp2RK(fs, e2);  /* both operands are "RK" */
   int rk1 = luaK_exp2RK(fs, e1);
-  freeexps(fs, e1, e2);
+  luai_freeexps(fs, e1, e2);
   e1->u.info = luaK_codeABC(fs, op, 0, rk1, rk2);  /* generate opcode */
-  e1->k = VRELOCABLE;  /* all those operations are relocatable */
+  e1->k = LUAI_VRELOCABLE;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
 }
 
@@ -7903,46 +7902,46 @@ static void codebinexpval (FuncState *fs, OpCode op,
 ** Emit code for comparisons.
 ** 'e1' was already put in R/K form by 'luaK_infix'.
 */
-static void codecomp (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
-  int rk1 = (e1->k == VK) ? RKASK(e1->u.info)
-                          : luai_check_exp(e1->k == VNONRELOC, e1->u.info);
+static void luai_codecomp (luai_FuncState *fs, luai_BinOpr opr, luai_expdesc *e1, luai_expdesc *e2) {
+  int rk1 = (e1->k == LUAI_VK) ? luai_RKASK(e1->u.info)
+                          : luai_check_exp(e1->k == LUAI_VNONRELOC, e1->u.info);
   int rk2 = luaK_exp2RK(fs, e2);
-  freeexps(fs, e1, e2);
+  luai_freeexps(fs, e1, e2);
   switch (opr) {
-    case OPR_NE: {  /* '(a ~= b)' ==> 'not (a == b)' */
-      e1->u.info = condjump(fs, OP_EQ, 0, rk1, rk2);
+    case LUAI_OPRNE: {  /* '(a ~= b)' ==> 'not (a == b)' */
+      e1->u.info = luai_condjump(fs, luai_OP_EQ, 0, rk1, rk2);
       break;
     }
-    case OPR_GT: case OPR_GE: {
+    case LUAI_OPRGT: case LUAI_OPRGE: {
       /* '(a > b)' ==> '(b < a)';  '(a >= b)' ==> '(b <= a)' */
-      OpCode op = cast(OpCode, (opr - OPR_NE) + OP_EQ);
-      e1->u.info = condjump(fs, op, 1, rk2, rk1);  /* invert operands */
+      luai_OpCode op = luai_cast(luai_OpCode, (opr - LUAI_OPRNE) + luai_OP_EQ);
+      e1->u.info = luai_condjump(fs, op, 1, rk2, rk1);  /* invert operands */
       break;
     }
     default: {  /* '==', '<', '<=' use their own opcodes */
-      OpCode op = cast(OpCode, (opr - OPR_EQ) + OP_EQ);
-      e1->u.info = condjump(fs, op, 1, rk1, rk2);
+      luai_OpCode op = luai_cast(luai_OpCode, (opr - LUAI_OPREQ) + luai_OP_EQ);
+      e1->u.info = luai_condjump(fs, op, 1, rk1, rk2);
       break;
     }
   }
-  e1->k = VJMP;
+  e1->k = LUAI_VJMP;
 }
 
 
 /*
 ** Aplly prefix operation 'op' to expression 'e'.
 */
-void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
-  static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP};
+void luaK_prefix (luai_FuncState *fs, laui_UnOpr op, luai_expdesc *e, int line) {
+  static const luai_expdesc ef = {LUAI_VKINT, {0}, LUAI_NO_JUMP, LUAI_NO_JUMP};
   switch (op) {
-    case OPR_MINUS: case OPR_BNOT:  /* use 'ef' as fake 2nd operand */
-      if (constfolding(fs, op + LUA_OPUNM, e, &ef))
+    case LUAI_OPRMINUS: case LUAI_OPRBNOT:  /* use 'ef' as fake 2nd operand */
+      if (luai_constfolding(fs, op + LUA_OPUNM, e, &ef))
         break;
       /* FALLTHROUGH */
-    case OPR_LEN:
-      codeunexpval(fs, cast(OpCode, op + OP_UNM), e, line);
+    case LUAI_OPRLEN:
+      luai_codeunexpval(fs, luai_cast(luai_OpCode, op + luai_OP_UNM), e, line);
       break;
-    case OPR_NOT: codenot(fs, e); break;
+    case LUAI_OPRNOT: luai_codenot(fs, e); break;
     default: lua_assert(0);
   }
 }
@@ -7952,25 +7951,25 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
 ** Process 1st operand 'v' of binary operation 'op' before reading
 ** 2nd operand.
 */
-void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
+void luaK_infix (luai_FuncState *fs, luai_BinOpr op, luai_expdesc *v) {
   switch (op) {
-    case OPR_AND: {
+    case LUAI_OPRAND: {
       luaK_goiftrue(fs, v);  /* go ahead only if 'v' is true */
       break;
     }
-    case OPR_OR: {
+    case LUAI_OPROR: {
       luaK_goiffalse(fs, v);  /* go ahead only if 'v' is false */
       break;
     }
-    case OPR_CONCAT: {
+    case LUAI_OPRCONCAT: {
       luaK_exp2nextreg(fs, v);  /* operand must be on the 'stack' */
       break;
     }
-    case OPR_ADD: case OPR_SUB:
-    case OPR_MUL: case OPR_DIV: case OPR_IDIV:
-    case OPR_MOD: case OPR_POW:
-    case OPR_BAND: case OPR_BOR: case OPR_BXOR:
-    case OPR_SHL: case OPR_SHR: {
+    case LUAI_OPRADD: case LUAI_OPRSUB:
+    case LUAI_OPRMUL: case LUAI_OPRDIV: case LUAI_OPRIDIV:
+    case LUAI_OPRMOD: case LUAI_OPRPOW:
+    case LUAI_OPRBAND: case LUAI_OPRBOR: case LUAI_OPRBXOR:
+    case LUAI_OPRSHL: case LUAI_OPRSHR: {
       if (!lua_tonumeral(v, NULL))
         luaK_exp2RK(fs, v);
       /* else keep numeral, which may be folded with 2nd operand */
@@ -7990,49 +7989,49 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
 ** concatenation is right associative), merge second CONCAT into first
 ** one.
 */
-void luaK_posfix (FuncState *fs, BinOpr op,
-                  expdesc *e1, expdesc *e2, int line) {
+void luaK_posfix (luai_FuncState *fs, luai_BinOpr op,
+                  luai_expdesc *e1, luai_expdesc *e2, int line) {
   switch (op) {
-    case OPR_AND: {
-      lua_assert(e1->t == NO_JUMP);  /* list closed by 'luK_infix' */
+    case LUAI_OPRAND: {
+      lua_assert(e1->t == LUAI_NO_JUMP);  /* list closed by 'luK_infix' */
       luaK_dischargevars(fs, e2);
       luaK_concat(fs, &e2->f, e1->f);
       *e1 = *e2;
       break;
     }
-    case OPR_OR: {
-      lua_assert(e1->f == NO_JUMP);  /* list closed by 'luK_infix' */
+    case LUAI_OPROR: {
+      lua_assert(e1->f == LUAI_NO_JUMP);  /* list closed by 'luK_infix' */
       luaK_dischargevars(fs, e2);
       luaK_concat(fs, &e2->t, e1->t);
       *e1 = *e2;
       break;
     }
-    case OPR_CONCAT: {
+    case LUAI_OPRCONCAT: {
       luaK_exp2val(fs, e2);
-      if (e2->k == VRELOCABLE &&
-          GET_OPCODE(getinstruction(fs, e2)) == OP_CONCAT) {
-        lua_assert(e1->u.info == GETARG_B(getinstruction(fs, e2))-1);
-        freeexp(fs, e1);
-        SETARG_B(getinstruction(fs, e2), e1->u.info);
-        e1->k = VRELOCABLE; e1->u.info = e2->u.info;
+      if (e2->k == LUAI_VRELOCABLE &&
+          luai_GETOPCODE(luai_getinstruction(fs, e2)) == luai_OP_CONCAT) {
+        lua_assert(e1->u.info == luai_GETARG_B(luai_getinstruction(fs, e2))-1);
+        luai_freeexp(fs, e1);
+        luai_SETARG_B(luai_getinstruction(fs, e2), e1->u.info);
+        e1->k = LUAI_VRELOCABLE; e1->u.info = e2->u.info;
       }
       else {
         luaK_exp2nextreg(fs, e2);  /* operand must be on the 'stack' */
-        codebinexpval(fs, OP_CONCAT, e1, e2, line);
+        luai_codebinexpval(fs, luai_OP_CONCAT, e1, e2, line);
       }
       break;
     }
-    case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
-    case OPR_IDIV: case OPR_MOD: case OPR_POW:
-    case OPR_BAND: case OPR_BOR: case OPR_BXOR:
-    case OPR_SHL: case OPR_SHR: {
-      if (!constfolding(fs, op + LUA_OPADD, e1, e2))
-        codebinexpval(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
+    case LUAI_OPRADD: case LUAI_OPRSUB: case LUAI_OPRMUL: case LUAI_OPRDIV:
+    case LUAI_OPRIDIV: case LUAI_OPRMOD: case LUAI_OPRPOW:
+    case LUAI_OPRBAND: case LUAI_OPRBOR: case LUAI_OPRBXOR:
+    case LUAI_OPRSHL: case LUAI_OPRSHR: {
+      if (!luai_constfolding(fs, op + LUA_OPADD, e1, e2))
+        luai_codebinexpval(fs, luai_cast(luai_OpCode, op + luai_OP_ADD), e1, e2, line);
       break;
     }
-    case OPR_EQ: case OPR_LT: case OPR_LE:
-    case OPR_NE: case OPR_GT: case OPR_GE: {
-      codecomp(fs, op, e1, e2);
+    case LUAI_OPREQ: case LUAI_OPRLT: case LUAI_OPRLE:
+    case LUAI_OPRNE: case LUAI_OPRGT: case LUAI_OPRGE: {
+      luai_codecomp(fs, op, e1, e2);
       break;
     }
     default: lua_assert(0);
@@ -8043,7 +8042,7 @@ void luaK_posfix (FuncState *fs, BinOpr op,
 /*
 ** Change line information associated with current position.
 */
-void luaK_fixline (FuncState *fs, int line) {
+void luaK_fixline (luai_FuncState *fs, int line) {
   fs->f->lineinfo[fs->pc - 1] = line;
 }
 
@@ -8055,38 +8054,38 @@ void luaK_fixline (FuncState *fs, int line) {
 ** 'tostore' is number of values (in registers 'base + 1',...) to add to
 ** table (or LUA_MULTRET to add up to stack top).
 */
-void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
-  int c =  (nelems - 1)/LFIELDS_PER_FLUSH + 1;
+void luaK_setlist (luai_FuncState *fs, int base, int nelems, int tostore) {
+  int c =  (nelems - 1)/LUAI_LFIELDS_PER_FLUSH + 1;
   int b = (tostore == LUA_MULTRET) ? 0 : tostore;
-  lua_assert(tostore != 0 && tostore <= LFIELDS_PER_FLUSH);
-  if (c <= MAXARG_C)
-    luaK_codeABC(fs, OP_SETLIST, base, b, c);
-  else if (c <= MAXARG_Ax) {
-    luaK_codeABC(fs, OP_SETLIST, base, b, 0);
-    codeextraarg(fs, c);
+  lua_assert(tostore != 0 && tostore <= LUAI_LFIELDS_PER_FLUSH);
+  if (c <= luai_MAXARG_C)
+    luaK_codeABC(fs, luai_OP_SETLIST, base, b, c);
+  else if (c <= luai_MAXARG_Ax) {
+    luaK_codeABC(fs, luai_OP_SETLIST, base, b, 0);
+    luai_codeextraarg(fs, c);
   }
   else
-    luaX_syntaxerror(fs->ls, "constructor too long");
-  fs->freereg = base + 1;  /* free registers with list values */
+    luaX_syntaxerror(fs->ls, "luai_constructor too long");
+  fs->luai_freereg = base + 1;  /* free registers with list values */
 }
 
 /*__lcorlib.c__*/
 
-static lua_State *getco (lua_State *L) {
+static lua_State *luai_getco (lua_State *L) {
   lua_State *co = lua_tothread(L, 1);
   luaL_argcheck(L, co, 1, "thread expected");
   return co;
 }
 
 
-static int auxresume (lua_State *L, lua_State *co, int narg) {
+static int luai_auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg)) {
-    lua_pushliteral(L, "too many arguments to resume");
+    lua_pushliteral(L, "too many arguments to luai_resume");
     return -1;  /* error flag */
   }
   if (lua_status(co) == LUA_OK && lua_gettop(co) == 0) {
-    lua_pushliteral(L, "cannot resume dead coroutine");
+    lua_pushliteral(L, "cannot luai_resume dead coroutine");
     return -1;  /* error flag */
   }
   lua_xmove(L, co, narg);
@@ -8095,7 +8094,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
     int nres = lua_gettop(co);
     if (!lua_checkstack(L, nres + 1)) {
       lua_pop(co, nres);  /* remove results anyway */
-      lua_pushliteral(L, "too many results to resume");
+      lua_pushliteral(L, "too many results to luai_resume");
       return -1;  /* error flag */
     }
     lua_xmove(co, L, nres);  /* move yielded values */
@@ -8109,9 +8108,9 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
 
 
 static int luaB_coresume (lua_State *L) {
-  lua_State *co = getco(L);
+  lua_State *co = luai_getco(L);
   int r;
-  r = auxresume(L, co, lua_gettop(L) - 1);
+  r = luai_auxresume(L, co, lua_gettop(L) - 1);
   if (r < 0) {
     lua_pushboolean(L, 0);
     lua_insert(L, -2);
@@ -8120,14 +8119,14 @@ static int luaB_coresume (lua_State *L) {
   else {
     lua_pushboolean(L, 1);
     lua_insert(L, -(r + 1));
-    return r + 1;  /* return true + 'resume' returns */
+    return r + 1;  /* return true + 'luai_resume' returns */
   }
 }
 
 
 static int luaB_auxwrap (lua_State *L) {
   lua_State *co = lua_tothread(L, lua_upvalueindex(1));
-  int r = auxresume(L, co, lua_gettop(L));
+  int r = luai_auxresume(L, co, lua_gettop(L));
   if (r < 0) {
     if (lua_type(L, -1) == LUA_TSTRING) {  /* error object is a string? */
       luaL_where(L, 1);  /* add extra info */
@@ -8163,7 +8162,7 @@ static int luaB_yield (lua_State *L) {
 
 
 static int luaB_costatus (lua_State *L) {
-  lua_State *co = getco(L);
+  lua_State *co = luai_getco(L);
   if (L == co) lua_pushliteral(L, "running");
   else {
     switch (lua_status(co)) {
@@ -8204,7 +8203,7 @@ static int luaB_corunning (lua_State *L) {
 
 static const luaL_Reg luai_co_funcs[] = {
   {"create", luaB_cocreate},
-  {"resume", luaB_coresume},
+  {"luai_resume", luaB_coresume},
   {"running", luaB_corunning},
   {"status", luaB_costatus},
   {"wrap", luaB_cowrap},
@@ -8267,10 +8266,10 @@ LUAI_DDEF const lu_byte luai_ctype_[UCHAR_MAX + 2] = {
 /*__ldblib.c__*/
 
 /*
-** The hook table at registry[&HOOKKEY] maps threads to their current
-** hook function. (We only need the unique address of 'HOOKKEY'.)
+** The hook table at registry[&LUAI_HOOKKEY] maps threads to their current
+** hook function. (We only need the unique address of 'LUAI_HOOKKEY'.)
 */
-static const int HOOKKEY = 0;
+static const int LUAI_HOOKKEY = 0;
 
 
 /*
@@ -8278,7 +8277,7 @@ static const int HOOKKEY = 0;
 ** guarantees about its stack space; any push in L1 must be
 ** checked.
 */
-static void checkstack (lua_State *L, lua_State *L1, int n) {
+static void luai_checkstack (lua_State *L, lua_State *L1, int n) {
   if (L != L1 && !lua_checkstack(L1, n))
     luaL_error(L, "stack overflow");
 }
@@ -8328,12 +8327,12 @@ static int luai_db_setuservalue (lua_State *L) {
 
 
 /*
-** Auxiliary function used by several library functions: check for
+** Auxiliary function used by several library functions: luai_check for
 ** an optional thread as function's first argument and set 'arg' with
 ** 1 if this argument is present (so that functions can skip it to
 ** access their other arguments)
 */
-static lua_State *getthread (lua_State *L, int *arg) {
+static lua_State *luai_getthread (lua_State *L, int *arg) {
   if (lua_isthread(L, 1)) {
     *arg = 1;
     return lua_tothread(L, 1);
@@ -8350,17 +8349,17 @@ static lua_State *getthread (lua_State *L, int *arg) {
 ** from 'lua_getinfo' into result table. Key is always a string;
 ** value can be a string, an int, or a boolean.
 */
-static void settabss (lua_State *L, const char *k, const char *v) {
+static void luai_settabss (lua_State *L, const char *k, const char *v) {
   lua_pushstring(L, v);
   lua_setfield(L, -2, k);
 }
 
-static void settabsi (lua_State *L, const char *k, int v) {
+static void luai_settabsi (lua_State *L, const char *k, int v) {
   lua_pushinteger(L, v);
   lua_setfield(L, -2, k);
 }
 
-static void settabsb (lua_State *L, const char *k, int v) {
+static void luai_settabsb (lua_State *L, const char *k, int v) {
   lua_pushboolean(L, v);
   lua_setfield(L, -2, k);
 }
@@ -8369,11 +8368,11 @@ static void settabsb (lua_State *L, const char *k, int v) {
 /*
 ** In function 'luai_db_getinfo', the call to 'lua_getinfo' may push
 ** results on the stack; later it creates the result table to put
-** these objects. Function 'treatstackoption' puts the result from
+** these objects. Function 'luai_treatstackoption' puts the result from
 ** 'lua_getinfo' on top of the result table so that it can call
 ** 'lua_setfield'.
 */
-static void treatstackoption (lua_State *L, lua_State *L1, const char *fname) {
+static void luai_treatstackoption (lua_State *L, lua_State *L1, const char *fname) {
   if (L == L1)
     lua_rotate(L, -2, 1);  /* exchange object and table */
   else
@@ -8391,9 +8390,9 @@ static void treatstackoption (lua_State *L, lua_State *L1, const char *fname) {
 static int luai_db_getinfo (lua_State *L) {
   lua_Debug ar;
   int arg;
-  lua_State *L1 = getthread(L, &arg);
+  lua_State *L1 = luai_getthread(L, &arg);
   const char *options = luaL_optstring(L, arg+2, "flnStu");
-  checkstack(L, L1, 3);
+  luai_checkstack(L, L1, 3);
   if (lua_isfunction(L, arg + 1)) {  /* info about a function? */
     options = lua_pushfstring(L, ">%s", options);  /* add '>' to 'options' */
     lua_pushvalue(L, arg + 1);  /* move function to 'L1' stack */
@@ -8409,36 +8408,36 @@ static int luai_db_getinfo (lua_State *L) {
     return luaL_argerror(L, arg+2, "invalid option");
   lua_newtable(L);  /* table to collect results */
   if (strchr(options, 'S')) {
-    settabss(L, "source", ar.source);
-    settabss(L, "short_src", ar.short_src);
-    settabsi(L, "linedefined", ar.linedefined);
-    settabsi(L, "lastlinedefined", ar.lastlinedefined);
-    settabss(L, "what", ar.what);
+    luai_settabss(L, "source", ar.source);
+    luai_settabss(L, "short_src", ar.short_src);
+    luai_settabsi(L, "linedefined", ar.linedefined);
+    luai_settabsi(L, "lastlinedefined", ar.lastlinedefined);
+    luai_settabss(L, "what", ar.what);
   }
   if (strchr(options, 'l'))
-    settabsi(L, "currentline", ar.currentline);
+    luai_settabsi(L, "luai_currentline", ar.luai_currentline);
   if (strchr(options, 'u')) {
-    settabsi(L, "nups", ar.nups);
-    settabsi(L, "nparams", ar.nparams);
-    settabsb(L, "isvararg", ar.isvararg);
+    luai_settabsi(L, "nups", ar.nups);
+    luai_settabsi(L, "nparams", ar.nparams);
+    luai_settabsb(L, "isvararg", ar.isvararg);
   }
   if (strchr(options, 'n')) {
-    settabss(L, "name", ar.name);
-    settabss(L, "namewhat", ar.namewhat);
+    luai_settabss(L, "name", ar.name);
+    luai_settabss(L, "namewhat", ar.namewhat);
   }
   if (strchr(options, 't'))
-    settabsb(L, "istailcall", ar.istailcall);
+    luai_settabsb(L, "istailcall", ar.istailcall);
   if (strchr(options, 'L'))
-    treatstackoption(L, L1, "activelines");
+    luai_treatstackoption(L, L1, "activelines");
   if (strchr(options, 'f'))
-    treatstackoption(L, L1, "func");
+    luai_treatstackoption(L, L1, "func");
   return 1;  /* return table */
 }
 
 
 static int luai_db_getlocal (lua_State *L) {
   int arg;
-  lua_State *L1 = getthread(L, &arg);
+  lua_State *L1 = luai_getthread(L, &arg);
   lua_Debug ar;
   const char *name;
   int nvar = (int)luaL_checkinteger(L, arg + 2);  /* local-variable index */
@@ -8451,7 +8450,7 @@ static int luai_db_getlocal (lua_State *L) {
     int level = (int)luaL_checkinteger(L, arg + 1);
     if (!lua_getstack(L1, level, &ar))  /* out of range? */
       return luaL_argerror(L, arg+1, "level out of range");
-    checkstack(L, L1, 1);
+    luai_checkstack(L, L1, 1);
     name = lua_getlocal(L1, &ar, nvar);
     if (name) {
       lua_xmove(L1, L, 1);  /* move local value */
@@ -8470,7 +8469,7 @@ static int luai_db_getlocal (lua_State *L) {
 static int luai_db_setlocal (lua_State *L) {
   int arg;
   const char *name;
-  lua_State *L1 = getthread(L, &arg);
+  lua_State *L1 = luai_getthread(L, &arg);
   lua_Debug ar;
   int level = (int)luaL_checkinteger(L, arg + 1);
   int nvar = (int)luaL_checkinteger(L, arg + 2);
@@ -8478,7 +8477,7 @@ static int luai_db_setlocal (lua_State *L) {
     return luaL_argerror(L, arg+1, "level out of range");
   luaL_checkany(L, arg+3);
   lua_settop(L, arg+3);
-  checkstack(L, L1, 1);
+  luai_checkstack(L, L1, 1);
   lua_xmove(L, L1, 1);
   name = lua_setlocal(L1, &ar, nvar);
   if (name == NULL)
@@ -8491,7 +8490,7 @@ static int luai_db_setlocal (lua_State *L) {
 /*
 ** get (if 'get' is true) or set an upvalue from a closure
 */
-static int auxupvalue (lua_State *L, int get) {
+static int luai_auxupvalue (lua_State *L, int get) {
   const char *name;
   int n = (int)luaL_checkinteger(L, 2);  /* upvalue index */
   luaL_checktype(L, 1, LUA_TFUNCTION);  /* closure */
@@ -8504,13 +8503,13 @@ static int auxupvalue (lua_State *L, int get) {
 
 
 static int luai_db_getupvalue (lua_State *L) {
-  return auxupvalue(L, 1);
+  return luai_auxupvalue(L, 1);
 }
 
 
 static int luai_db_setupvalue (lua_State *L) {
   luaL_checkany(L, 3);
-  return auxupvalue(L, 0);
+  return luai_auxupvalue(L, 0);
 }
 
 
@@ -8518,7 +8517,7 @@ static int luai_db_setupvalue (lua_State *L) {
 ** Check whether a given upvalue from a given closure exists and
 ** returns its index
 */
-static int checkupval (lua_State *L, int argf, int argnup) {
+static int luai_checkupval (lua_State *L, int argf, int argnup) {
   int nup = (int)luaL_checkinteger(L, argnup);  /* upvalue index */
   luaL_checktype(L, argf, LUA_TFUNCTION);  /* closure */
   luaL_argcheck(L, (lua_getupvalue(L, argf, nup) != NULL), argnup,
@@ -8528,15 +8527,15 @@ static int checkupval (lua_State *L, int argf, int argnup) {
 
 
 static int luai_db_upvalueid (lua_State *L) {
-  int n = checkupval(L, 1, 2);
+  int n = luai_checkupval(L, 1, 2);
   lua_pushlightuserdata(L, lua_upvalueid(L, 1, n));
   return 1;
 }
 
 
 static int luai_db_upvaluejoin (lua_State *L) {
-  int n1 = checkupval(L, 1, 2);
-  int n2 = checkupval(L, 3, 4);
+  int n1 = luai_checkupval(L, 1, 2);
+  int n2 = luai_checkupval(L, 3, 4);
   luaL_argcheck(L, !lua_iscfunction(L, 1), 1, "Lua function expected");
   luaL_argcheck(L, !lua_iscfunction(L, 3), 3, "Lua function expected");
   lua_upvaluejoin(L, 1, n1, 3, n2);
@@ -8548,15 +8547,15 @@ static int luai_db_upvaluejoin (lua_State *L) {
 ** Call hook function registered at hook table for the current
 ** thread (if there is one)
 */
-static void hookf (lua_State *L, lua_Debug *ar) {
+static void luai_hookf (lua_State *L, lua_Debug *ar) {
   static const char *const hooknames[] =
     {"call", "return", "line", "count", "tail call"};
-  lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &LUAI_HOOKKEY);
   lua_pushthread(L);
   if (lua_rawget(L, -2) == LUA_TFUNCTION) {  /* is there a hook function? */
     lua_pushstring(L, hooknames[(int)ar->event]);  /* push event name */
-    if (ar->currentline >= 0)
-      lua_pushinteger(L, ar->currentline);  /* push current line */
+    if (ar->luai_currentline >= 0)
+      lua_pushinteger(L, ar->luai_currentline);  /* push current line */
     else lua_pushnil(L);
     lua_assert(lua_getinfo(L, "lS", ar));
     lua_call(L, 2, 0);  /* call hook function */
@@ -8567,7 +8566,7 @@ static void hookf (lua_State *L, lua_Debug *ar) {
 /*
 ** Convert a string mask (for 'sethook') into a bit mask
 */
-static int makemask (const char *smask, int count) {
+static int luai_makemask (const char *smask, int count) {
   int mask = 0;
   if (strchr(smask, 'c')) mask |= LUA_MASKCALL;
   if (strchr(smask, 'r')) mask |= LUA_MASKRET;
@@ -8580,7 +8579,7 @@ static int makemask (const char *smask, int count) {
 /*
 ** Convert a bit mask (for 'gethook') into a string mask
 */
-static char *unmakemask (int mask, char *smask) {
+static char *luai_unmakemask (int mask, char *smask) {
   int i = 0;
   if (mask & LUA_MASKCALL) smask[i++] = 'c';
   if (mask & LUA_MASKRET) smask[i++] = 'r';
@@ -8593,7 +8592,7 @@ static char *unmakemask (int mask, char *smask) {
 static int luai_db_sethook (lua_State *L) {
   int arg, mask, count;
   lua_Hook func;
-  lua_State *L1 = getthread(L, &arg);
+  lua_State *L1 = luai_getthread(L, &arg);
   if (lua_isnoneornil(L, arg+1)) {  /* no hook? */
     lua_settop(L, arg+1);
     func = NULL; mask = 0; count = 0;  /* turn off hooks */
@@ -8602,18 +8601,18 @@ static int luai_db_sethook (lua_State *L) {
     const char *smask = luaL_checkstring(L, arg+2);
     luaL_checktype(L, arg+1, LUA_TFUNCTION);
     count = (int)luaL_optinteger(L, arg + 3, 0);
-    func = hookf; mask = makemask(smask, count);
+    func = luai_hookf; mask = luai_makemask(smask, count);
   }
-  if (lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) == LUA_TNIL) {
+  if (lua_rawgetp(L, LUA_REGISTRYINDEX, &LUAI_HOOKKEY) == LUA_TNIL) {
     lua_createtable(L, 0, 2);  /* create a hook table */
     lua_pushvalue(L, -1);
-    lua_rawsetp(L, LUA_REGISTRYINDEX, &HOOKKEY);  /* set it in position */
+    lua_rawsetp(L, LUA_REGISTRYINDEX, &LUAI_HOOKKEY);  /* set it in position */
     lua_pushstring(L, "k");
     lua_setfield(L, -2, "__mode");  /** hooktable.__mode = "k" */
     lua_pushvalue(L, -1);
     lua_setmetatable(L, -2);  /* setmetatable(hooktable) = hooktable */
   }
-  checkstack(L, L1, 1);
+  luai_checkstack(L, L1, 1);
   lua_pushthread(L1); lua_xmove(L1, L, 1);  /* key (thread) */
   lua_pushvalue(L, arg + 1);  /* value (hook function) */
   lua_rawset(L, -3);  /* hooktable[L1] = new Lua hook */
@@ -8624,22 +8623,22 @@ static int luai_db_sethook (lua_State *L) {
 
 static int luai_db_gethook (lua_State *L) {
   int arg;
-  lua_State *L1 = getthread(L, &arg);
+  lua_State *L1 = luai_getthread(L, &arg);
   char buff[5];
   int mask = lua_gethookmask(L1);
   lua_Hook hook = lua_gethook(L1);
   if (hook == NULL)  /* no hook? */
     lua_pushnil(L);
-  else if (hook != hookf)  /* external hook? */
+  else if (hook != luai_hookf)  /* external hook? */
     lua_pushliteral(L, "external hook");
   else {  /* hook table must exist */
-    lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
-    checkstack(L, L1, 1);
+    lua_rawgetp(L, LUA_REGISTRYINDEX, &LUAI_HOOKKEY);
+    luai_checkstack(L, L1, 1);
     lua_pushthread(L1); lua_xmove(L1, L, 1);
     lua_rawget(L, -2);   /* 1st result = hooktable[L1] */
     lua_remove(L, -2);  /* remove hook table */
   }
-  lua_pushstring(L, unmakemask(mask, buff));  /* 2nd result = mask */
+  lua_pushstring(L, luai_unmakemask(mask, buff));  /* 2nd result = mask */
   lua_pushinteger(L, lua_gethookcount(L1));  /* 3rd result = count */
   return 3;
 }
@@ -8662,7 +8661,7 @@ static int luai_db_debug (lua_State *L) {
 
 static int luai_db_traceback (lua_State *L) {
   int arg;
-  lua_State *L1 = getthread(L, &arg);
+  lua_State *L1 = luai_getthread(L, &arg);
   const char *msg = lua_tostring(L, arg + 1);
   if (msg == NULL && !lua_isnoneornil(L, arg + 1))  /* non-string 'msg'? */
     lua_pushvalue(L, arg + 1);  /* return it untouched */
@@ -8709,33 +8708,33 @@ LUAMOD_API int luaopen_debug (lua_State *L) {
 #define lua_ci_func(ci)		(clLvalue((ci)->func))
 
 
-static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
+static const char *luai_funcnamefromcode (lua_State *L, CallInfo *ci,
                                     const char **name);
 
 
-static int currentpc (CallInfo *ci) {
+static int luai_currentpc (CallInfo *ci) {
   lua_assert(isLua(ci));
-  return pcRel(ci->u.l.savedpc, lua_ci_func(ci)->p);
+  return luai_pcRel(ci->u.l.savedpc, lua_ci_func(ci)->p);
 }
 
 
-static int currentline (CallInfo *ci) {
-  return getfuncline(lua_ci_func(ci)->p, currentpc(ci));
+static int luai_currentline (CallInfo *ci) {
+  return luai_getfuncline(lua_ci_func(ci)->p, luai_currentpc(ci));
 }
 
 
 /*
-** If function yielded, its 'func' can be in the 'extra' field. The
-** next function restores 'func' to its correct value for debugging
+** If function yielded, its 'func' can be in the 'extra' luai_field. The
+** luai_next function restores 'func' to its correct value for debugging
 ** purposes. (It exchanges 'func' and 'extra'; so, when called again,
 ** after debugging, it also "re-restores" ** 'func' to its altered value.
 */
-static void swapextra (lua_State *L) {
+static void luai_swapextra (lua_State *L) {
   if (L->status == LUA_YIELD) {
     CallInfo *ci = L->ci;  /* get function that yielded */
     StkId temp = ci->func;  /* exchange its 'func' and 'extra' values */
-    ci->func = restorestack(L, ci->extra);
-    ci->extra = savestack(L, temp);
+    ci->func = luai_restorestack(L, ci->extra);
+    ci->extra = luai_savestack(L, temp);
   }
 }
 
@@ -8743,9 +8742,9 @@ static void swapextra (lua_State *L) {
 /*
 ** This function can be called asynchronously (e.g. during a signal).
 ** Fields 'oldpc', 'basehookcount', and 'hookcount' (set by
-** 'resethookcount') are for debug only, and it is no problem if they
+** 'luai_resethookcount') are for debug only, and it is no problem if they
 ** get arbitrary values (causes at most one wrong hook call). 'hookmask'
-** is an atomic value. We assume that pointers are atomic too (e.g., gcc
+** is an luai_atomic value. We assume that pointers are luai_atomic too (e.g., gcc
 ** ensures that for all platforms where it runs). Moreover, 'hook' is
 ** always checked before being called (see 'luaD_hook').
 */
@@ -8758,8 +8757,8 @@ LUA_API void lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
     L->oldpc = L->ci->u.l.savedpc;
   L->hook = func;
   L->basehookcount = count;
-  resethookcount(L);
-  L->hookmask = cast_byte(mask);
+  luai_resethookcount(L);
+  L->hookmask = luai_cast_byte(mask);
 }
 
 
@@ -8795,16 +8794,16 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 }
 
 
-static const char *upvalname (Proto *p, int uv) {
-  TString *s = luai_check_exp(uv < p->sizeupvalues, p->upvalues[uv].name);
+static const char *luai_upvalname (luai_Proto *p, int uv) {
+  luai_TString *s = luai_check_exp(uv < p->sizeupvalues, p->upvalues[uv].name);
   if (s == NULL) return "?";
   else return getstr(s);
 }
 
 
-static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
+static const char *luai_findvararg (CallInfo *ci, int n, StkId *pos) {
   int nparams = clLvalue(ci->func)->p->numparams;
-  if (n >= cast_int(ci->u.l.base - ci->func) - nparams)
+  if (n >= luai_cast_int(ci->u.l.base - ci->func) - nparams)
     return NULL;  /* no such vararg */
   else {
     *pos = ci->func + nparams + n;
@@ -8813,22 +8812,22 @@ static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
 }
 
 
-static const char *findlocal (lua_State *L, CallInfo *ci, int n,
+static const char *luai_findlocal (lua_State *L, CallInfo *ci, int n,
                               StkId *pos) {
   const char *name = NULL;
   StkId base;
   if (isLua(ci)) {
     if (n < 0)  /* access to vararg values? */
-      return findvararg(ci, -n, pos);
+      return luai_findvararg(ci, -n, pos);
     else {
       base = ci->u.l.base;
-      name = luaF_getlocalname(lua_ci_func(ci)->p, n, currentpc(ci));
+      name = luaF_getlocalname(lua_ci_func(ci)->p, n, luai_currentpc(ci));
     }
   }
   else
     base = ci->func + 1;
   if (name == NULL) {  /* no 'standard' name? */
-    StkId limit = (ci == L->ci) ? L->top : ci->next->func;
+    StkId limit = (ci == L->ci) ? L->top : ci->luai_next->func;
     if (limit - base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
       name = "(*temporary)";  /* generic name for any valid slot */
     else
@@ -8842,7 +8841,7 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   const char *name;
   lua_lock(L);
-  swapextra(L);
+  luai_swapextra(L);
   if (ar == NULL) {  /* information about non-active function? */
     if (!isLfunction(L->top - 1))  /* not a Lua function? */
       name = NULL;
@@ -8851,13 +8850,13 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   }
   else {  /* active function; get information through 'ar' */
     StkId pos = NULL;  /* to avoid warnings */
-    name = findlocal(L, ar->i_ci, n, &pos);
+    name = luai_findlocal(L, ar->i_ci, n, &pos);
     if (name) {
       setobj2s(L, L->top, pos);
       api_incr_top(L);
     }
   }
-  swapextra(L);
+  luai_swapextra(L);
   lua_unlock(L);
   return name;
 }
@@ -8867,19 +8866,19 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   StkId pos = NULL;  /* to avoid warnings */
   const char *name;
   lua_lock(L);
-  swapextra(L);
-  name = findlocal(L, ar->i_ci, n, &pos);
+  luai_swapextra(L);
+  name = luai_findlocal(L, ar->i_ci, n, &pos);
   if (name) {
     setobjs2s(L, pos, L->top - 1);
     L->top--;  /* pop value */
   }
-  swapextra(L);
+  luai_swapextra(L);
   lua_unlock(L);
   return name;
 }
 
 
-static void funcinfo (lua_Debug *ar, Closure *cl) {
+static void luai_funcinfo (lua_Debug *ar, Closure *cl) {
   if (lua_noLuaClosure(cl)) {
     ar->source = "=[C]";
     ar->linedefined = -1;
@@ -8887,7 +8886,7 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
     ar->what = "C";
   }
   else {
-    Proto *p = cl->l.p;
+    luai_Proto *p = cl->l.p;
     ar->source = p->source ? getstr(p->source) : "=?";
     ar->linedefined = p->linedefined;
     ar->lastlinedefined = p->lastlinedefined;
@@ -8897,16 +8896,16 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
 }
 
 
-static void collectvalidlines (lua_State *L, Closure *f) {
+static void luai_collectvalidlines (lua_State *L, Closure *f) {
   if (lua_noLuaClosure(f)) {
     setnilvalue(L->top);
     api_incr_top(L);
   }
   else {
     int i;
-    TValue v;
+    luai_TValue v;
     int *lineinfo = f->l.p->lineinfo;
-    Table *t = luaH_new(L);  /* new table to store active lines */
+    luai_Table *t = luaH_new(L);  /* new table to store active lines */
     sethvalue(L, L->top, t);  /* push it on stack */
     api_incr_top(L);
     setbvalue(&v, 1);  /* boolean 'true' to be the value of all indices */
@@ -8916,7 +8915,7 @@ static void collectvalidlines (lua_State *L, Closure *f) {
 }
 
 
-static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
+static const char *luai_getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   if (ci == NULL)  /* no 'ci'? */
     return NULL;  /* no info */
   else if (ci->callstatus & CIST_FIN) {  /* is this a finalizer? */
@@ -8925,22 +8924,22 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   }
   /* calling function is a known Lua function? */
   else if (!(ci->callstatus & CIST_TAIL) && isLua(ci->previous))
-    return funcnamefromcode(L, ci->previous, name);
+    return luai_funcnamefromcode(L, ci->previous, name);
   else return NULL;  /* no way to find a name */
 }
 
 
-static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
+static int luai_auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
                        Closure *f, CallInfo *ci) {
   int status = 1;
   for (; *what; what++) {
     switch (*what) {
       case 'S': {
-        funcinfo(ar, f);
+        luai_funcinfo(ar, f);
         break;
       }
       case 'l': {
-        ar->currentline = (ci && isLua(ci)) ? currentline(ci) : -1;
+        ar->luai_currentline = (ci && isLua(ci)) ? luai_currentline(ci) : -1;
         break;
       }
       case 'u': {
@@ -8960,7 +8959,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'n': {
-        ar->namewhat = getfuncname(L, ci, &ar->name);
+        ar->namewhat = luai_getfuncname(L, ci, &ar->name);
         if (ar->namewhat == NULL) {
           ar->namewhat = "";  /* not found */
           ar->name = NULL;
@@ -8983,7 +8982,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   CallInfo *ci;
   StkId func;
   lua_lock(L);
-  swapextra(L);
+  luai_swapextra(L);
   if (*what == '>') {
     ci = NULL;
     func = L->top - 1;
@@ -8997,14 +8996,14 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
     lua_assert(ttisfunction(ci->func));
   }
   cl = ttisclosure(func) ? clvalue(func) : NULL;
-  status = auxgetinfo(L, what, ar, cl, ci);
+  status = luai_auxgetinfo(L, what, ar, cl, ci);
   if (strchr(what, 'f')) {
     setobjs2s(L, L->top, func);
     api_incr_top(L);
   }
-  swapextra(L);  /* correct before option 'L', which can raise a mem. error */
+  luai_swapextra(L);  /* correct before option 'L', which can raise a mem. error */
   if (strchr(what, 'L'))
-    collectvalidlines(L, cl);
+    luai_collectvalidlines(L, cl);
   lua_unlock(L);
   return status;
 }
@@ -9016,16 +9015,16 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 ** =======================================================
 */
 
-static const char *getobjname (Proto *p, int lastpc, int reg,
+static const char *luai_getobjname (luai_Proto *p, int lastpc, int reg,
                                const char **name);
 
 
 /*
 ** find a "name" for the RK value 'c'
 */
-static void kname (Proto *p, int pc, int c, const char **name) {
-  if (ISK(c)) {  /* is 'c' a constant? */
-    TValue *kvalue = &p->k[INDEXK(c)];
+static void luai_kname (luai_Proto *p, int pc, int c, const char **name) {
+  if (luai_ISK(c)) {  /* is 'c' a constant? */
+    luai_TValue *kvalue = &p->k[luai_INDEXK(c)];
     if (ttisstring(kvalue)) {  /* literal constant? */
       *name = svalue(kvalue);  /* it is its own name */
       return;
@@ -9033,7 +9032,7 @@ static void kname (Proto *p, int pc, int c, const char **name) {
     /* else no reasonable name found */
   }
   else {  /* 'c' is a register */
-    const char *what = getobjname(p, pc, c, name); /* search for 'c' */
+    const char *what = luai_getobjname(p, pc, c, name); /* search for 'c' */
     if (what && *what == 'c') {  /* found a constant name? */
       return;  /* 'name' already filled */
     }
@@ -9043,7 +9042,7 @@ static void kname (Proto *p, int pc, int c, const char **name) {
 }
 
 
-static int filterpc (int pc, int jmptarget) {
+static int luai_filterpc (int pc, int jmptarget) {
   if (pc < jmptarget)  /* is code conditional (inside a jump)? */
     return -1;  /* cannot know who sets that register */
   else return pc;  /* current position sets that register */
@@ -9053,34 +9052,34 @@ static int filterpc (int pc, int jmptarget) {
 /*
 ** try to find last instruction before 'lastpc' that modified register 'reg'
 */
-static int findsetreg (Proto *p, int lastpc, int reg) {
+static int luai_findsetreg (luai_Proto *p, int lastpc, int reg) {
   int pc;
   int setreg = -1;  /* keep last instruction that changed 'reg' */
   int jmptarget = 0;  /* any code before this address is conditional */
   for (pc = 0; pc < lastpc; pc++) {
     Instruction i = p->code[pc];
-    OpCode op = GET_OPCODE(i);
-    int a = GETARG_A(i);
+    luai_OpCode op = luai_GETOPCODE(i);
+    int a = luai_GETARG_A(i);
     switch (op) {
-      case OP_LOADNIL: {
-        int b = GETARG_B(i);
+      case luai_OP_LOADNIL: {
+        int b = luai_GETARG_B(i);
         if (a <= reg && reg <= a + b)  /* set registers from 'a' to 'a+b' */
-          setreg = filterpc(pc, jmptarget);
+          setreg = luai_filterpc(pc, jmptarget);
         break;
       }
-      case OP_TFORCALL: {
+      case luai_OP_TFORCALL: {
         if (reg >= a + 2)  /* affect all regs above its base */
-          setreg = filterpc(pc, jmptarget);
+          setreg = luai_filterpc(pc, jmptarget);
         break;
       }
-      case OP_CALL:
-      case OP_TAILCALL: {
+      case luai_OP_CALL:
+      case luai_OP_TAILCALL: {
         if (reg >= a)  /* affect all registers above base */
-          setreg = filterpc(pc, jmptarget);
+          setreg = luai_filterpc(pc, jmptarget);
         break;
       }
-      case OP_JMP: {
-        int b = GETARG_sBx(i);
+      case luai_OP_JMP: {
+        int b = luai_GETARG_sBx(i);
         int dest = pc + 1 + b;
         /* jump is forward and do not skip 'lastpc'? */
         if (pc < dest && dest <= lastpc) {
@@ -9090,8 +9089,8 @@ static int findsetreg (Proto *p, int lastpc, int reg) {
         break;
       }
       default:
-        if (testAMode(op) && reg == a)  /* any instruction that set A */
-          setreg = filterpc(pc, jmptarget);
+        if (luai_testAMode(op) && reg == a)  /* any instruction that set A */
+          setreg = luai_filterpc(pc, jmptarget);
         break;
     }
   }
@@ -9099,51 +9098,51 @@ static int findsetreg (Proto *p, int lastpc, int reg) {
 }
 
 
-static const char *getobjname (Proto *p, int lastpc, int reg,
+static const char *luai_getobjname (luai_Proto *p, int lastpc, int reg,
                                const char **name) {
   int pc;
   *name = luaF_getlocalname(p, reg + 1, lastpc);
   if (*name)  /* is a local? */
     return "local";
   /* else try symbolic execution */
-  pc = findsetreg(p, lastpc, reg);
+  pc = luai_findsetreg(p, lastpc, reg);
   if (pc != -1) {  /* could find instruction? */
     Instruction i = p->code[pc];
-    OpCode op = GET_OPCODE(i);
+    luai_OpCode op = luai_GETOPCODE(i);
     switch (op) {
-      case OP_MOVE: {
-        int b = GETARG_B(i);  /* move from 'b' to 'a' */
-        if (b < GETARG_A(i))
-          return getobjname(p, pc, b, name);  /* get name for 'b' */
+      case luai_OP_MOVE: {
+        int b = luai_GETARG_B(i);  /* move from 'b' to 'a' */
+        if (b < luai_GETARG_A(i))
+          return luai_getobjname(p, pc, b, name);  /* get name for 'b' */
         break;
       }
-      case OP_GETTABUP:
-      case OP_GETTABLE: {
-        int k = GETARG_C(i);  /* key index */
-        int t = GETARG_B(i);  /* table index */
-        const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */
+      case luai_OP_GETTABUP:
+      case luai_OP_GETTABLE: {
+        int k = luai_GETARG_C(i);  /* key index */
+        int t = luai_GETARG_B(i);  /* table index */
+        const char *vn = (op == luai_OP_GETTABLE)  /* name of indexed variable */
                          ? luaF_getlocalname(p, t + 1, pc)
-                         : upvalname(p, t);
-        kname(p, pc, k, name);
-        return (vn && strcmp(vn, LUA_ENV) == 0) ? "global" : "field";
+                         : luai_upvalname(p, t);
+        luai_kname(p, pc, k, name);
+        return (vn && strcmp(vn, LUA_ENV) == 0) ? "global" : "luai_field";
       }
-      case OP_GETUPVAL: {
-        *name = upvalname(p, GETARG_B(i));
+      case luai_OP_GETUPVAL: {
+        *name = luai_upvalname(p, luai_GETARG_B(i));
         return "upvalue";
       }
-      case OP_LOADK:
-      case OP_LOADKX: {
-        int b = (op == OP_LOADK) ? GETARG_Bx(i)
-                                 : GETARG_Ax(p->code[pc + 1]);
+      case luai_OP_LOADK:
+      case luai_OP_LOADKX: {
+        int b = (op == luai_OP_LOADK) ? luai_GETARG_Bx(i)
+                                 : luai_GETARG_Ax(p->code[pc + 1]);
         if (ttisstring(&p->k[b])) {
           *name = svalue(&p->k[b]);
           return "constant";
         }
         break;
       }
-      case OP_SELF: {
-        int k = GETARG_C(i);  /* key index */
-        kname(p, pc, k, name);
+      case luai_OP_SELF: {
+        int k = luai_GETARG_C(i);  /* key index */
+        luai_kname(p, pc, k, name);
         return "method";
       }
       default: break;  /* go through to return NULL */
@@ -9159,45 +9158,45 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
 ** Returns what the name is (e.g., "for iterator", "method",
 ** "metamethod") and sets '*name' to point to the name.
 */
-static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
+static const char *luai_funcnamefromcode (lua_State *L, CallInfo *ci,
                                      const char **name) {
   TMS tm = (TMS)0;  /* (initial value avoids warnings) */
-  Proto *p = lua_ci_func(ci)->p;  /* calling function */
-  int pc = currentpc(ci);  /* calling instruction index */
+  luai_Proto *p = lua_ci_func(ci)->p;  /* calling function */
+  int pc = luai_currentpc(ci);  /* calling instruction index */
   Instruction i = p->code[pc];  /* calling instruction */
   if (ci->callstatus & CIST_HOOKED) {  /* was it called inside a hook? */
     *name = "?";
     return "hook";
   }
-  switch (GET_OPCODE(i)) {
-    case OP_CALL:
-    case OP_TAILCALL:
-      return getobjname(p, pc, GETARG_A(i), name);  /* get function name */
-    case OP_TFORCALL: {  /* for iterator */
+  switch (luai_GETOPCODE(i)) {
+    case luai_OP_CALL:
+    case luai_OP_TAILCALL:
+      return luai_getobjname(p, pc, luai_GETARG_A(i), name);  /* get function name */
+    case luai_OP_TFORCALL: {  /* for iterator */
       *name = "for iterator";
        return "for iterator";
     }
     /* other instructions can do calls through metamethods */
-    case OP_SELF: case OP_GETTABUP: case OP_GETTABLE:
+    case luai_OP_SELF: case luai_OP_GETTABUP: case luai_OP_GETTABLE:
       tm = TM_INDEX;
       break;
-    case OP_SETTABUP: case OP_SETTABLE:
+    case luai_OP_SETTABUP: case luai_OP_SETTABLE:
       tm = TM_NEWINDEX;
       break;
-    case OP_ADD: case OP_SUB: case OP_MUL: case OP_MOD:
-    case OP_POW: case OP_DIV: case OP_IDIV: case OP_BAND:
-    case OP_BOR: case OP_BXOR: case OP_SHL: case OP_SHR: {
-      int offset = cast_int(GET_OPCODE(i)) - cast_int(OP_ADD);  /* ORDER OP */
-      tm = cast(TMS, offset + cast_int(TM_ADD));  /* ORDER TM */
+    case luai_OP_ADD: case luai_OP_SUB: case luai_OP_MUL: case luai_OP_MOD:
+    case luai_OP_POW: case luai_OP_DIV: case luai_OP_IDIV: case luai_OP_BAND:
+    case luai_OP_BOR: case luai_OP_BXOR: case luai_OP_SHL: case luai_OP_SHR: {
+      int offset = luai_cast_int(luai_GETOPCODE(i)) - luai_cast_int(luai_OP_ADD);  /* ORDER OP */
+      tm = luai_cast(TMS, offset + luai_cast_int(TM_ADD));  /* ORDER TM */
       break;
     }
-    case OP_UNM: tm = TM_UNM; break;
-    case OP_BNOT: tm = TM_BNOT; break;
-    case OP_LEN: tm = TM_LEN; break;
-    case OP_CONCAT: tm = TM_CONCAT; break;
-    case OP_EQ: tm = TM_EQ; break;
-    case OP_LT: tm = TM_LT; break;
-    case OP_LE: tm = TM_LE; break;
+    case luai_OP_UNM: tm = TM_UNM; break;
+    case luai_OP_BNOT: tm = TM_BNOT; break;
+    case luai_OP_LEN: tm = TM_LEN; break;
+    case luai_OP_CONCAT: tm = TM_CONCAT; break;
+    case luai_OP_EQ: tm = TM_EQ; break;
+    case luai_OP_LT: tm = TM_LT; break;
+    case luai_OP_LE: tm = TM_LE; break;
     default:
       return NULL;  /* cannot find a reasonable name */
   }
@@ -9214,7 +9213,7 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
 ** not ISO C, but it should not crash a program; the subsequent
 ** checks are ISO C and ensure a correct result.
 */
-static int isinstack (CallInfo *ci, const TValue *o) {
+static int luai_isinstack (CallInfo *ci, const luai_TValue *o) {
   ptrdiff_t i = o - ci->u.l.base;
   return (0 <= i && i < (ci->top - ci->u.l.base) && ci->u.l.base + i == o);
 }
@@ -9222,16 +9221,16 @@ static int isinstack (CallInfo *ci, const TValue *o) {
 
 /*
 ** Checks whether value 'o' came from an upvalue. (That can only happen
-** with instructions OP_GETTABUP/OP_SETTABUP, which operate directly on
+** with instructions luai_OP_GETTABUP/luai_OP_SETTABUP, which operate directly on
 ** upvalues.)
 */
-static const char *getupvalname (CallInfo *ci, const TValue *o,
+static const char *luai_getupvalname (CallInfo *ci, const luai_TValue *o,
                                  const char **name) {
   LClosure *c = lua_ci_func(ci);
   int i;
   for (i = 0; i < c->nupvalues; i++) {
     if (c->upvals[i]->v == o) {
-      *name = upvalname(c->p, i);
+      *name = luai_upvalname(c->p, i);
       return "upvalue";
     }
   }
@@ -9239,34 +9238,34 @@ static const char *getupvalname (CallInfo *ci, const TValue *o,
 }
 
 
-static const char *varinfo (lua_State *L, const TValue *o) {
+static const char *luai_varinfo (lua_State *L, const luai_TValue *o) {
   const char *name = NULL;  /* to avoid warnings */
   CallInfo *ci = L->ci;
   const char *kind = NULL;
   if (isLua(ci)) {
-    kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
-    if (!kind && isinstack(ci, o))  /* no? try a register */
-      kind = getobjname(lua_ci_func(ci)->p, currentpc(ci),
-                        cast_int(o - ci->u.l.base), &name);
+    kind = luai_getupvalname(ci, o, &name);  /* luai_check whether 'o' is an upvalue */
+    if (!kind && luai_isinstack(ci, o))  /* no? try a register */
+      kind = luai_getobjname(lua_ci_func(ci)->p, luai_currentpc(ci),
+                        luai_cast_int(o - ci->u.l.base), &name);
   }
   return (kind) ? luaO_pushfstring(L, " (%s '%s')", kind, name) : "";
 }
 
 
-l_noret luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
+luai_l_noret luaG_typeerror (lua_State *L, const luai_TValue *o, const char *op) {
   const char *t = luaT_objtypename(L, o);
-  luaG_runerror(L, "attempt to %s a %s value%s", op, t, varinfo(L, o));
+  luaG_runerror(L, "attempt to %s a %s value%s", op, t, luai_varinfo(L, o));
 }
 
 
-l_noret luaG_concaterror (lua_State *L, const TValue *p1, const TValue *p2) {
+luai_l_noret luaG_concaterror (lua_State *L, const luai_TValue *p1, const luai_TValue *p2) {
   if (ttisstring(p1) || cvt2str(p1)) p1 = p2;
   luaG_typeerror(L, p1, "concatenate");
 }
 
 
-l_noret luaG_opinterror (lua_State *L, const TValue *p1,
-                         const TValue *p2, const char *msg) {
+luai_l_noret luaG_opinterror (lua_State *L, const luai_TValue *p1,
+                         const luai_TValue *p2, const char *msg) {
   lua_Number temp;
   if (!tonumber(p1, &temp))  /* first operand is wrong? */
     p2 = p1;  /* now second is wrong */
@@ -9277,15 +9276,15 @@ l_noret luaG_opinterror (lua_State *L, const TValue *p1,
 /*
 ** Error when both values are convertible to numbers, but not to integers
 */
-l_noret luaG_tointerror (lua_State *L, const TValue *p1, const TValue *p2) {
+luai_l_noret luaG_tointerror (lua_State *L, const luai_TValue *p1, const luai_TValue *p2) {
   lua_Integer temp;
   if (!tointeger(p1, &temp))
     p2 = p1;
-  luaG_runerror(L, "number%s has no integer representation", varinfo(L, p2));
+  luaG_runerror(L, "number%s has no integer representation", luai_varinfo(L, p2));
 }
 
 
-l_noret luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
+luai_l_noret luaG_ordererror (lua_State *L, const luai_TValue *p1, const luai_TValue *p2) {
   const char *t1 = luaT_objtypename(L, p1);
   const char *t2 = luaT_objtypename(L, p2);
   if (strcmp(t1, t2) == 0)
@@ -9296,7 +9295,7 @@ l_noret luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
 
 
 /* add src:line information to 'msg' */
-const char *luaG_addinfo (lua_State *L, const char *msg, TString *src,
+const char *luaG_addinfo (lua_State *L, const char *msg, luai_TString *src,
                                         int line) {
   char buff[LUA_IDSIZE];
   if (src)
@@ -9308,9 +9307,9 @@ const char *luaG_addinfo (lua_State *L, const char *msg, TString *src,
 }
 
 
-l_noret luaG_errormsg (lua_State *L) {
+luai_l_noret luaG_errormsg (lua_State *L) {
   if (L->errfunc != 0) {  /* is there an error handling function? */
-    StkId errfunc = restorestack(L, L->errfunc);
+    StkId errfunc = luai_restorestack(L, L->errfunc);
     setobjs2s(L, L->top, L->top - 1);  /* move argument */
     setobjs2s(L, L->top - 1, errfunc);  /* push function */
     L->top++;  /* assume EXTRA_STACK */
@@ -9320,7 +9319,7 @@ l_noret luaG_errormsg (lua_State *L) {
 }
 
 
-l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
+luai_l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   CallInfo *ci = L->ci;
   const char *msg;
   va_list argp;
@@ -9328,7 +9327,7 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
   va_end(argp);
   if (isLua(ci))  /* if Lua function, add source:line information */
-    luaG_addinfo(L, msg, lua_ci_func(ci)->p->source, currentline(ci));
+    luaG_addinfo(L, msg, lua_ci_func(ci)->p->source, luai_currentline(ci));
   luaG_errormsg(L);
 }
 
@@ -9338,7 +9337,7 @@ void luaG_traceexec (lua_State *L) {
   lu_byte mask = L->hookmask;
   int counthook = (--L->hookcount == 0 && (mask & LUA_MASKCOUNT));
   if (counthook)
-    resethookcount(L);  /* reset count */
+    luai_resethookcount(L);  /* reset count */
   else if (!(mask & LUA_MASKLINE))
     return;  /* no line hook and count != 0; nothing to be done */
   if (ci->callstatus & CIST_HOOKYIELD) {  /* called hook last time? */
@@ -9348,19 +9347,19 @@ void luaG_traceexec (lua_State *L) {
   if (counthook)
     luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
   if (mask & LUA_MASKLINE) {
-    Proto *p = lua_ci_func(ci)->p;
-    int npc = pcRel(ci->u.l.savedpc, p);
-    int newline = getfuncline(p, npc);
+    luai_Proto *p = lua_ci_func(ci)->p;
+    int npc = luai_pcRel(ci->u.l.savedpc, p);
+    int newline = luai_getfuncline(p, npc);
     if (npc == 0 ||  /* call linehook when enter a new function, */
         ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
-        newline != getfuncline(p, pcRel(L->oldpc, p)))  /* enter a new line */
+        newline != luai_getfuncline(p, luai_pcRel(L->oldpc, p)))  /* enter a new line */
       luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
   }
   L->oldpc = ci->u.l.savedpc;
   if (L->status == LUA_YIELD) {  /* did hook yield? */
     if (counthook)
       L->hookcount = 1;  /* undo decrement to zero */
-    ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
+    ci->u.l.savedpc--;  /* undo increment (luai_resume will increment it again) */
     ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yielded */
     ci->func = L->top - 1;  /* protect stack below results */
     luaD_throw(L, LUA_YIELD);
@@ -9422,7 +9421,7 @@ struct lua_longjmp {
 };
 
 
-static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
+static void luai_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {  /* memory error? */
       setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
@@ -9441,21 +9440,21 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 }
 
 
-l_noret luaD_throw (lua_State *L, int errcode) {
+luai_l_noret luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {  /* thread has an error handler? */
     L->errorJmp->status = errcode;  /* set status */
     LUAI_THROW(L, L->errorJmp);  /* jump to it */
   }
   else {  /* thread has no error handler */
     global_State *g = G(L);
-    L->status = cast_byte(errcode);  /* mark it as dead */
+    L->status = luai_cast_byte(errcode);  /* mark it as dead */
     if (g->mainthread->errorJmp) {  /* main thread has a handler? */
       setobjs2s(L, g->mainthread->top++, L->top - 1);  /* copy error obj. */
       luaD_throw(g->mainthread, errcode);  /* re-throw in main thread */
     }
     else {  /* no handler at all; abort */
       if (g->panic) {  /* panic function? */
-        seterrorobj(L, errcode, L->top);  /* assume EXTRA_STACK */
+        luai_seterrorobj(L, errcode, L->top);  /* assume EXTRA_STACK */
         if (L->ci->top < L->top)
           L->ci->top = L->top;  /* pushing msg. can break this invariant */
         lua_unlock(L);
@@ -9489,11 +9488,11 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 ** Stack reallocation
 ** ===================================================================
 */
-static void correctstack (lua_State *L, TValue *oldstack) {
+static void luai_correctstack (lua_State *L, luai_TValue *oldstack) {
   CallInfo *ci;
-  UpVal *up;
+  luai_UpVal *up;
   L->top = (L->top - oldstack) + L->stack;
-  for (up = L->openupval; up != NULL; up = up->u.open.next)
+  for (up = L->openupval; up != NULL; up = up->u.open.luai_next)
     up->v = (up->v - oldstack) + L->stack;
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
     ci->top = (ci->top - oldstack) + L->stack;
@@ -9509,16 +9508,16 @@ static void correctstack (lua_State *L, TValue *oldstack) {
 
 
 void luaD_reallocstack (lua_State *L, int newsize) {
-  TValue *oldstack = L->stack;
+  luai_TValue *oldstack = L->stack;
   int lim = L->stacksize;
   lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK);
-  luaM_reallocvector(L, L->stack, L->stacksize, newsize, TValue);
+  luaM_reallocvector(L, L->stack, L->stacksize, newsize, luai_TValue);
   for (; lim < newsize; lim++)
     setnilvalue(L->stack + lim); /* erase new segment */
   L->stacksize = newsize;
   L->stack_last = L->stack + newsize - EXTRA_STACK;
-  correctstack(L, oldstack);
+  luai_correctstack(L, oldstack);
 }
 
 
@@ -9527,7 +9526,7 @@ void luaD_growstack (lua_State *L, int n) {
   if (size > LUAI_MAXSTACK)  /* error after extra size? */
     luaD_throw(L, LUA_ERRERR);
   else {
-    int needed = cast_int(L->top - L->stack) + n + EXTRA_STACK;
+    int needed = luai_cast_int(L->top - L->stack) + n + EXTRA_STACK;
     int newsize = 2 * size;
     if (newsize > LUAI_MAXSTACK) newsize = LUAI_MAXSTACK;
     if (newsize < needed) newsize = needed;
@@ -9541,19 +9540,19 @@ void luaD_growstack (lua_State *L, int n) {
 }
 
 
-static int stackinuse (lua_State *L) {
+static int luai_stackinuse (lua_State *L) {
   CallInfo *ci;
   StkId lim = L->top;
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
     if (lim < ci->top) lim = ci->top;
   }
   lua_assert(lim <= L->stack_last);
-  return cast_int(lim - L->stack) + 1;  /* part of stack in use */
+  return luai_cast_int(lim - L->stack) + 1;  /* part of stack in use */
 }
 
 
 void luaD_shrinkstack (lua_State *L) {
-  int inuse = stackinuse(L);
+  int inuse = luai_stackinuse(L);
   int goodsize = inuse + (inuse / 8) + 2*EXTRA_STACK;
   if (goodsize > LUAI_MAXSTACK)
     goodsize = LUAI_MAXSTACK;  /* respect stack limit */
@@ -9588,11 +9587,11 @@ void luaD_hook (lua_State *L, int event, int line) {
   lua_Hook hook = L->hook;
   if (hook && L->allowhook) {  /* make sure there is a hook */
     CallInfo *ci = L->ci;
-    ptrdiff_t top = savestack(L, L->top);
-    ptrdiff_t ci_top = savestack(L, ci->top);
+    ptrdiff_t top = luai_savestack(L, L->top);
+    ptrdiff_t ci_top = luai_savestack(L, ci->top);
     lua_Debug ar;
     ar.event = event;
-    ar.currentline = line;
+    ar.luai_currentline = line;
     ar.i_ci = ci;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     ci->top = L->top + LUA_MINSTACK;
@@ -9604,18 +9603,18 @@ void luaD_hook (lua_State *L, int event, int line) {
     lua_lock(L);
     lua_assert(!L->allowhook);
     L->allowhook = 1;
-    ci->top = restorestack(L, ci_top);
-    L->top = restorestack(L, top);
+    ci->top = luai_restorestack(L, ci_top);
+    L->top = luai_restorestack(L, top);
     ci->callstatus &= ~CIST_HOOKED;
   }
 }
 
 
-static void callhook (lua_State *L, CallInfo *ci) {
+static void luai_callhook (lua_State *L, CallInfo *ci) {
   int hook = LUA_HOOKCALL;
   ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
   if (isLua(ci->previous) &&
-      GET_OPCODE(*(ci->previous->u.l.savedpc - 1)) == OP_TAILCALL) {
+      luai_GETOPCODE(*(ci->previous->u.l.savedpc - 1)) == luai_OP_TAILCALL) {
     ci->callstatus |= CIST_TAIL;
     hook = LUA_HOOKTAILCALL;
   }
@@ -9624,7 +9623,7 @@ static void callhook (lua_State *L, CallInfo *ci) {
 }
 
 
-static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
+static StkId luai_adjust_varargs (lua_State *L, luai_Proto *p, int actual) {
   int i;
   int nfixargs = p->numparams;
   StkId base, fixed;
@@ -9633,7 +9632,7 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
   base = L->top;  /* final position of first argument */
   for (i = 0; i < nfixargs && i < actual; i++) {
     setobjs2s(L, L->top++, fixed + i);
-    setnilvalue(fixed + i);  /* erase original copy (for GC) */
+    setnilvalue(fixed + i);  /* erase original copy (for LUAI_GC) */
   }
   for (; i < nfixargs; i++)
     setnilvalue(L->top++);  /* complete missing arguments */
@@ -9646,8 +9645,8 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
 ** it in stack below original 'func' so that 'luaD_precall' can call
 ** it. Raise an error if __call metafield is not a function.
 */
-static void tryfuncTM (lua_State *L, StkId func) {
-  const TValue *tm = luaT_gettmbyobj(L, func, TM_CALL);
+static void luai_tryfuncTM (lua_State *L, StkId func) {
+  const luai_TValue *tm = luaT_gettmbyobj(L, func, TM_CALL);
   StkId p;
   if (!ttisfunction(tm))
     luaG_typeerror(L, func, "call");
@@ -9665,7 +9664,7 @@ static void tryfuncTM (lua_State *L, StkId func) {
 ** expressions, multiple results for tail calls/single parameters)
 ** separated.
 */
-static int moveresults (lua_State *L, const TValue *firstResult, StkId res,
+static int luai_moveresults (lua_State *L, const luai_TValue *firstResult, StkId res,
                                       int nres, int wanted) {
   switch (wanted) {  /* handle typical cases separately */
     case 0: break;  /* nothing to move */
@@ -9712,29 +9711,29 @@ int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
   int wanted = ci->nresults;
   if (L->hookmask & (LUA_MASKRET | LUA_MASKLINE)) {
     if (L->hookmask & LUA_MASKRET) {
-      ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
+      ptrdiff_t fr = luai_savestack(L, firstResult);  /* hook may change stack */
       luaD_hook(L, LUA_HOOKRET, -1);
-      firstResult = restorestack(L, fr);
+      firstResult = luai_restorestack(L, fr);
     }
     L->oldpc = ci->previous->u.l.savedpc;  /* 'oldpc' for caller function */
   }
   res = ci->func;  /* res == final position of 1st result */
   L->ci = ci->previous;  /* back to caller */
   /* move results to proper place */
-  return moveresults(L, firstResult, res, nres, wanted);
+  return luai_moveresults(L, firstResult, res, nres, wanted);
 }
 
 
 
-#define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
+#define next_ci(L) (L->ci = (L->ci->luai_next ? L->ci->luai_next : luaE_extendCI(L)))
 
 
-/* macro to check stack size, preserving 'p' */
+/* macro to luai_check stack size, preserving 'p' */
 #define checkstackp(L,n,p)  \
   luaD_checkstackaux(L, n, \
-    ptrdiff_t t__ = savestack(L, p);  /* save 'p' */ \
+    ptrdiff_t t__ = luai_savestack(L, p);  /* luai_save 'p' */ \
     luaC_checkGC(L),  /* stack grow uses memory */ \
-    p = restorestack(L, t__))  /* 'pos' part: restore 'p' */
+    p = luai_restorestack(L, t__))  /* 'pos' part: restore 'p' */
 
 
 /*
@@ -9773,12 +9772,12 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     }
     case LUA_TLCL: {  /* Lua function: prepare its call */
       StkId base;
-      Proto *p = clLvalue(func)->p;
-      int n = cast_int(L->top - func) - 1;  /* number of real arguments */
+      luai_Proto *p = clLvalue(func)->p;
+      int n = luai_cast_int(L->top - func) - 1;  /* number of real arguments */
       int fsize = p->maxstacksize;  /* frame size */
       checkstackp(L, fsize, func);
       if (p->is_vararg)
-        base = adjust_varargs(L, p, n);
+        base = luai_adjust_varargs(L, p, n);
       else {  /* non vararg function */
         for (; n < p->numparams; n++)
           setnilvalue(L->top++);  /* complete missing arguments */
@@ -9793,12 +9792,12 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = CIST_LUA;
       if (L->hookmask & LUA_MASKCALL)
-        callhook(L, ci);
+        luai_callhook(L, ci);
       return 0;
     }
     default: {  /* not a function */
       checkstackp(L, 1, func);  /* ensure space for metamethod */
-      tryfuncTM(L, func);  /* try to get '__call' metamethod */
+      luai_tryfuncTM(L, func);  /* try to get '__call' metamethod */
       return luaD_precall(L, func, nresults);  /* now it must be a function */
     }
   }
@@ -9812,7 +9811,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 ** smaller than 9/8 of LUAI_MAXCCALLS, does not report an error (to
 ** allow overflow handling to work)
 */
-static void stackerror (lua_State *L) {
+static void luai_stackerror (lua_State *L) {
   if (L->nCcalls == LUAI_MAXCCALLS)
     luaG_runerror(L, "C stack overflow");
   else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
@@ -9828,7 +9827,7 @@ static void stackerror (lua_State *L) {
 */
 void luaD_call (lua_State *L, StkId func, int nResults) {
   if (++L->nCcalls >= LUAI_MAXCCALLS)
-    stackerror(L);
+    luai_stackerror(L);
   if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
     luaV_execute(L);  /* call it */
   L->nCcalls--;
@@ -9849,7 +9848,7 @@ void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
 ** Completes the execution of an interrupted C function, calling its
 ** continuation function.
 */
-static void finishCcall (lua_State *L, int status) {
+static void luai_finishCcall (lua_State *L, int status) {
   CallInfo *ci = L->ci;
   int n;
   /* must have a continuation and must be able to call it */
@@ -9879,12 +9878,12 @@ static void finishCcall (lua_State *L, int status) {
 ** be passed to the first continuation function (otherwise the default
 ** status is LUA_YIELD).
 */
-static void unroll (lua_State *L, void *ud) {
+static void luai_unroll (lua_State *L, void *ud) {
   if (ud != NULL)  /* error status? */
-    finishCcall(L, *(int *)ud);  /* finish 'lua_pcallk' callee */
+    luai_finishCcall(L, *(int *)ud);  /* finish 'lua_pcallk' callee */
   while (L->ci != &L->base_ci) {  /* something in the stack */
     if (!isLua(L->ci))  /* C function? */
-      finishCcall(L, LUA_YIELD);  /* complete its execution */
+      luai_finishCcall(L, LUA_YIELD);  /* complete its execution */
     else {  /* Lua function */
       luaV_finishOp(L);  /* finish interrupted instruction */
       luaV_execute(L);  /* execute down to higher C 'boundary' */
@@ -9894,10 +9893,10 @@ static void unroll (lua_State *L, void *ud) {
 
 
 /*
-** Try to find a suspended protected call (a "recover point") for the
+** Try to find a suspended protected call (a "luai_recover point") for the
 ** given thread.
 */
-static CallInfo *findpcall (lua_State *L) {
+static CallInfo *luai_findpcall (lua_State *L) {
   CallInfo *ci;
   for (ci = L->ci; ci != NULL; ci = ci->previous) {  /* search for a pcall */
     if (ci->callstatus & CIST_YPCALL)
@@ -9908,18 +9907,18 @@ static CallInfo *findpcall (lua_State *L) {
 
 
 /*
-** Recovers from an error in a coroutine. Finds a recover point (if
+** Recovers from an error in a coroutine. Finds a luai_recover point (if
 ** there is one) and completes the execution of the interrupted
-** 'luaD_pcall'. If there is no recover point, returns zero.
+** 'luaD_pcall'. If there is no luai_recover point, returns zero.
 */
-static int recover (lua_State *L, int status) {
+static int luai_recover (lua_State *L, int status) {
   StkId oldtop;
-  CallInfo *ci = findpcall(L);
+  CallInfo *ci = luai_findpcall(L);
   if (ci == NULL) return 0;  /* no recovery point */
   /* "finish" luaD_pcall */
-  oldtop = restorestack(L, ci->extra);
+  oldtop = luai_restorestack(L, ci->extra);
   luaF_close(L, oldtop);
-  seterrorobj(L, status, oldtop);
+  luai_seterrorobj(L, status, oldtop);
   L->ci = ci;
   L->allowhook = getoah(ci->callstatus);  /* restore original 'allowhook' */
   L->nny = 0;  /* should be zero to be yieldable */
@@ -9934,7 +9933,7 @@ static int recover (lua_State *L, int status) {
 ** of the coroutine itself. (Such errors should not be handled by any
 ** coroutine error handler and should not kill the coroutine.)
 */
-static int resume_error (lua_State *L, const char *msg, int narg) {
+static int luai_resume_error (lua_State *L, const char *msg, int narg) {
   L->top -= narg;  /* remove args from the stack */
   setsvalue2s(L, L->top, luaS_new(L, msg));  /* push error message */
   api_incr_top(L);
@@ -9950,8 +9949,8 @@ static int resume_error (lua_State *L, const char *msg, int narg) {
 ** function), plus erroneous cases: non-suspended coroutine or dead
 ** coroutine.
 */
-static void resume (lua_State *L, void *ud) {
-  int n = *(cast(int*, ud));  /* number of arguments */
+static void luai_resume (lua_State *L, void *ud) {
+  int n = *(luai_cast(int*, ud));  /* number of arguments */
   StkId firstArg = L->top - n;  /* first argument */
   CallInfo *ci = L->ci;
   if (L->status == LUA_OK) {  /* starting a coroutine? */
@@ -9961,7 +9960,7 @@ static void resume (lua_State *L, void *ud) {
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
-    ci->func = restorestack(L, ci->extra);
+    ci->func = luai_restorestack(L, ci->extra);
     if (isLua(ci))  /* yielded inside a hook? */
       luaV_execute(L);  /* just continue running Lua code */
     else {  /* 'common' yield */
@@ -9974,38 +9973,38 @@ static void resume (lua_State *L, void *ud) {
       }
       luaD_poscall(L, ci, firstArg, n);  /* finish 'luaD_precall' */
     }
-    unroll(L, NULL);  /* run continuation */
+    luai_unroll(L, NULL);  /* run continuation */
   }
 }
 
 
 LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   int status;
-  unsigned short oldnny = L->nny;  /* save "number of non-yieldable" calls */
+  unsigned short oldnny = L->nny;  /* luai_save "number of non-yieldable" calls */
   lua_lock(L);
   if (L->status == LUA_OK) {  /* may be starting a coroutine */
     if (L->ci != &L->base_ci)  /* not in base level? */
-      return resume_error(L, "cannot resume non-suspended coroutine", nargs);
+      return luai_resume_error(L, "cannot luai_resume non-suspended coroutine", nargs);
   }
   else if (L->status != LUA_YIELD)
-    return resume_error(L, "cannot resume dead coroutine", nargs);
+    return luai_resume_error(L, "cannot luai_resume dead coroutine", nargs);
   L->nCcalls = (from) ? from->nCcalls + 1 : 1;
   if (L->nCcalls >= LUAI_MAXCCALLS)
-    return resume_error(L, "C stack overflow", nargs);
+    return luai_resume_error(L, "C stack overflow", nargs);
   luai_userstateresume(L, nargs);
   L->nny = 0;  /* allow yields */
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
-  status = luaD_rawrunprotected(L, resume, &nargs);
+  status = luaD_rawrunprotected(L, luai_resume, &nargs);
   if (status == -1)  /* error calling 'lua_resume'? */
     status = LUA_ERRRUN;
   else {  /* continue running after recoverable errors */
-    while (errorstatus(status) && recover(L, status)) {
-      /* unroll continuation */
-      status = luaD_rawrunprotected(L, unroll, &status);
+    while (errorstatus(status) && luai_recover(L, status)) {
+      /* luai_unroll continuation */
+      status = luaD_rawrunprotected(L, luai_unroll, &status);
     }
     if (errorstatus(status)) {  /* unrecoverable error? */
-      L->status = cast_byte(status);  /* mark thread as 'dead' */
-      seterrorobj(L, status, L->top);  /* push error message */
+      L->status = luai_cast_byte(status);  /* mark thread as 'dead' */
+      luai_seterrorobj(L, status, L->top);  /* push error message */
       L->ci->top = L->top;
     }
     else lua_assert(status == L->status);  /* normal end or yield */
@@ -10036,13 +10035,13 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
       luaG_runerror(L, "attempt to yield from outside a coroutine");
   }
   L->status = LUA_YIELD;
-  ci->extra = savestack(L, ci->func);  /* save current 'func' */
+  ci->extra = luai_savestack(L, ci->func);  /* luai_save current 'func' */
   if (isLua(ci)) {  /* inside a hook? */
     api_check(L, k == NULL, "hooks cannot continue after yielding");
   }
   else {
     if ((ci->u.c.k = k) != NULL)  /* is there a continuation? */
-      ci->u.c.ctx = ctx;  /* save context */
+      ci->u.c.ctx = ctx;  /* luai_save context */
     ci->func = L->top - nresults - 1;  /* protect stack below results */
     luaD_throw(L, LUA_YIELD);
   }
@@ -10062,9 +10061,9 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   L->errfunc = ef;
   status = luaD_rawrunprotected(L, func, u);
   if (status != LUA_OK) {  /* an error occurred? */
-    StkId oldtop = restorestack(L, old_top);
+    StkId oldtop = luai_restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close possible pending closures */
-    seterrorobj(L, status, oldtop);
+    luai_seterrorobj(L, status, oldtop);
     L->ci = old_ci;
     L->allowhook = old_allowhooks;
     L->nny = old_nny;
@@ -10079,16 +10078,16 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
 /*
 ** Execute a protected parser.
 */
-struct SParser {  /* data to 'luai_f_parser' */
+struct luai_SParser {  /* data to 'luai_f_parser' */
   ZIO *z;
   Mbuffer buff;  /* dynamic structure used by the scanner */
-  Dyndata dyd;  /* dynamic structures used by the parser */
+  luai_Dyndata dyd;  /* dynamic structures used by the parser */
   const char *mode;
   const char *name;
 };
 
 
-static void checkmode (lua_State *L, const char *mode, const char *x) {
+static void luai_checkmode (lua_State *L, const char *mode, const char *x) {
   if (mode && strchr(mode, x[0]) == NULL) {
     luaO_pushfstring(L,
        "attempt to load a %s chunk (mode is '%s')", x, mode);
@@ -10099,14 +10098,14 @@ static void checkmode (lua_State *L, const char *mode, const char *x) {
 
 static void luai_f_parser (lua_State *L, void *ud) {
   LClosure *cl;
-  struct SParser *p = cast(struct SParser *, ud);
-  int c = zgetc(p->z);  /* read first character */
+  struct luai_SParser *p = luai_cast(struct luai_SParser *, ud);
+  int c = luai_zgetc(p->z);  /* read first character */
   if (c == LUA_SIGNATURE[0]) {
-    checkmode(L, p->mode, "binary");
+    luai_checkmode(L, p->mode, "binary");
     cl = luaU_undump(L, p->z, p->name);
   }
   else {
-    checkmode(L, p->mode, "text");
+    luai_checkmode(L, p->mode, "text");
     cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
   }
   lua_assert(cl->nupvalues == cl->p->sizeupvalues);
@@ -10116,7 +10115,7 @@ static void luai_f_parser (lua_State *L, void *ud) {
 
 int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
                                         const char *mode) {
-  struct SParser p;
+  struct luai_SParser p;
   int status;
   L->nny++;  /* cannot yield during parsing */
   p.z = z; p.name = name; p.mode = mode;
@@ -10124,7 +10123,7 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
   p.dyd.gt.arr = NULL; p.dyd.gt.size = 0;
   p.dyd.label.arr = NULL; p.dyd.label.size = 0;
   luaZ_initbuffer(L, &p.buff);
-  status = luaD_pcall(L, luai_f_parser, &p, savestack(L, L->top), L->errfunc);
+  status = luaD_pcall(L, luai_f_parser, &p, luai_savestack(L, L->top), L->errfunc);
   luaZ_freebuffer(L, &p.buff);
   luaM_freearray(L, p.dyd.actvar.arr, p.dyd.actvar.size);
   luaM_freearray(L, p.dyd.gt.arr, p.dyd.gt.size);
@@ -10141,19 +10140,19 @@ typedef struct {
   void *data;
   int strip;
   int status;
-} DumpState;
+} luai_DumpState;
 
 
 /*
-** All high-level dumps go through DumpVector; you can change it to
+** All high-level dumps go through luai_DumpVector; you can change it to
 ** change the endianness of the result
 */
-#define DumpVector(v,n,D)	DumpBlock(v,(n)*sizeof((v)[0]),D)
+#define luai_DumpVector(v,n,D)	luai_DumpBlock(v,(n)*sizeof((v)[0]),D)
 
-#define DumpLiteral(s,D)	DumpBlock(s, sizeof(s) - sizeof(char), D)
+#define luai_DumpLiteral(s,D)	luai_DumpBlock(s, sizeof(s) - sizeof(char), D)
 
 
-static void DumpBlock (const void *b, size_t size, DumpState *D) {
+static void luai_DumpBlock (const void *b, size_t size, luai_DumpState *D) {
   if (D->status == 0 && size > 0) {
     lua_unlock(D->L);
     D->status = (*D->writer)(D->L, b, size, D->data);
@@ -10162,77 +10161,77 @@ static void DumpBlock (const void *b, size_t size, DumpState *D) {
 }
 
 
-#define DumpVar(x,D)		DumpVector(&x,1,D)
+#define luai_DumpVar(x,D)		luai_DumpVector(&x,1,D)
 
 
-static void DumpByte (int y, DumpState *D) {
+static void luai_DumpByte (int y, luai_DumpState *D) {
   lu_byte x = (lu_byte)y;
-  DumpVar(x, D);
+  luai_DumpVar(x, D);
 }
 
 
-static void DumpInt (int x, DumpState *D) {
-  DumpVar(x, D);
+static void luai_DumpInt (int x, luai_DumpState *D) {
+  luai_DumpVar(x, D);
 }
 
 
-static void DumpNumber (lua_Number x, DumpState *D) {
-  DumpVar(x, D);
+static void luai_DumpNumber (lua_Number x, luai_DumpState *D) {
+  luai_DumpVar(x, D);
 }
 
 
-static void DumpInteger (lua_Integer x, DumpState *D) {
-  DumpVar(x, D);
+static void luai_DumpInteger (lua_Integer x, luai_DumpState *D) {
+  luai_DumpVar(x, D);
 }
 
 
-static void DumpString (const TString *s, DumpState *D) {
+static void luai_DumpString (const luai_TString *s, luai_DumpState *D) {
   if (s == NULL)
-    DumpByte(0, D);
+    luai_DumpByte(0, D);
   else {
     size_t size = tsslen(s) + 1;  /* include trailing '\0' */
     const char *str = getstr(s);
     if (size < 0xFF)
-      DumpByte(cast_int(size), D);
+      luai_DumpByte(luai_cast_int(size), D);
     else {
-      DumpByte(0xFF, D);
-      DumpVar(size, D);
+      luai_DumpByte(0xFF, D);
+      luai_DumpVar(size, D);
     }
-    DumpVector(str, size - 1, D);  /* no need to save '\0' */
+    luai_DumpVector(str, size - 1, D);  /* no need to luai_save '\0' */
   }
 }
 
 
-static void DumpCode (const Proto *f, DumpState *D) {
-  DumpInt(f->sizecode, D);
-  DumpVector(f->code, f->sizecode, D);
+static void luai_DumpCode (const luai_Proto *f, luai_DumpState *D) {
+  luai_DumpInt(f->sizecode, D);
+  luai_DumpVector(f->code, f->sizecode, D);
 }
 
 
-static void DumpFunction(const Proto *f, TString *psource, DumpState *D);
+static void luai_DumpFunction(const luai_Proto *f, luai_TString *psource, luai_DumpState *D);
 
-static void DumpConstants (const Proto *f, DumpState *D) {
+static void luai_DumpConstants (const luai_Proto *f, luai_DumpState *D) {
   int i;
   int n = f->sizek;
-  DumpInt(n, D);
+  luai_DumpInt(n, D);
   for (i = 0; i < n; i++) {
-    const TValue *o = &f->k[i];
-    DumpByte(ttype(o), D);
+    const luai_TValue *o = &f->k[i];
+    luai_DumpByte(ttype(o), D);
     switch (ttype(o)) {
     case LUA_TNIL:
       break;
     case LUA_TBOOLEAN:
-      DumpByte(bvalue(o), D);
+      luai_DumpByte(bvalue(o), D);
       break;
     case LUA_TNUMFLT:
-      DumpNumber(fltvalue(o), D);
+      luai_DumpNumber(fltvalue(o), D);
       break;
     case LUA_TNUMINT:
-      DumpInteger(ivalue(o), D);
+      luai_DumpInteger(ivalue(o), D);
       break;
     case LUA_TSHRSTR:
     case LUA_TLNGSTR:
-      DumpString(tsvalue(o), D);
+      luai_DumpString(tsvalue(o), D);
       break;
     default:
       lua_assert(0);
@@ -10241,109 +10240,109 @@ static void DumpConstants (const Proto *f, DumpState *D) {
 }
 
 
-static void DumpProtos (const Proto *f, DumpState *D) {
+static void luai_DumpProtos (const luai_Proto *f, luai_DumpState *D) {
   int i;
   int n = f->sizep;
-  DumpInt(n, D);
+  luai_DumpInt(n, D);
   for (i = 0; i < n; i++)
-    DumpFunction(f->p[i], f->source, D);
+    luai_DumpFunction(f->p[i], f->source, D);
 }
 
 
-static void DumpUpvalues (const Proto *f, DumpState *D) {
+static void luai_DumpUpvalues (const luai_Proto *f, luai_DumpState *D) {
   int i, n = f->sizeupvalues;
-  DumpInt(n, D);
+  luai_DumpInt(n, D);
   for (i = 0; i < n; i++) {
-    DumpByte(f->upvalues[i].instack, D);
-    DumpByte(f->upvalues[i].idx, D);
+    luai_DumpByte(f->upvalues[i].instack, D);
+    luai_DumpByte(f->upvalues[i].idx, D);
   }
 }
 
 
-static void DumpDebug (const Proto *f, DumpState *D) {
+static void luai_DumpDebug (const luai_Proto *f, luai_DumpState *D) {
   int i, n;
   n = (D->strip) ? 0 : f->sizelineinfo;
-  DumpInt(n, D);
-  DumpVector(f->lineinfo, n, D);
+  luai_DumpInt(n, D);
+  luai_DumpVector(f->lineinfo, n, D);
   n = (D->strip) ? 0 : f->sizelocvars;
-  DumpInt(n, D);
+  luai_DumpInt(n, D);
   for (i = 0; i < n; i++) {
-    DumpString(f->locvars[i].varname, D);
-    DumpInt(f->locvars[i].startpc, D);
-    DumpInt(f->locvars[i].endpc, D);
+    luai_DumpString(f->locvars[i].varname, D);
+    luai_DumpInt(f->locvars[i].startpc, D);
+    luai_DumpInt(f->locvars[i].endpc, D);
   }
   n = (D->strip) ? 0 : f->sizeupvalues;
-  DumpInt(n, D);
+  luai_DumpInt(n, D);
   for (i = 0; i < n; i++)
-    DumpString(f->upvalues[i].name, D);
+    luai_DumpString(f->upvalues[i].name, D);
 }
 
 
-static void DumpFunction (const Proto *f, TString *psource, DumpState *D) {
+static void luai_DumpFunction (const luai_Proto *f, luai_TString *psource, luai_DumpState *D) {
   if (D->strip || f->source == psource)
-    DumpString(NULL, D);  /* no debug info or same source as its parent */
+    luai_DumpString(NULL, D);  /* no debug info or same source as its parent */
   else
-    DumpString(f->source, D);
-  DumpInt(f->linedefined, D);
-  DumpInt(f->lastlinedefined, D);
-  DumpByte(f->numparams, D);
-  DumpByte(f->is_vararg, D);
-  DumpByte(f->maxstacksize, D);
-  DumpCode(f, D);
-  DumpConstants(f, D);
-  DumpUpvalues(f, D);
-  DumpProtos(f, D);
-  DumpDebug(f, D);
+    luai_DumpString(f->source, D);
+  luai_DumpInt(f->linedefined, D);
+  luai_DumpInt(f->lastlinedefined, D);
+  luai_DumpByte(f->numparams, D);
+  luai_DumpByte(f->is_vararg, D);
+  luai_DumpByte(f->maxstacksize, D);
+  luai_DumpCode(f, D);
+  luai_DumpConstants(f, D);
+  luai_DumpUpvalues(f, D);
+  luai_DumpProtos(f, D);
+  luai_DumpDebug(f, D);
 }
 
 
-static void DumpHeader (DumpState *D) {
-  DumpLiteral(LUA_SIGNATURE, D);
-  DumpByte(LUAC_VERSION, D);
-  DumpByte(LUAC_FORMAT, D);
-  DumpLiteral(LUAC_DATA, D);
-  DumpByte(sizeof(int), D);
-  DumpByte(sizeof(size_t), D);
-  DumpByte(sizeof(Instruction), D);
-  DumpByte(sizeof(lua_Integer), D);
-  DumpByte(sizeof(lua_Number), D);
-  DumpInteger(LUAC_INT, D);
-  DumpNumber(LUAC_NUM, D);
+static void luai_DumpHeader (luai_DumpState *D) {
+  luai_DumpLiteral(LUA_SIGNATURE, D);
+  luai_DumpByte(LUAC_VERSION, D);
+  luai_DumpByte(LUAC_FORMAT, D);
+  luai_DumpLiteral(LUAC_DATA, D);
+  luai_DumpByte(sizeof(int), D);
+  luai_DumpByte(sizeof(size_t), D);
+  luai_DumpByte(sizeof(Instruction), D);
+  luai_DumpByte(sizeof(lua_Integer), D);
+  luai_DumpByte(sizeof(lua_Number), D);
+  luai_DumpInteger(LUAC_INT, D);
+  luai_DumpNumber(LUAC_NUM, D);
 }
 
 
 /*
 ** dump Lua function as precompiled chunk
 */
-int luaU_dump(lua_State *L, const Proto *f, lua_Writer w, void *data,
+int luaU_dump(lua_State *L, const luai_Proto *f, lua_Writer w, void *data,
               int strip) {
-  DumpState D;
+  luai_DumpState D;
   D.L = L;
   D.writer = w;
   D.data = data;
   D.strip = strip;
   D.status = 0;
-  DumpHeader(&D);
-  DumpByte(f->sizeupvalues, &D);
-  DumpFunction(f, NULL, &D);
+  luai_DumpHeader(&D);
+  luai_DumpByte(f->sizeupvalues, &D);
+  luai_DumpFunction(f, NULL, &D);
   return D.status;
 }
 
 /*__lfunc.c__*/
 
 CClosure *luaF_newCclosure (lua_State *L, int n) {
-  GCObject *o = luaC_newobj(L, LUA_TCCL, sizeCclosure(n));
+  LUAI_GCObject *o = luaC_newobj(L, LUA_TCCL, luai_sizeCclosure(n));
   CClosure *c = gco2ccl(o);
-  c->nupvalues = cast_byte(n);
+  c->nupvalues = luai_cast_byte(n);
   return c;
 }
 
 
 LClosure *luaF_newLclosure (lua_State *L, int n) {
-  GCObject *o = luaC_newobj(L, LUA_TLCL, sizeLclosure(n));
+  LUAI_GCObject *o = luaC_newobj(L, LUA_TLCL, luai_sizeLclosure(n));
   LClosure *c = gco2lcl(o);
   c->p = NULL;
-  c->nupvalues = cast_byte(n);
+  c->nupvalues = luai_cast_byte(n);
   while (n--) c->upvals[n] = NULL;
   return c;
 }
@@ -10354,7 +10353,7 @@ LClosure *luaF_newLclosure (lua_State *L, int n) {
 void luaF_initupvals (lua_State *L, LClosure *cl) {
   int i;
   for (i = 0; i < cl->nupvalues; i++) {
-    UpVal *uv = luaM_new(L, UpVal);
+    luai_UpVal *uv = luaM_new(L, luai_UpVal);
     uv->refcount = 1;
     uv->v = &uv->u.value;  /* make it closed */
     setnilvalue(uv->v);
@@ -10363,25 +10362,25 @@ void luaF_initupvals (lua_State *L, LClosure *cl) {
 }
 
 
-UpVal *luaF_findupval (lua_State *L, StkId level) {
-  UpVal **pp = &L->openupval;
-  UpVal *p;
-  UpVal *uv;
-  lua_assert(isintwups(L) || L->openupval == NULL);
+luai_UpVal *luaF_findupval (lua_State *L, StkId level) {
+  luai_UpVal **pp = &L->openupval;
+  luai_UpVal *p;
+  luai_UpVal *uv;
+  lua_assert(luai_isintwups(L) || L->openupval == NULL);
   while (*pp != NULL && (p = *pp)->v >= level) {
-    lua_assert(upisopen(p));
+    lua_assert(luai_upisopen(p));
     if (p->v == level)  /* found a corresponding upvalue? */
       return p;  /* return it */
-    pp = &p->u.open.next;
+    pp = &p->u.open.luai_next;
   }
   /* not found: create a new upvalue */
-  uv = luaM_new(L, UpVal);
+  uv = luaM_new(L, luai_UpVal);
   uv->refcount = 0;
-  uv->u.open.next = *pp;  /* link it to list of open upvalues */
+  uv->u.open.luai_next = *pp;  /* link it to list of open upvalues */
   uv->u.open.touched = 1;
   *pp = uv;
   uv->v = level;  /* current value lives in the stack */
-  if (!isintwups(L)) {  /* thread not in list of threads with upvalues? */
+  if (!luai_isintwups(L)) {  /* thread not in list of threads with upvalues? */
     L->twups = G(L)->twups;  /* link it to the list */
     G(L)->twups = L;
   }
@@ -10390,10 +10389,10 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 
 
 void luaF_close (lua_State *L, StkId level) {
-  UpVal *uv;
+  luai_UpVal *uv;
   while (L->openupval != NULL && (uv = L->openupval)->v >= level) {
-    lua_assert(upisopen(uv));
-    L->openupval = uv->u.open.next;  /* remove from 'open' list */
+    lua_assert(luai_upisopen(uv));
+    L->openupval = uv->u.open.luai_next;  /* remove from 'open' list */
     if (uv->refcount == 0)  /* no references? */
       luaM_free(L, uv);  /* free upvalue */
     else {
@@ -10405,9 +10404,9 @@ void luaF_close (lua_State *L, StkId level) {
 }
 
 
-Proto *luaF_newproto (lua_State *L) {
-  GCObject *o = luaC_newobj(L, LUA_TPROTO, sizeof(Proto));
-  Proto *f = gco2p(o);
+luai_Proto *luaF_newproto (lua_State *L) {
+  LUAI_GCObject *o = luaC_newobj(L, LUA_TPROTO, sizeof(luai_Proto));
+  luai_Proto *f = gco2p(o);
   f->k = NULL;
   f->sizek = 0;
   f->p = NULL;
@@ -10431,7 +10430,7 @@ Proto *luaF_newproto (lua_State *L) {
 }
 
 
-void luaF_freeproto (lua_State *L, Proto *f) {
+void luaF_freeproto (lua_State *L, luai_Proto *f) {
   luaM_freearray(L, f->code, f->sizecode);
   luaM_freearray(L, f->p, f->sizep);
   luaM_freearray(L, f->k, f->sizek);
@@ -10446,7 +10445,7 @@ void luaF_freeproto (lua_State *L, Proto *f) {
 ** Look for n-th local variable at line 'line' in function 'func'.
 ** Returns NULL if not found.
 */
-const char *luaF_getlocalname (const Proto *f, int local_number, int pc) {
+const char *luaF_getlocalname (const luai_Proto *f, int local_number, int pc) {
   int i;
   for (i = 0; i<f->sizelocvars && f->locvars[i].startpc <= pc; i++) {
     if (pc < f->locvars[i].endpc) {  /* is variable active? */
@@ -10461,71 +10460,71 @@ const char *luaF_getlocalname (const Proto *f, int local_number, int pc) {
 /*__lgc.c__*/
 
 /*
-** internal state for collector while inside the atomic phase. The
+** internal state for collector while inside the luai_atomic phase. The
 ** collector should never be in this state while running regular code.
 */
-#define GCSinsideatomic		(GCSpause + 1)
+#define LUAI_GCSinsideatomic		(LUAI_GCSpause + 1)
 
 /*
 ** cost of sweeping one element (the size of a small object divided
 ** by some adjust for the sweep speed)
 */
-#define GCSWEEPCOST	((sizeof(TString) + 4) / 4)
+#define LUAI_GCSWEEPCOST	((sizeof(luai_TString) + 4) / 4)
 
 /* maximum number of elements to sweep in each single step */
-#define GCSWEEPMAX	(cast_int((GCSTEPSIZE / GCSWEEPCOST) / 4))
+#define LUAI_GCSWEEPMAX	(luai_cast_int((LUA_GCSTEPSIZE / LUAI_GCSWEEPCOST) / 4))
 
 /* cost of calling one finalizer */
-#define GCFINALIZECOST	GCSWEEPCOST
+#define LUAI_GCFINALIZECOST	LUAI_GCSWEEPCOST
 
 
 /*
 ** macro to adjust 'stepmul': 'stepmul' is actually used like
-** 'stepmul / STEPMULADJ' (value chosen by tests)
+** 'stepmul / LUAI_STEPMULADJ' (value chosen by tests)
 */
-#define STEPMULADJ		200
+#define LUAI_STEPMULADJ		200
 
 
 /*
 ** macro to adjust 'pause': 'pause' is actually used like
-** 'pause / PAUSEADJ' (value chosen by tests)
+** 'pause / LUAI_PAUSEADJ' (value chosen by tests)
 */
-#define PAUSEADJ		100
+#define LUAI_PAUSEADJ		100
 
 
 /*
-** 'makewhite' erases all color bits then sets only the current white
+** 'luai_makewhite' erases all color bits then sets only the current white
 ** bit
 */
 #define luai_maskcolors	(~(bitmask(BLACKBIT) | WHITEBITS))
-#define makewhite(g,x)	\
- (x->marked = cast_byte((x->marked & luai_maskcolors) | luaC_white(g)))
+#define luai_makewhite(g,x)	\
+ (x->marked = luai_cast_byte((x->marked & luai_maskcolors) | luaC_white(g)))
 
-#define white2gray(x)	resetbits(x->marked, WHITEBITS)
-#define black2gray(x)	resetbit(x->marked, BLACKBIT)
-
-
-#define valiswhite(x)   (iscollectable(x) && iswhite(gcvalue(x)))
-
-#define checkdeadkey(n)	lua_assert(!ttisdeadkey(gkey(n)) || ttisnil(gval(n)))
+#define luai_white2gray(x)	resetbits(x->marked, WHITEBITS)
+#define luai_black2gray(x)	resetbit(x->marked, BLACKBIT)
 
 
-#define checkconsistency(obj)  \
+#define luai_valiswhite(x)   (iscollectable(x) && iswhite(gcvalue(x)))
+
+#define luai_checkdeadkey(n)	lua_assert(!ttisdeadkey(luai_gkey(n)) || ttisnil(luai_gval(n)))
+
+
+#define luai_checkconsistency(obj)  \
   lua_longassert(!iscollectable(obj) || righttt(obj))
 
 
-#define markvalue(g,o) { checkconsistency(o); \
-  if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
+#define luai_markvalue(g,o) { luai_checkconsistency(o); \
+  if (luai_valiswhite(o)) luai_reallymarkobject(g,gcvalue(o)); }
 
-#define markobject(g,t)	{ if (iswhite(t)) reallymarkobject(g, obj2gco(t)); }
+#define luai_markobject(g,t)	{ if (iswhite(t)) luai_reallymarkobject(g, obj2gco(t)); }
 
 /*
 ** mark an object that can be NULL (either because it is really optional,
 ** or it was stripped as debug info, or inside an uncompleted structure)
 */
-#define markobjectN(g,t)	{ if (t) markobject(g,t); }
+#define luai_markobjectN(g,t)	{ if (t) luai_markobject(g,t); }
 
-static void reallymarkobject (global_State *g, GCObject *o);
+static void luai_reallymarkobject (global_State *g, LUAI_GCObject *o);
 
 
 /*
@@ -10538,13 +10537,13 @@ static void reallymarkobject (global_State *g, GCObject *o);
 /*
 ** one after last element in a hash array
 */
-#define gnodelast(h)	gnode(h, cast(size_t, sizenode(h)))
+#define luai_gnodelast(h)	luai_gnode(h, luai_cast(size_t, sizenode(h)))
 
 
 /*
 ** link collectable object 'o' into list pointed by 'p'
 */
-#define linkgclist(o,p)	((o)->gclist = (p), (p) = obj2gco(o))
+#define luai_linkgclist(o,p)	((o)->gclist = (p), (p) = obj2gco(o))
 
 
 /*
@@ -10556,10 +10555,10 @@ static void reallymarkobject (global_State *g, GCObject *o);
 ** associated nil value is enough to signal that the entry is logically
 ** empty.
 */
-static void removeentry (Node *n) {
-  lua_assert(ttisnil(gval(n)));
-  if (valiswhite(gkey(n)))
-    setdeadvalue(wgkey(n));  /* unused and unmarked key; remove it */
+static void luai_removeentry (luai_Node *n) {
+  lua_assert(ttisnil(luai_gval(n)));
+  if (luai_valiswhite(luai_gkey(n)))
+    setdeadvalue(luai_wgkey(n));  /* unused and unmarked key; remove it */
 }
 
 
@@ -10570,10 +10569,10 @@ static void removeentry (Node *n) {
 ** other objects: if really collected, cannot keep them; for objects
 ** being finalized, keep them in keys, but not in values
 */
-static int iscleared (global_State *g, const TValue *o) {
+static int luai_iscleared (global_State *g, const luai_TValue *o) {
   if (!iscollectable(o)) return 0;
   else if (ttisstring(o)) {
-    markobject(g, tsvalue(o));  /* strings are 'values', so are never weak */
+    luai_markobject(g, tsvalue(o));  /* strings are 'values', so are never weak */
     return 0;
   }
   else return iswhite(gcvalue(o));
@@ -10586,14 +10585,14 @@ static int iscleared (global_State *g, const TValue *o) {
 ** object to white [sweep it] to avoid other barrier calls for this
 ** same object.)
 */
-void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
+void luaC_barrier_ (lua_State *L, LUAI_GCObject *o, LUAI_GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   if (keepinvariant(g))  /* must keep invariant? */
-    reallymarkobject(g, v);  /* restore invariant */
+    luai_reallymarkobject(g, v);  /* restore invariant */
   else {  /* sweep phase */
     lua_assert(issweepphase(g));
-    makewhite(g, o);  /* mark main obj. as white to avoid other barriers */
+    luai_makewhite(g, o);  /* mark main obj. as white to avoid other barriers */
   }
 }
 
@@ -10602,11 +10601,11 @@ void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
 ** barrier that moves collector backward, that is, mark the black object
 ** pointing to a white object as gray again.
 */
-void luaC_barrierback_ (lua_State *L, Table *t) {
+void luaC_barrierback_ (lua_State *L, luai_Table *t) {
   global_State *g = G(L);
   lua_assert(isblack(t) && !isdead(g, t));
-  black2gray(t);  /* make table gray (again) */
-  linkgclist(t, g->grayagain);
+  luai_black2gray(t);  /* make table gray (again) */
+  luai_linkgclist(t, g->grayagain);
 }
 
 
@@ -10616,21 +10615,21 @@ void luaC_barrierback_ (lua_State *L, Table *t) {
 ** closures pointing to it. So, we assume that the object being assigned
 ** must be marked.
 */
-void luaC_upvalbarrier_ (lua_State *L, UpVal *uv) {
+void luaC_upvalbarrier_ (lua_State *L, luai_UpVal *uv) {
   global_State *g = G(L);
-  GCObject *o = gcvalue(uv->v);
-  lua_assert(!upisopen(uv));  /* ensured by macro luaC_upvalbarrier */
+  LUAI_GCObject *o = gcvalue(uv->v);
+  lua_assert(!luai_upisopen(uv));  /* ensured by macro luaC_upvalbarrier */
   if (keepinvariant(g))
-    markobject(g, o);
+    luai_markobject(g, o);
 }
 
 
-void luaC_fix (lua_State *L, GCObject *o) {
+void luaC_fix (lua_State *L, LUAI_GCObject *o) {
   global_State *g = G(L);
   lua_assert(g->allgc == o);  /* object must be 1st in 'allgc' list! */
-  white2gray(o);  /* they will be gray forever */
-  g->allgc = o->next;  /* remove object from 'allgc' list */
-  o->next = g->fixedgc;  /* link it to 'fixedgc' list */
+  luai_white2gray(o);  /* they will be gray forever */
+  g->allgc = o->luai_next;  /* remove object from 'allgc' list */
+  o->luai_next = g->fixedgc;  /* link it to 'fixedgc' list */
   g->fixedgc = o;
 }
 
@@ -10639,12 +10638,12 @@ void luaC_fix (lua_State *L, GCObject *o) {
 ** create a new collectable object (with given type and size) and link
 ** it to 'allgc' list.
 */
-GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
+LUAI_GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
   global_State *g = G(L);
-  GCObject *o = cast(GCObject *, luaM_newobject(L, novariant(tt), sz));
+  LUAI_GCObject *o = luai_cast(LUAI_GCObject *, luaM_newobject(L, novariant(tt), sz));
   o->marked = luaC_white(g);
   o->tt = tt;
-  o->next = g->allgc;
+  o->luai_next = g->allgc;
   g->allgc = o;
   return o;
 }
@@ -10666,50 +10665,50 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
 ** to appropriate list to be visited (and turned black) later. (Open
 ** upvalues are already linked in 'headuv' list.)
 */
-static void reallymarkobject (global_State *g, GCObject *o) {
+static void luai_reallymarkobject (global_State *g, LUAI_GCObject *o) {
  reentry:
-  white2gray(o);
+  luai_white2gray(o);
   switch (o->tt) {
     case LUA_TSHRSTR: {
       gray2black(o);
-      g->GCmemtrav += sizelstring(gco2ts(o)->shrlen);
+      g->LUAI_GCmemtrav += luai_sizelstring(gco2ts(o)->shrlen);
       break;
     }
     case LUA_TLNGSTR: {
       gray2black(o);
-      g->GCmemtrav += sizelstring(gco2ts(o)->u.lnglen);
+      g->LUAI_GCmemtrav += luai_sizelstring(gco2ts(o)->u.lnglen);
       break;
     }
     case LUA_TUSERDATA: {
-      TValue uvalue;
-      markobjectN(g, gco2u(o)->metatable);  /* mark its metatable */
+      luai_TValue uvalue;
+      luai_markobjectN(g, gco2u(o)->metatable);  /* mark its metatable */
       gray2black(o);
-      g->GCmemtrav += sizeudata(gco2u(o));
+      g->LUAI_GCmemtrav += luai_sizeudata(gco2u(o));
       getuservalue(g->mainthread, gco2u(o), &uvalue);
-      if (valiswhite(&uvalue)) {  /* markvalue(g, &uvalue); */
+      if (luai_valiswhite(&uvalue)) {  /* luai_markvalue(g, &uvalue); */
         o = gcvalue(&uvalue);
         goto reentry;
       }
       break;
     }
     case LUA_TLCL: {
-      linkgclist(gco2lcl(o), g->gray);
+      luai_linkgclist(gco2lcl(o), g->gray);
       break;
     }
     case LUA_TCCL: {
-      linkgclist(gco2ccl(o), g->gray);
+      luai_linkgclist(gco2ccl(o), g->gray);
       break;
     }
     case LUA_TTABLE: {
-      linkgclist(gco2t(o), g->gray);
+      luai_linkgclist(gco2t(o), g->gray);
       break;
     }
     case LUA_TTHREAD: {
-      linkgclist(gco2th(o), g->gray);
+      luai_linkgclist(gco2th(o), g->gray);
       break;
     }
     case LUA_TPROTO: {
-      linkgclist(gco2p(o), g->gray);
+      luai_linkgclist(gco2p(o), g->gray);
       break;
     }
     default: lua_assert(0); break;
@@ -10720,20 +10719,20 @@ static void reallymarkobject (global_State *g, GCObject *o) {
 /*
 ** mark metamethods for basic types
 */
-static void markmt (global_State *g) {
+static void luai_markmt (global_State *g) {
   int i;
   for (i=0; i < LUA_NUMTAGS; i++)
-    markobjectN(g, g->mt[i]);
+    luai_markobjectN(g, g->mt[i]);
 }
 
 
 /*
 ** mark all objects in list of being-finalized
 */
-static void markbeingfnz (global_State *g) {
-  GCObject *o;
-  for (o = g->tobefnz; o != NULL; o = o->next)
-    markobject(g, o);
+static void luai_markbeingfnz (global_State *g) {
+  LUAI_GCObject *o;
+  for (o = g->tobefnz; o != NULL; o = o->luai_next)
+    luai_markobject(g, o);
 }
 
 
@@ -10743,7 +10742,7 @@ static void markbeingfnz (global_State *g) {
 ** thread.) Remove from the list threads that no longer have upvalues and
 ** not-marked threads.
 */
-static void remarkupvals (global_State *g) {
+static void luai_remarkupvals (global_State *g) {
   lua_State *thread;
   lua_State **p = &g->twups;
   while ((thread = *p) != NULL) {
@@ -10751,12 +10750,12 @@ static void remarkupvals (global_State *g) {
     if (isgray(thread) && thread->openupval != NULL)
       p = &thread->twups;  /* keep marked thread with upvalues in the list */
     else {  /* thread is not marked or without upvalues */
-      UpVal *uv;
+      luai_UpVal *uv;
       *p = thread->twups;  /* remove thread from the list */
       thread->twups = thread;  /* mark that it is out of list */
-      for (uv = thread->openupval; uv != NULL; uv = uv->u.open.next) {
+      for (uv = thread->openupval; uv != NULL; uv = uv->u.open.luai_next) {
         if (uv->u.open.touched) {
-          markvalue(g, uv->v);  /* remark upvalue's value */
+          luai_markvalue(g, uv->v);  /* remark upvalue's value */
           uv->u.open.touched = 0;
         }
       }
@@ -10768,13 +10767,13 @@ static void remarkupvals (global_State *g) {
 /*
 ** mark root set and reset all gray lists, to start a new collection
 */
-static void restartcollection (global_State *g) {
+static void luai_restartcollection (global_State *g) {
   g->gray = g->grayagain = NULL;
   g->weak = g->allweak = g->ephemeron = NULL;
-  markobject(g, g->mainthread);
-  markvalue(g, &g->l_registry);
-  markmt(g);
-  markbeingfnz(g);  /* mark any finalizing object left from previous cycle */
+  luai_markobject(g, g->mainthread);
+  luai_markvalue(g, &g->luai_l_registry);
+  luai_markmt(g);
+  luai_markbeingfnz(g);  /* mark any finalizing object left from previous cycle */
 }
 
 /* }====================================================== */
@@ -10789,29 +10788,29 @@ static void restartcollection (global_State *g) {
 /*
 ** Traverse a table with weak values and link it to proper list. During
 ** propagate phase, keep it in 'grayagain' list, to be revisited in the
-** atomic phase. In the atomic phase, if table has any white value,
+** luai_atomic phase. In the luai_atomic phase, if table has any white value,
 ** put it in 'weak' list, to be cleared.
 */
-static void traverseweakvalue (global_State *g, Table *h) {
-  Node *n, *limit = gnodelast(h);
+static void luai_traverseweakvalue (global_State *g, luai_Table *h) {
+  luai_Node *n, *limit = luai_gnodelast(h);
   /* if there is array part, assume it may have white values (it is not
-     worth traversing it now just to check) */
+     worth traversing it now just to luai_check) */
   int hasclears = (h->sizearray > 0);
-  for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
-    checkdeadkey(n);
-    if (ttisnil(gval(n)))  /* entry is empty? */
-      removeentry(n);  /* remove it */
+  for (n = luai_gnode(h, 0); n < limit; n++) {  /* traverse hash part */
+    luai_checkdeadkey(n);
+    if (ttisnil(luai_gval(n)))  /* entry is empty? */
+      luai_removeentry(n);  /* remove it */
     else {
-      lua_assert(!ttisnil(gkey(n)));
-      markvalue(g, gkey(n));  /* mark key */
-      if (!hasclears && iscleared(g, gval(n)))  /* is there a white value? */
+      lua_assert(!ttisnil(luai_gkey(n)));
+      luai_markvalue(g, luai_gkey(n));  /* mark key */
+      if (!hasclears && luai_iscleared(g, luai_gval(n)))  /* is there a white value? */
         hasclears = 1;  /* table will have to be cleared */
     }
   }
-  if (g->gcstate == GCSpropagate)
-    linkgclist(h, g->grayagain);  /* must retraverse it in atomic phase */
+  if (g->gcstate == LUAI_GCSpropagate)
+    luai_linkgclist(h, g->grayagain);  /* must retraverse it in luai_atomic phase */
   else if (hasclears)
-    linkgclist(h, g->weak);  /* has to be cleared later */
+    luai_linkgclist(h, g->weak);  /* has to be cleared later */
 }
 
 
@@ -10819,169 +10818,169 @@ static void traverseweakvalue (global_State *g, Table *h) {
 ** Traverse an ephemeron table and link it to proper list. Returns true
 ** iff any object was marked during this traversal (which implies that
 ** convergence has to continue). During propagation phase, keep table
-** in 'grayagain' list, to be visited again in the atomic phase. In
-** the atomic phase, if table has any white->white entry, it has to
+** in 'grayagain' list, to be visited again in the luai_atomic phase. In
+** the luai_atomic phase, if table has any white->white entry, it has to
 ** be revisited during ephemeron convergence (as that key may turn
 ** black). Otherwise, if it has any white key, table has to be cleared
-** (in the atomic phase).
+** (in the luai_atomic phase).
 */
-static int traverseephemeron (global_State *g, Table *h) {
+static int luai_traverseephemeron (global_State *g, luai_Table *h) {
   int marked = 0;  /* true if an object is marked in this traversal */
   int hasclears = 0;  /* true if table has white keys */
   int hasww = 0;  /* true if table has entry "white-key -> white-value" */
-  Node *n, *limit = gnodelast(h);
+  luai_Node *n, *limit = luai_gnodelast(h);
   unsigned int i;
   /* traverse array part */
   for (i = 0; i < h->sizearray; i++) {
-    if (valiswhite(&h->array[i])) {
+    if (luai_valiswhite(&h->array[i])) {
       marked = 1;
-      reallymarkobject(g, gcvalue(&h->array[i]));
+      luai_reallymarkobject(g, gcvalue(&h->array[i]));
     }
   }
   /* traverse hash part */
-  for (n = gnode(h, 0); n < limit; n++) {
-    checkdeadkey(n);
-    if (ttisnil(gval(n)))  /* entry is empty? */
-      removeentry(n);  /* remove it */
-    else if (iscleared(g, gkey(n))) {  /* key is not marked (yet)? */
+  for (n = luai_gnode(h, 0); n < limit; n++) {
+    luai_checkdeadkey(n);
+    if (ttisnil(luai_gval(n)))  /* entry is empty? */
+      luai_removeentry(n);  /* remove it */
+    else if (luai_iscleared(g, luai_gkey(n))) {  /* key is not marked (yet)? */
       hasclears = 1;  /* table must be cleared */
-      if (valiswhite(gval(n)))  /* value not marked yet? */
+      if (luai_valiswhite(luai_gval(n)))  /* value not marked yet? */
         hasww = 1;  /* white-white entry */
     }
-    else if (valiswhite(gval(n))) {  /* value not marked yet? */
+    else if (luai_valiswhite(luai_gval(n))) {  /* value not marked yet? */
       marked = 1;
-      reallymarkobject(g, gcvalue(gval(n)));  /* mark it now */
+      luai_reallymarkobject(g, gcvalue(luai_gval(n)));  /* mark it now */
     }
   }
   /* link table into proper list */
-  if (g->gcstate == GCSpropagate)
-    linkgclist(h, g->grayagain);  /* must retraverse it in atomic phase */
+  if (g->gcstate == LUAI_GCSpropagate)
+    luai_linkgclist(h, g->grayagain);  /* must retraverse it in luai_atomic phase */
   else if (hasww)  /* table has white->white entries? */
-    linkgclist(h, g->ephemeron);  /* have to propagate again */
+    luai_linkgclist(h, g->ephemeron);  /* have to propagate again */
   else if (hasclears)  /* table has white keys? */
-    linkgclist(h, g->allweak);  /* may have to clean white keys */
+    luai_linkgclist(h, g->allweak);  /* may have to clean white keys */
   return marked;
 }
 
 
-static void traversestrongtable (global_State *g, Table *h) {
-  Node *n, *limit = gnodelast(h);
+static void luai_traversestrongtable (global_State *g, luai_Table *h) {
+  luai_Node *n, *limit = luai_gnodelast(h);
   unsigned int i;
   for (i = 0; i < h->sizearray; i++)  /* traverse array part */
-    markvalue(g, &h->array[i]);
-  for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
-    checkdeadkey(n);
-    if (ttisnil(gval(n)))  /* entry is empty? */
-      removeentry(n);  /* remove it */
+    luai_markvalue(g, &h->array[i]);
+  for (n = luai_gnode(h, 0); n < limit; n++) {  /* traverse hash part */
+    luai_checkdeadkey(n);
+    if (ttisnil(luai_gval(n)))  /* entry is empty? */
+      luai_removeentry(n);  /* remove it */
     else {
-      lua_assert(!ttisnil(gkey(n)));
-      markvalue(g, gkey(n));  /* mark key */
-      markvalue(g, gval(n));  /* mark value */
+      lua_assert(!ttisnil(luai_gkey(n)));
+      luai_markvalue(g, luai_gkey(n));  /* mark key */
+      luai_markvalue(g, luai_gval(n));  /* mark value */
     }
   }
 }
 
 
-static lu_mem traversetable (global_State *g, Table *h) {
+static luai_lu_mem luai_traversetable (global_State *g, luai_Table *h) {
   const char *weakkey, *weakvalue;
-  const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
-  markobjectN(g, h->metatable);
+  const luai_TValue *mode = gfasttm(g, h->metatable, TM_MODE);
+  luai_markobjectN(g, h->metatable);
   if (mode && ttisstring(mode) &&  /* is there a weak mode? */
       ((weakkey = strchr(svalue(mode), 'k')),
        (weakvalue = strchr(svalue(mode), 'v')),
        (weakkey || weakvalue))) {  /* is really weak? */
-    black2gray(h);  /* keep table gray */
+    luai_black2gray(h);  /* keep table gray */
     if (!weakkey)  /* strong keys? */
-      traverseweakvalue(g, h);
+      luai_traverseweakvalue(g, h);
     else if (!weakvalue)  /* strong values? */
-      traverseephemeron(g, h);
+      luai_traverseephemeron(g, h);
     else  /* all weak */
-      linkgclist(h, g->allweak);  /* nothing to traverse now */
+      luai_linkgclist(h, g->allweak);  /* nothing to traverse now */
   }
   else  /* not weak */
-    traversestrongtable(g, h);
-  return sizeof(Table) + sizeof(TValue) * h->sizearray +
-                         sizeof(Node) * cast(size_t, allocsizenode(h));
+    luai_traversestrongtable(g, h);
+  return sizeof(luai_Table) + sizeof(luai_TValue) * h->sizearray +
+                         sizeof(luai_Node) * luai_cast(size_t, luai_allocsizenode(h));
 }
 
 
 /*
 ** Traverse a prototype. (While a prototype is being build, its
 ** arrays can be larger than needed; the extra slots are filled with
-** NULL, so the use of 'markobjectN')
+** NULL, so the use of 'luai_markobjectN')
 */
-static int traverseproto (global_State *g, Proto *f) {
+static int luai_traverseproto (global_State *g, luai_Proto *f) {
   int i;
   if (f->cache && iswhite(f->cache))
     f->cache = NULL;  /* allow cache to be collected */
-  markobjectN(g, f->source);
+  luai_markobjectN(g, f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
-    markvalue(g, &f->k[i]);
+    luai_markvalue(g, &f->k[i]);
   for (i = 0; i < f->sizeupvalues; i++)  /* mark upvalue names */
-    markobjectN(g, f->upvalues[i].name);
+    luai_markobjectN(g, f->upvalues[i].name);
   for (i = 0; i < f->sizep; i++)  /* mark nested protos */
-    markobjectN(g, f->p[i]);
+    luai_markobjectN(g, f->p[i]);
   for (i = 0; i < f->sizelocvars; i++)  /* mark local-variable names */
-    markobjectN(g, f->locvars[i].varname);
-  return sizeof(Proto) + sizeof(Instruction) * f->sizecode +
-                         sizeof(Proto *) * f->sizep +
-                         sizeof(TValue) * f->sizek +
+    luai_markobjectN(g, f->locvars[i].varname);
+  return sizeof(luai_Proto) + sizeof(Instruction) * f->sizecode +
+                         sizeof(luai_Proto *) * f->sizep +
+                         sizeof(luai_TValue) * f->sizek +
                          sizeof(int) * f->sizelineinfo +
                          sizeof(LocVar) * f->sizelocvars +
                          sizeof(Upvaldesc) * f->sizeupvalues;
 }
 
 
-static lu_mem traverseCclosure (global_State *g, CClosure *cl) {
+static luai_lu_mem luai_traverseCclosure (global_State *g, CClosure *cl) {
   int i;
   for (i = 0; i < cl->nupvalues; i++)  /* mark its upvalues */
-    markvalue(g, &cl->upvalue[i]);
-  return sizeCclosure(cl->nupvalues);
+    luai_markvalue(g, &cl->upvalue[i]);
+  return luai_sizeCclosure(cl->nupvalues);
 }
 
 /*
 ** open upvalues point to values in a thread, so those values should
-** be marked when the thread is traversed except in the atomic phase
+** be marked when the thread is traversed except in the luai_atomic phase
 ** (because then the value cannot be changed by the thread and the
 ** thread may not be traversed again)
 */
-static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
+static luai_lu_mem luai_traverseLclosure (global_State *g, LClosure *cl) {
   int i;
-  markobjectN(g, cl->p);  /* mark its prototype */
+  luai_markobjectN(g, cl->p);  /* mark its prototype */
   for (i = 0; i < cl->nupvalues; i++) {  /* mark its upvalues */
-    UpVal *uv = cl->upvals[i];
+    luai_UpVal *uv = cl->upvals[i];
     if (uv != NULL) {
-      if (upisopen(uv) && g->gcstate != GCSinsideatomic)
-        uv->u.open.touched = 1;  /* can be marked in 'remarkupvals' */
+      if (luai_upisopen(uv) && g->gcstate != LUAI_GCSinsideatomic)
+        uv->u.open.touched = 1;  /* can be marked in 'luai_remarkupvals' */
       else
-        markvalue(g, uv->v);
+        luai_markvalue(g, uv->v);
     }
   }
-  return sizeLclosure(cl->nupvalues);
+  return luai_sizeLclosure(cl->nupvalues);
 }
 
 
-static lu_mem traversethread (global_State *g, lua_State *th) {
+static luai_lu_mem luai_traversethread (global_State *g, lua_State *th) {
   StkId o = th->stack;
   if (o == NULL)
     return 1;  /* stack not completely built yet */
-  lua_assert(g->gcstate == GCSinsideatomic ||
-             th->openupval == NULL || isintwups(th));
+  lua_assert(g->gcstate == LUAI_GCSinsideatomic ||
+             th->openupval == NULL || luai_isintwups(th));
   for (; o < th->top; o++)  /* mark live elements in the stack */
-    markvalue(g, o);
-  if (g->gcstate == GCSinsideatomic) {  /* final traversal? */
+    luai_markvalue(g, o);
+  if (g->gcstate == LUAI_GCSinsideatomic) {  /* final traversal? */
     StkId lim = th->stack + th->stacksize;  /* real end of stack */
     for (; o < lim; o++)  /* clear not-marked stack slice */
       setnilvalue(o);
-    /* 'remarkupvals' may have removed thread from 'twups' list */
-    if (!isintwups(th) && th->openupval != NULL) {
+    /* 'luai_remarkupvals' may have removed thread from 'twups' list */
+    if (!luai_isintwups(th) && th->openupval != NULL) {
       th->twups = g->twups;  /* link it back to the list */
       g->twups = th;
     }
   }
   else if (g->gckind != KGC_EMERGENCY)
     luaD_shrinkstack(th); /* do not change stack in emergency cycle */
-  return (sizeof(lua_State) + sizeof(TValue) * th->stacksize +
+  return (sizeof(lua_State) + sizeof(luai_TValue) * th->stacksize +
           sizeof(CallInfo) * th->nci);
 }
 
@@ -10990,66 +10989,66 @@ static lu_mem traversethread (global_State *g, lua_State *th) {
 ** traverse one gray object, turning it to black (except for threads,
 ** which are always gray).
 */
-static void propagatemark (global_State *g) {
-  lu_mem size;
-  GCObject *o = g->gray;
+static void luai_propagatemark (global_State *g) {
+  luai_lu_mem size;
+  LUAI_GCObject *o = g->gray;
   lua_assert(isgray(o));
   gray2black(o);
   switch (o->tt) {
     case LUA_TTABLE: {
-      Table *h = gco2t(o);
+      luai_Table *h = gco2t(o);
       g->gray = h->gclist;  /* remove from 'gray' list */
-      size = traversetable(g, h);
+      size = luai_traversetable(g, h);
       break;
     }
     case LUA_TLCL: {
       LClosure *cl = gco2lcl(o);
       g->gray = cl->gclist;  /* remove from 'gray' list */
-      size = traverseLclosure(g, cl);
+      size = luai_traverseLclosure(g, cl);
       break;
     }
     case LUA_TCCL: {
       CClosure *cl = gco2ccl(o);
       g->gray = cl->gclist;  /* remove from 'gray' list */
-      size = traverseCclosure(g, cl);
+      size = luai_traverseCclosure(g, cl);
       break;
     }
     case LUA_TTHREAD: {
       lua_State *th = gco2th(o);
       g->gray = th->gclist;  /* remove from 'gray' list */
-      linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
-      black2gray(o);
-      size = traversethread(g, th);
+      luai_linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
+      luai_black2gray(o);
+      size = luai_traversethread(g, th);
       break;
     }
     case LUA_TPROTO: {
-      Proto *p = gco2p(o);
+      luai_Proto *p = gco2p(o);
       g->gray = p->gclist;  /* remove from 'gray' list */
-      size = traverseproto(g, p);
+      size = luai_traverseproto(g, p);
       break;
     }
     default: lua_assert(0); return;
   }
-  g->GCmemtrav += size;
+  g->LUAI_GCmemtrav += size;
 }
 
 
-static void propagateall (global_State *g) {
-  while (g->gray) propagatemark(g);
+static void luai_propagateall (global_State *g) {
+  while (g->gray) luai_propagatemark(g);
 }
 
 
-static void convergeephemerons (global_State *g) {
+static void luai_convergeephemerons (global_State *g) {
   int changed;
   do {
-    GCObject *w;
-    GCObject *next = g->ephemeron;  /* get ephemeron list */
+    LUAI_GCObject *w;
+    LUAI_GCObject *luai_next = g->ephemeron;  /* get ephemeron list */
     g->ephemeron = NULL;  /* tables may return to this list when traversed */
     changed = 0;
-    while ((w = next) != NULL) {
-      next = gco2t(w)->gclist;
-      if (traverseephemeron(g, gco2t(w))) {  /* traverse marked some value? */
-        propagateall(g);  /* propagate changes */
+    while ((w = luai_next) != NULL) {
+      luai_next = gco2t(w)->gclist;
+      if (luai_traverseephemeron(g, gco2t(w))) {  /* traverse marked some value? */
+        luai_propagateall(g);  /* propagate changes */
         changed = 1;  /* will have to revisit all ephemeron tables */
       }
     }
@@ -11070,14 +11069,14 @@ static void convergeephemerons (global_State *g) {
 ** clear entries with unmarked keys from all weaktables in list 'l' up
 ** to element 'f'
 */
-static void clearkeys (global_State *g, GCObject *l, GCObject *f) {
+static void luai_clearkeys (global_State *g, LUAI_GCObject *l, LUAI_GCObject *f) {
   for (; l != f; l = gco2t(l)->gclist) {
-    Table *h = gco2t(l);
-    Node *n, *limit = gnodelast(h);
-    for (n = gnode(h, 0); n < limit; n++) {
-      if (!ttisnil(gval(n)) && (iscleared(g, gkey(n)))) {
-        setnilvalue(gval(n));  /* remove value ... */
-        removeentry(n);  /* and remove entry from table */
+    luai_Table *h = gco2t(l);
+    luai_Node *n, *limit = luai_gnodelast(h);
+    for (n = luai_gnode(h, 0); n < limit; n++) {
+      if (!ttisnil(luai_gval(n)) && (luai_iscleared(g, luai_gkey(n)))) {
+        setnilvalue(luai_gval(n));  /* remove value ... */
+        luai_removeentry(n);  /* and remove entry from table */
       }
     }
   }
@@ -11088,65 +11087,65 @@ static void clearkeys (global_State *g, GCObject *l, GCObject *f) {
 ** clear entries with unmarked values from all weaktables in list 'l' up
 ** to element 'f'
 */
-static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
+static void luai_clearvalues (global_State *g, LUAI_GCObject *l, LUAI_GCObject *f) {
   for (; l != f; l = gco2t(l)->gclist) {
-    Table *h = gco2t(l);
-    Node *n, *limit = gnodelast(h);
+    luai_Table *h = gco2t(l);
+    luai_Node *n, *limit = luai_gnodelast(h);
     unsigned int i;
     for (i = 0; i < h->sizearray; i++) {
-      TValue *o = &h->array[i];
-      if (iscleared(g, o))  /* value was collected? */
+      luai_TValue *o = &h->array[i];
+      if (luai_iscleared(g, o))  /* value was collected? */
         setnilvalue(o);  /* remove value */
     }
-    for (n = gnode(h, 0); n < limit; n++) {
-      if (!ttisnil(gval(n)) && iscleared(g, gval(n))) {
-        setnilvalue(gval(n));  /* remove value ... */
-        removeentry(n);  /* and remove entry from table */
+    for (n = luai_gnode(h, 0); n < limit; n++) {
+      if (!ttisnil(luai_gval(n)) && luai_iscleared(g, luai_gval(n))) {
+        setnilvalue(luai_gval(n));  /* remove value ... */
+        luai_removeentry(n);  /* and remove entry from table */
       }
     }
   }
 }
 
 
-void luaC_upvdeccount (lua_State *L, UpVal *uv) {
+void luaC_upvdeccount (lua_State *L, luai_UpVal *uv) {
   lua_assert(uv->refcount > 0);
   uv->refcount--;
-  if (uv->refcount == 0 && !upisopen(uv))
+  if (uv->refcount == 0 && !luai_upisopen(uv))
     luaM_free(L, uv);
 }
 
 
-static void freeLclosure (lua_State *L, LClosure *cl) {
+static void luai_freeLclosure (lua_State *L, LClosure *cl) {
   int i;
   for (i = 0; i < cl->nupvalues; i++) {
-    UpVal *uv = cl->upvals[i];
+    luai_UpVal *uv = cl->upvals[i];
     if (uv)
       luaC_upvdeccount(L, uv);
   }
-  luaM_freemem(L, cl, sizeLclosure(cl->nupvalues));
+  luaM_freemem(L, cl, luai_sizeLclosure(cl->nupvalues));
 }
 
 
-static void freeobj (lua_State *L, GCObject *o) {
+static void luai_freeobj (lua_State *L, LUAI_GCObject *o) {
   switch (o->tt) {
     case LUA_TPROTO: luaF_freeproto(L, gco2p(o)); break;
     case LUA_TLCL: {
-      freeLclosure(L, gco2lcl(o));
+      luai_freeLclosure(L, gco2lcl(o));
       break;
     }
     case LUA_TCCL: {
-      luaM_freemem(L, o, sizeCclosure(gco2ccl(o)->nupvalues));
+      luaM_freemem(L, o, luai_sizeCclosure(gco2ccl(o)->nupvalues));
       break;
     }
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
-    case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
+    case LUA_TUSERDATA: luaM_freemem(L, o, luai_sizeudata(gco2u(o))); break;
     case LUA_TSHRSTR:
       luaS_remove(L, gco2ts(o));  /* remove it from hash table */
-      luaM_freemem(L, o, sizelstring(gco2ts(o)->shrlen));
+      luaM_freemem(L, o, luai_sizelstring(gco2ts(o)->shrlen));
       break;
     case LUA_TLNGSTR: {
-      luaM_freemem(L, o, sizelstring(gco2ts(o)->u.lnglen));
+      luaM_freemem(L, o, luai_sizelstring(gco2ts(o)->u.lnglen));
       break;
     }
     default: lua_assert(0);
@@ -11154,31 +11153,31 @@ static void freeobj (lua_State *L, GCObject *o) {
 }
 
 
-#define sweepwholelist(L,p)	sweeplist(L,p,MAX_LUMEM)
-static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
+#define luai_sweepwholelist(L,p)	luai_sweeplist(L,p,MAX_LUMEM)
+static LUAI_GCObject **luai_sweeplist (lua_State *L, LUAI_GCObject **p, luai_lu_mem count);
 
 
 /*
-** sweep at most 'count' elements from a list of GCObjects erasing dead
+** sweep at most 'count' elements from a list of LUAI_GCObjects erasing dead
 ** objects, where a dead object is one marked with the old (non current)
-** white; change all non-dead objects back to white, preparing for next
+** white; change all non-dead objects back to white, preparing for luai_next
 ** collection cycle. Return where to continue the traversal or NULL if
 ** list is finished.
 */
-static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
+static LUAI_GCObject **luai_sweeplist (lua_State *L, LUAI_GCObject **p, luai_lu_mem count) {
   global_State *g = G(L);
   int ow = otherwhite(g);
   int white = luaC_white(g);  /* current white */
   while (*p != NULL && count-- > 0) {
-    GCObject *curr = *p;
+    LUAI_GCObject *curr = *p;
     int marked = curr->marked;
     if (isdeadm(ow, marked)) {  /* is 'curr' dead? */
-      *p = curr->next;  /* remove 'curr' from list */
-      freeobj(L, curr);  /* erase 'curr' */
+      *p = curr->luai_next;  /* remove 'curr' from list */
+      luai_freeobj(L, curr);  /* erase 'curr' */
     }
     else {  /* change mark to 'white' */
-      curr->marked = cast_byte((marked & luai_maskcolors) | white);
-      p = &curr->next;  /* go to next element */
+      curr->marked = luai_cast_byte((marked & luai_maskcolors) | white);
+      p = &curr->luai_next;  /* go to luai_next element */
     }
   }
   return (*p == NULL) ? NULL : p;
@@ -11188,10 +11187,10 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 /*
 ** sweep a list until a live object (or end of list)
 */
-static GCObject **sweeptolive (lua_State *L, GCObject **p) {
-  GCObject **old = p;
+static LUAI_GCObject **luai_sweeptolive (lua_State *L, LUAI_GCObject **p) {
+  LUAI_GCObject **old = p;
   do {
-    p = sweeplist(L, p, 1);
+    p = luai_sweeplist(L, p, 1);
   } while (p == old);
   return p;
 }
@@ -11208,52 +11207,52 @@ static GCObject **sweeptolive (lua_State *L, GCObject **p) {
 /*
 ** If possible, shrink string table
 */
-static void checkSizes (lua_State *L, global_State *g) {
+static void luai_checkSizes (lua_State *L, global_State *g) {
   if (g->gckind != KGC_EMERGENCY) {
-    l_mem olddebt = g->GCdebt;
+    luai_l_mem olddebt = g->LUAI_GCdebt;
     if (g->strt.nuse < g->strt.size / 4)  /* string table too big? */
       luaS_resize(L, g->strt.size / 2);  /* shrink it a little */
-    g->GCestimate += g->GCdebt - olddebt;  /* update estimate */
+    g->LUAI_GCestimate += g->LUAI_GCdebt - olddebt;  /* update estimate */
   }
 }
 
 
-static GCObject *udata2finalize (global_State *g) {
-  GCObject *o = g->tobefnz;  /* get first element */
+static LUAI_GCObject *luai_udata2finalize (global_State *g) {
+  LUAI_GCObject *o = g->tobefnz;  /* get first element */
   lua_assert(tofinalize(o));
-  g->tobefnz = o->next;  /* remove it from 'tobefnz' list */
-  o->next = g->allgc;  /* return it to 'allgc' list */
+  g->tobefnz = o->luai_next;  /* remove it from 'tobefnz' list */
+  o->luai_next = g->allgc;  /* return it to 'allgc' list */
   g->allgc = o;
   resetbit(o->marked, FINALIZEDBIT);  /* object is "normal" again */
   if (issweepphase(g))
-    makewhite(g, o);  /* "sweep" object */
+    luai_makewhite(g, o);  /* "sweep" object */
   return o;
 }
 
 
-static void dothecall (lua_State *L, void *ud) {
+static void luai_dothecall (lua_State *L, void *ud) {
   UNUSED(ud);
   luaD_callnoyield(L, L->top - 2, 0);
 }
 
 
-static void GCTM (lua_State *L, int propagateerrors) {
+static void LUAI_GCTM (lua_State *L, int propagateerrors) {
   global_State *g = G(L);
-  const TValue *tm;
-  TValue v;
-  setgcovalue(L, &v, udata2finalize(g));
+  const luai_TValue *tm;
+  luai_TValue v;
+  setgcovalue(L, &v, luai_udata2finalize(g));
   tm = luaT_gettmbyobj(L, &v, TM_GC);
   if (tm != NULL && ttisfunction(tm)) {  /* is there a finalizer? */
     int status;
     lu_byte oldah = L->allowhook;
     int running  = g->gcrunning;
-    L->allowhook = 0;  /* stop debug hooks during GC metamethod */
-    g->gcrunning = 0;  /* avoid GC steps */
+    L->allowhook = 0;  /* stop debug hooks during LUAI_GC metamethod */
+    g->gcrunning = 0;  /* avoid LUAI_GC steps */
     setobj2s(L, L->top, tm);  /* push finalizer... */
     setobj2s(L, L->top + 1, &v);  /* ... and its argument */
-    L->top += 2;  /* and (next line) call the finalizer */
+    L->top += 2;  /* and (luai_next line) call the finalizer */
     L->ci->callstatus |= CIST_FIN;  /* will run a finalizer */
-    status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
+    status = luaD_pcall(L, luai_dothecall, NULL, luai_savestack(L, L->top - 2), 0);
     L->ci->callstatus &= ~CIST_FIN;  /* not running a finalizer anymore */
     L->allowhook = oldah;  /* restore hooks */
     g->gcrunning = running;  /* restore state */
@@ -11274,14 +11273,14 @@ static void GCTM (lua_State *L, int propagateerrors) {
 /*
 ** call a few (up to 'g->gcfinnum') finalizers
 */
-static int runafewfinalizers (lua_State *L) {
+static int luai_runafewfinalizers (lua_State *L) {
   global_State *g = G(L);
   unsigned int i;
   lua_assert(!g->tobefnz || g->gcfinnum > 0);
   for (i = 0; g->tobefnz && i < g->gcfinnum; i++)
-    GCTM(L, 1);  /* call one finalizer */
+    LUAI_GCTM(L, 1);  /* call one finalizer */
   g->gcfinnum = (!g->tobefnz) ? 0  /* nothing more to finalize? */
-                    : g->gcfinnum * 2;  /* else call a few more next time */
+                    : g->gcfinnum * 2;  /* else call a few more luai_next time */
   return i;
 }
 
@@ -11289,19 +11288,19 @@ static int runafewfinalizers (lua_State *L) {
 /*
 ** call all pending finalizers
 */
-static void callallpendingfinalizers (lua_State *L) {
+static void luai_callallpendingfinalizers (lua_State *L) {
   global_State *g = G(L);
   while (g->tobefnz)
-    GCTM(L, 0);
+    LUAI_GCTM(L, 0);
 }
 
 
 /*
-** find last 'next' field in list 'p' list (to add elements in its end)
+** find last 'luai_next' luai_field in list 'p' list (to add elements in its end)
 */
-static GCObject **findlast (GCObject **p) {
+static LUAI_GCObject **luai_findlast (LUAI_GCObject **p) {
   while (*p != NULL)
-    p = &(*p)->next;
+    p = &(*p)->luai_next;
   return p;
 }
 
@@ -11310,19 +11309,19 @@ static GCObject **findlast (GCObject **p) {
 ** move all unreachable objects (or 'all' objects) that need
 ** finalization from list 'finobj' to list 'tobefnz' (to be finalized)
 */
-static void separatetobefnz (global_State *g, int all) {
-  GCObject *curr;
-  GCObject **p = &g->finobj;
-  GCObject **lastnext = findlast(&g->tobefnz);
+static void luai_separatetobefnz (global_State *g, int all) {
+  LUAI_GCObject *curr;
+  LUAI_GCObject **p = &g->finobj;
+  LUAI_GCObject **lastnext = luai_findlast(&g->tobefnz);
   while ((curr = *p) != NULL) {  /* traverse all finalizable objects */
     lua_assert(tofinalize(curr));
     if (!(iswhite(curr) || all))  /* not being collected? */
-      p = &curr->next;  /* don't bother with it */
+      p = &curr->luai_next;  /* don't bother with it */
     else {
-      *p = curr->next;  /* remove 'curr' from 'finobj' list */
-      curr->next = *lastnext;  /* link at the end of 'tobefnz' list */
+      *p = curr->luai_next;  /* remove 'curr' from 'finobj' list */
+      curr->luai_next = *lastnext;  /* link at the end of 'tobefnz' list */
       *lastnext = curr;
-      lastnext = &curr->next;
+      lastnext = &curr->luai_next;
     }
   }
 }
@@ -11332,24 +11331,24 @@ static void separatetobefnz (global_State *g, int all) {
 ** if object 'o' has a finalizer, remove it from 'allgc' list (must
 ** search the list to find it) and link it in 'finobj' list.
 */
-void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
+void luaC_checkfinalizer (lua_State *L, LUAI_GCObject *o, luai_Table *mt) {
   global_State *g = G(L);
   if (tofinalize(o) ||                 /* obj. is already marked... */
       gfasttm(g, mt, TM_GC) == NULL)   /* or has no finalizer? */
     return;  /* nothing to be done */
   else {  /* move 'o' to 'finobj' list */
-    GCObject **p;
+    LUAI_GCObject **p;
     if (issweepphase(g)) {
-      makewhite(g, o);  /* "sweep" object 'o' */
-      if (g->sweepgc == &o->next)  /* should not remove 'sweepgc' object */
-        g->sweepgc = sweeptolive(L, g->sweepgc);  /* change 'sweepgc' */
+      luai_makewhite(g, o);  /* "sweep" object 'o' */
+      if (g->sweepgc == &o->luai_next)  /* should not remove 'sweepgc' object */
+        g->sweepgc = luai_sweeptolive(L, g->sweepgc);  /* change 'sweepgc' */
     }
     /* search for pointer pointing to 'o' */
-    for (p = &g->allgc; *p != o; p = &(*p)->next) { /* empty */ }
-    *p = o->next;  /* remove 'o' from 'allgc' list */
-    o->next = g->finobj;  /* link it in 'finobj' list */
+    for (p = &g->allgc; *p != o; p = &(*p)->luai_next) { /* empty */ }
+    *p = o->luai_next;  /* remove 'o' from 'allgc' list */
+    o->luai_next = g->finobj;  /* link it in 'finobj' list */
     g->finobj = o;
-    l_setbit(o->marked, FINALIZEDBIT);  /* mark it as such */
+    luai_l_setbit(o->marked, FINALIZEDBIT);  /* mark it as such */
   }
 }
 
@@ -11359,20 +11358,20 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 
 /*
 ** {======================================================
-** GC control
+** LUAI_GC control
 ** =======================================================
 */
 
 
 /*
-** Set a reasonable "time" to wait before starting a new GC cycle; cycle
+** Set a reasonable "time" to wait before starting a new LUAI_GC cycle; cycle
 ** will start when memory use hits threshold. (Division by 'estimate'
 ** should be OK: it cannot be zero (because Lua cannot even start with
-** less than PAUSEADJ bytes).
+** less than LUAI_PAUSEADJ bytes).
 */
-static void setpause (global_State *g) {
-  l_mem threshold, debt;
-  l_mem estimate = g->GCestimate / PAUSEADJ;  /* adjust 'estimate' */
+static void luai_setpause (global_State *g) {
+  luai_l_mem threshold, debt;
+  luai_l_mem estimate = g->LUAI_GCestimate / LUAI_PAUSEADJ;  /* adjust 'estimate' */
   lua_assert(estimate > 0);
   threshold = (g->gcpause < MAX_LMEM / estimate)  /* overflow? */
             ? estimate * g->gcpause  /* no overflow */
@@ -11384,144 +11383,144 @@ static void setpause (global_State *g) {
 
 /*
 ** Enter first sweep phase.
-** The call to 'sweeplist' tries to make pointer point to an object
+** The call to 'luai_sweeplist' tries to make pointer point to an object
 ** inside the list (instead of to the header), so that the real sweep do
 ** not need to skip objects created between "now" and the start of the
 ** real sweep.
 */
-static void entersweep (lua_State *L) {
+static void luai_entersweep (lua_State *L) {
   global_State *g = G(L);
-  g->gcstate = GCSswpallgc;
+  g->gcstate = LUAI_GCSswpallgc;
   lua_assert(g->sweepgc == NULL);
-  g->sweepgc = sweeplist(L, &g->allgc, 1);
+  g->sweepgc = luai_sweeplist(L, &g->allgc, 1);
 }
 
 
 void luaC_freeallobjects (lua_State *L) {
   global_State *g = G(L);
-  separatetobefnz(g, 1);  /* separate all objects with finalizers */
+  luai_separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
-  callallpendingfinalizers(L);
+  luai_callallpendingfinalizers(L);
   lua_assert(g->tobefnz == NULL);
   g->currentwhite = WHITEBITS; /* this "white" makes all objects look dead */
   g->gckind = KGC_NORMAL;
-  sweepwholelist(L, &g->finobj);
-  sweepwholelist(L, &g->allgc);
-  sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
+  luai_sweepwholelist(L, &g->finobj);
+  luai_sweepwholelist(L, &g->allgc);
+  luai_sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
 }
 
 
-static l_mem atomic (lua_State *L) {
+static luai_l_mem luai_atomic (lua_State *L) {
   global_State *g = G(L);
-  l_mem work;
-  GCObject *origweak, *origall;
-  GCObject *grayagain = g->grayagain;  /* save original list */
+  luai_l_mem work;
+  LUAI_GCObject *origweak, *origall;
+  LUAI_GCObject *grayagain = g->grayagain;  /* luai_save original list */
   lua_assert(g->ephemeron == NULL && g->weak == NULL);
   lua_assert(!iswhite(g->mainthread));
-  g->gcstate = GCSinsideatomic;
-  g->GCmemtrav = 0;  /* start counting work */
-  markobject(g, L);  /* mark running thread */
+  g->gcstate = LUAI_GCSinsideatomic;
+  g->LUAI_GCmemtrav = 0;  /* start counting work */
+  luai_markobject(g, L);  /* mark running thread */
   /* registry and global metatables may be changed by API */
-  markvalue(g, &g->l_registry);
-  markmt(g);  /* mark global metatables */
+  luai_markvalue(g, &g->luai_l_registry);
+  luai_markmt(g);  /* mark global metatables */
   /* remark occasional upvalues of (maybe) dead threads */
-  remarkupvals(g);
-  propagateall(g);  /* propagate changes */
-  work = g->GCmemtrav;  /* stop counting (do not recount 'grayagain') */
+  luai_remarkupvals(g);
+  luai_propagateall(g);  /* propagate changes */
+  work = g->LUAI_GCmemtrav;  /* stop counting (do not recount 'grayagain') */
   g->gray = grayagain;
-  propagateall(g);  /* traverse 'grayagain' list */
-  g->GCmemtrav = 0;  /* restart counting */
-  convergeephemerons(g);
+  luai_propagateall(g);  /* traverse 'grayagain' list */
+  g->LUAI_GCmemtrav = 0;  /* restart counting */
+  luai_convergeephemerons(g);
   /* at this point, all strongly accessible objects are marked. */
   /* Clear values from weak tables, before checking finalizers */
-  clearvalues(g, g->weak, NULL);
-  clearvalues(g, g->allweak, NULL);
+  luai_clearvalues(g, g->weak, NULL);
+  luai_clearvalues(g, g->allweak, NULL);
   origweak = g->weak; origall = g->allweak;
-  work += g->GCmemtrav;  /* stop counting (objects being finalized) */
-  separatetobefnz(g, 0);  /* separate objects to be finalized */
+  work += g->LUAI_GCmemtrav;  /* stop counting (objects being finalized) */
+  luai_separatetobefnz(g, 0);  /* separate objects to be finalized */
   g->gcfinnum = 1;  /* there may be objects to be finalized */
-  markbeingfnz(g);  /* mark objects that will be finalized */
-  propagateall(g);  /* remark, to propagate 'resurrection' */
-  g->GCmemtrav = 0;  /* restart counting */
-  convergeephemerons(g);
+  luai_markbeingfnz(g);  /* mark objects that will be finalized */
+  luai_propagateall(g);  /* remark, to propagate 'resurrection' */
+  g->LUAI_GCmemtrav = 0;  /* restart counting */
+  luai_convergeephemerons(g);
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
-  clearkeys(g, g->ephemeron, NULL);  /* clear keys from all ephemeron tables */
-  clearkeys(g, g->allweak, NULL);  /* clear keys from all 'allweak' tables */
+  luai_clearkeys(g, g->ephemeron, NULL);  /* clear keys from all ephemeron tables */
+  luai_clearkeys(g, g->allweak, NULL);  /* clear keys from all 'allweak' tables */
   /* clear values from resurrected weak tables */
-  clearvalues(g, g->weak, origweak);
-  clearvalues(g, g->allweak, origall);
+  luai_clearvalues(g, g->weak, origweak);
+  luai_clearvalues(g, g->allweak, origall);
   luaS_clearcache(g);
-  g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
-  work += g->GCmemtrav;  /* complete counting */
-  return work;  /* estimate of memory marked by 'atomic' */
+  g->currentwhite = luai_cast_byte(otherwhite(g));  /* flip current white */
+  work += g->LUAI_GCmemtrav;  /* complete counting */
+  return work;  /* estimate of memory marked by 'luai_atomic' */
 }
 
 
-static lu_mem sweepstep (lua_State *L, global_State *g,
-                         int nextstate, GCObject **nextlist) {
+static luai_lu_mem luai_sweepstep (lua_State *L, global_State *g,
+                         int nextstate, LUAI_GCObject **nextlist) {
   if (g->sweepgc) {
-    l_mem olddebt = g->GCdebt;
-    g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
-    g->GCestimate += g->GCdebt - olddebt;  /* update estimate */
+    luai_l_mem olddebt = g->LUAI_GCdebt;
+    g->sweepgc = luai_sweeplist(L, g->sweepgc, LUAI_GCSWEEPMAX);
+    g->LUAI_GCestimate += g->LUAI_GCdebt - olddebt;  /* update estimate */
     if (g->sweepgc)  /* is there still something to sweep? */
-      return (GCSWEEPMAX * GCSWEEPCOST);
+      return (LUAI_GCSWEEPMAX * LUAI_GCSWEEPCOST);
   }
-  /* else enter next state */
+  /* else enter luai_next state */
   g->gcstate = nextstate;
   g->sweepgc = nextlist;
   return 0;
 }
 
 
-static lu_mem singlestep (lua_State *L) {
+static luai_lu_mem luai_singlestep (lua_State *L) {
   global_State *g = G(L);
   switch (g->gcstate) {
-    case GCSpause: {
-      g->GCmemtrav = g->strt.size * sizeof(GCObject*);
-      restartcollection(g);
-      g->gcstate = GCSpropagate;
-      return g->GCmemtrav;
+    case LUAI_GCSpause: {
+      g->LUAI_GCmemtrav = g->strt.size * sizeof(LUAI_GCObject*);
+      luai_restartcollection(g);
+      g->gcstate = LUAI_GCSpropagate;
+      return g->LUAI_GCmemtrav;
     }
-    case GCSpropagate: {
-      g->GCmemtrav = 0;
+    case LUAI_GCSpropagate: {
+      g->LUAI_GCmemtrav = 0;
       lua_assert(g->gray);
-      propagatemark(g);
+      luai_propagatemark(g);
        if (g->gray == NULL)  /* no more gray objects? */
-        g->gcstate = GCSatomic;  /* finish propagate phase */
-      return g->GCmemtrav;  /* memory traversed in this step */
+        g->gcstate = LUAI_GCSatomic;  /* finish propagate phase */
+      return g->LUAI_GCmemtrav;  /* memory traversed in this step */
     }
-    case GCSatomic: {
-      lu_mem work;
-      propagateall(g);  /* make sure gray list is empty */
-      work = atomic(L);  /* work is what was traversed by 'atomic' */
-      entersweep(L);
-      g->GCestimate = gettotalbytes(g);  /* first estimate */;
+    case LUAI_GCSatomic: {
+      luai_lu_mem work;
+      luai_propagateall(g);  /* make sure gray list is empty */
+      work = luai_atomic(L);  /* work is what was traversed by 'luai_atomic' */
+      luai_entersweep(L);
+      g->LUAI_GCestimate = gettotalbytes(g);  /* first estimate */;
       return work;
     }
-    case GCSswpallgc: {  /* sweep "regular" objects */
-      return sweepstep(L, g, GCSswpfinobj, &g->finobj);
+    case LUAI_GCSswpallgc: {  /* sweep "regular" objects */
+      return luai_sweepstep(L, g, LUAI_GCSswpfinobj, &g->finobj);
     }
-    case GCSswpfinobj: {  /* sweep objects with finalizers */
-      return sweepstep(L, g, GCSswptobefnz, &g->tobefnz);
+    case LUAI_GCSswpfinobj: {  /* sweep objects with finalizers */
+      return luai_sweepstep(L, g, LUAI_GCSswptobefnz, &g->tobefnz);
     }
-    case GCSswptobefnz: {  /* sweep objects to be finalized */
-      return sweepstep(L, g, GCSswpend, NULL);
+    case LUAI_GCSswptobefnz: {  /* sweep objects to be finalized */
+      return luai_sweepstep(L, g, LUAI_GCSswpend, NULL);
     }
-    case GCSswpend: {  /* finish sweeps */
-      makewhite(g, g->mainthread);  /* sweep main thread */
-      checkSizes(L, g);
-      g->gcstate = GCScallfin;
+    case LUAI_GCSswpend: {  /* finish sweeps */
+      luai_makewhite(g, g->mainthread);  /* sweep main thread */
+      luai_checkSizes(L, g);
+      g->gcstate = LUAI_GCScallfin;
       return 0;
     }
-    case GCScallfin: {  /* call remaining finalizers */
+    case LUAI_GCScallfin: {  /* call remaining finalizers */
       if (g->tobefnz && g->gckind != KGC_EMERGENCY) {
-        int n = runafewfinalizers(L);
-        return (n * GCFINALIZECOST);
+        int n = luai_runafewfinalizers(L);
+        return (n * LUAI_GCFINALIZECOST);
       }
       else {  /* emergency mode or no more finalizers */
-        g->gcstate = GCSpause;  /* finish collection */
+        g->gcstate = LUAI_GCSpause;  /* finish collection */
         return 0;
       }
     }
@@ -11537,54 +11536,54 @@ static lu_mem singlestep (lua_State *L) {
 void luaC_runtilstate (lua_State *L, int statesmask) {
   global_State *g = G(L);
   while (!testbit(statesmask, g->gcstate))
-    singlestep(L);
+    luai_singlestep(L);
 }
 
 
 /*
-** get GC debt and convert it from Kb to 'work units' (avoid zero debt
+** get LUAI_GC debt and convert it from Kb to 'work units' (avoid zero debt
 ** and overflows)
 */
-static l_mem getdebt (global_State *g) {
-  l_mem debt = g->GCdebt;
+static luai_l_mem luai_getdebt (global_State *g) {
+  luai_l_mem debt = g->LUAI_GCdebt;
   int stepmul = g->gcstepmul;
   if (debt <= 0) return 0;  /* minimal debt */
   else {
-    debt = (debt / STEPMULADJ) + 1;
+    debt = (debt / LUAI_STEPMULADJ) + 1;
     debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
     return debt;
   }
 }
 
 /*
-** performs a basic GC step when collector is running
+** performs a basic LUAI_GC step when collector is running
 */
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  l_mem debt = getdebt(g);  /* GC deficit (be paid now) */
+  luai_l_mem debt = luai_getdebt(g);  /* LUAI_GC deficit (be paid now) */
   if (!g->gcrunning) {  /* not running? */
-    luaE_setdebt(g, -GCSTEPSIZE * 10);  /* avoid being called too often */
+    luaE_setdebt(g, -LUA_GCSTEPSIZE * 10);  /* avoid being called too often */
     return;
   }
   do {  /* repeat until pause or enough "credit" (negative debt) */
-    lu_mem work = singlestep(L);  /* perform one single step */
+    luai_lu_mem work = luai_singlestep(L);  /* perform one single step */
     debt -= work;
-  } while (debt > -GCSTEPSIZE && g->gcstate != GCSpause);
-  if (g->gcstate == GCSpause)
-    setpause(g);  /* pause until next cycle */
+  } while (debt > -LUA_GCSTEPSIZE && g->gcstate != LUAI_GCSpause);
+  if (g->gcstate == LUAI_GCSpause)
+    luai_setpause(g);  /* pause until luai_next cycle */
   else {
-    debt = (debt / g->gcstepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
+    debt = (debt / g->gcstepmul) * LUAI_STEPMULADJ;  /* convert 'work units' to Kb */
     luaE_setdebt(g, debt);
-    runafewfinalizers(L);
+    luai_runafewfinalizers(L);
   }
 }
 
 
 /*
-** Performs a full GC cycle; if 'isemergency', set a flag to avoid
+** Performs a full LUAI_GC cycle; if 'isemergency', set a flag to avoid
 ** some operations which could change the interpreter state in some
 ** unexpected ways (running finalizers and shrinking some structures).
-** Before running the collection, check 'keepinvariant'; if it is true,
+** Before running the collection, luai_check 'keepinvariant'; if it is true,
 ** there may be some objects marked as black, so the collector has
 ** to sweep all objects to turn them back to white (as white has not
 ** changed, nothing will be collected).
@@ -11594,17 +11593,17 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   lua_assert(g->gckind == KGC_NORMAL);
   if (isemergency) g->gckind = KGC_EMERGENCY;  /* set flag */
   if (keepinvariant(g)) {  /* black objects? */
-    entersweep(L); /* sweep everything to turn them back to white */
+    luai_entersweep(L); /* sweep everything to turn them back to white */
   }
   /* finish any pending sweep phase to start a new cycle */
-  luaC_runtilstate(L, bitmask(GCSpause));
-  luaC_runtilstate(L, ~bitmask(GCSpause));  /* start new collection */
-  luaC_runtilstate(L, bitmask(GCScallfin));  /* run up to finalizers */
-  /* estimate must be correct after a full GC cycle */
-  lua_assert(g->GCestimate == gettotalbytes(g));
-  luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
+  luaC_runtilstate(L, bitmask(LUAI_GCSpause));
+  luaC_runtilstate(L, ~bitmask(LUAI_GCSpause));  /* start new collection */
+  luaC_runtilstate(L, bitmask(LUAI_GCScallfin));  /* run up to finalizers */
+  /* estimate must be correct after a full LUAI_GC cycle */
+  lua_assert(g->LUAI_GCestimate == gettotalbytes(g));
+  luaC_runtilstate(L, bitmask(LUAI_GCSpause));  /* finish collection */
   g->gckind = KGC_NORMAL;
-  setpause(g);
+  luai_setpause(g);
 }
 
 /* }====================================================== */
@@ -11648,49 +11647,49 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
 ** Change this macro to accept other modes for 'fopen' besides
 ** the standard ones.
 */
-#if !defined(l_checkmode)
+#if !defined(luai_l_checkmode)
 
 /* accepted extensions to 'mode' in 'fopen' */
-#if !defined(L_MODEEXT)
-#define L_MODEEXT	"b"
+#if !defined(LUAI_L_MODEEXT)
+#define LUAI_L_MODEEXT	"b"
 #endif
 
-/* Check whether 'mode' matches '[rwa]%+?[L_MODEEXT]*' */
-static int l_checkmode (const char *mode) {
+/* Check whether 'mode' matches '[rwa]%+?[LUAI_L_MODEEXT]*' */
+static int luai_l_checkmode (const char *mode) {
   return (*mode != '\0' && strchr("rwa", *(mode++)) != NULL &&
          (*mode != '+' || (++mode, 1)) &&  /* skip if char is '+' */
-         (strspn(mode, L_MODEEXT) == strlen(mode)));  /* check extensions */
+         (strspn(mode, LUAI_L_MODEEXT) == strlen(mode)));  /* luai_check extensions */
 }
 
 #endif
 
 /*
 ** {======================================================
-** l_popen spawns a new process connected to the current
+** luai_l_popen spawns a new process connected to the current
 ** one through the file streams.
 ** =======================================================
 */
 
-#if !defined(l_popen)		/* { */
+#if !defined(luai_l_popen)		/* { */
 
 #if defined(LUA_USE_POSIX)	/* { */
 
-#define l_popen(L,c,m)		(fflush(NULL), popen(c,m))
-#define l_pclose(L,file)	(pclose(file))
+#define luai_l_popen(L,c,m)		(fflush(NULL), popen(c,m))
+#define luai_l_pclose(L,file)	(pclose(file))
 
 #elif defined(LUA_USE_WINDOWS)	/* }{ */
 
-#define l_popen(L,c,m)		(_popen(c,m))
-#define l_pclose(L,file)	(_pclose(file))
+#define luai_l_popen(L,c,m)		(_popen(c,m))
+#define luai_l_pclose(L,file)	(_pclose(file))
 
 #else				/* }{ */
 
 /* ISO C definitions */
-#define l_popen(L,c,m)  \
+#define luai_l_popen(L,c,m)  \
 	  ((void)((void)c, m), \
 	  luaL_error(L, "'popen' not supported"), \
 	  (FILE*)0)
-#define l_pclose(L,file)		((void)L, (void)file, -1)
+#define luai_l_pclose(L,file)		((void)L, (void)file, -1)
 
 #endif				/* } */
 
@@ -11699,16 +11698,16 @@ static int l_checkmode (const char *mode) {
 /* }====================================================== */
 
 
-#if !defined(l_getc)		/* { */
+#if !defined(luai_l_getc)		/* { */
 
 #if defined(LUA_USE_POSIX)
-#define l_getc(f)		getc_unlocked(f)
-#define l_lockfile(f)		flockfile(f)
-#define l_unlockfile(f)		funlockfile(f)
+#define luai_l_getc(f)		getc_unlocked(f)
+#define luai_l_lockfile(f)		flockfile(f)
+#define luai_l_unlockfile(f)		funlockfile(f)
 #else
-#define l_getc(f)		getc(f)
-#define l_lockfile(f)		((void)0)
-#define l_unlockfile(f)		((void)0)
+#define luai_l_getc(f)		getc(f)
+#define luai_l_lockfile(f)		((void)0)
+#define luai_l_unlockfile(f)		((void)0)
 #endif
 
 #endif				/* } */
@@ -11716,34 +11715,34 @@ static int l_checkmode (const char *mode) {
 
 /*
 ** {======================================================
-** l_fseek: configuration for longer offsets
+** luai_l_fseek: configuration for longer offsets
 ** =======================================================
 */
 
-#if !defined(l_fseek)		/* { */
+#if !defined(luai_l_fseek)		/* { */
 
 #if defined(LUA_USE_POSIX)	/* { */
 
 #include <sys/types.h>
 
-#define l_fseek(f,o,w)		fseeko(f,o,w)
-#define l_ftell(f)		ftello(f)
-#define l_seeknum		off_t
+#define luai_l_fseek(f,o,w)		fseeko(f,o,w)
+#define luai_l_ftell(f)		ftello(f)
+#define luai_l_seeknum		off_t
 
 #elif defined(LUA_USE_WINDOWS) && !defined(_CRTIMP_TYPEINFO) \
    && defined(_MSC_VER) && (_MSC_VER >= 1400)	/* }{ */
 
 /* Windows (but not DDK) and Visual C++ 2005 or higher */
-#define l_fseek(f,o,w)		_fseeki64(f,o,w)
-#define l_ftell(f)		_ftelli64(f)
-#define l_seeknum		__int64
+#define luai_l_fseek(f,o,w)		_fseeki64(f,o,w)
+#define luai_l_ftell(f)		_ftelli64(f)
+#define luai_l_seeknum		__int64
 
 #else				/* }{ */
 
 /* ISO C definitions */
-#define l_fseek(f,o,w)		fseek(f,o,w)
-#define l_ftell(f)		ftell(f)
-#define l_seeknum		long
+#define luai_l_fseek(f,o,w)		fseek(f,o,w)
+#define luai_l_ftell(f)		ftell(f)
+#define luai_l_seeknum		long
 
 #endif				/* } */
 
@@ -11752,27 +11751,27 @@ static int l_checkmode (const char *mode) {
 /* }====================================================== */
 
 
-#define IO_PREFIX	"_IO_"
-#define IOPREF_LEN	(sizeof(IO_PREFIX)/sizeof(char) - 1)
-#define IO_INPUT	(IO_PREFIX "input")
-#define IO_OUTPUT	(IO_PREFIX "output")
+#define LUAI_IO_PREFIX	"_IO_"
+#define LUAI_IOPREF_LEN	(sizeof(LUAI_IO_PREFIX)/sizeof(char) - 1)
+#define LUAI_IO_INPUT	(LUAI_IO_PREFIX "input")
+#define LUAI_IO_OUTPUT	(LUAI_IO_PREFIX "output")
 
 
-typedef luaL_Stream LStream;
+typedef luaL_Stream luai_LStream;
 
 
-#define tolstream(L)	((LStream *)luaL_checkudata(L, 1, LUA_FILEHANDLE))
+#define luai_tolstream(L)	((luai_LStream *)luaL_checkudata(L, 1, LUA_FILEHANDLE))
 
-#define isclosed(p)	((p)->closef == NULL)
+#define luai_isclosed(p)	((p)->closef == NULL)
 
 
 static int luai_io_type (lua_State *L) {
-  LStream *p;
+  luai_LStream *p;
   luaL_checkany(L, 1);
-  p = (LStream *)luaL_testudata(L, 1, LUA_FILEHANDLE);
+  p = (luai_LStream *)luaL_testudata(L, 1, LUA_FILEHANDLE);
   if (p == NULL)
     lua_pushnil(L);  /* not a file */
-  else if (isclosed(p))
+  else if (luai_isclosed(p))
     lua_pushliteral(L, "closed file");
   else
     lua_pushliteral(L, "file");
@@ -11781,8 +11780,8 @@ static int luai_io_type (lua_State *L) {
 
 
 static int luai_f_tostring (lua_State *L) {
-  LStream *p = tolstream(L);
-  if (isclosed(p))
+  luai_LStream *p = luai_tolstream(L);
+  if (luai_isclosed(p))
     lua_pushliteral(L, "file (closed)");
   else
     lua_pushfstring(L, "file (%p)", p->f);
@@ -11790,9 +11789,9 @@ static int luai_f_tostring (lua_State *L) {
 }
 
 
-static FILE *tofile (lua_State *L) {
-  LStream *p = tolstream(L);
-  if (isclosed(p))
+static FILE *luai_tofile (lua_State *L) {
+  luai_LStream *p = luai_tolstream(L);
+  if (luai_isclosed(p))
     luaL_error(L, "attempt to use a closed file");
   lua_assert(p->f);
   return p->f;
@@ -11804,8 +11803,8 @@ static FILE *tofile (lua_State *L) {
 ** before opening the actual file; so, if there is a memory error, the
 ** handle is in a consistent state.
 */
-static LStream *newprefile (lua_State *L) {
-  LStream *p = (LStream *)lua_newuserdata(L, sizeof(LStream));
+static luai_LStream *luai_toprefile (lua_State *L) {
+  luai_LStream *p = (luai_LStream *)lua_newuserdata(L, sizeof(luai_LStream));
   p->closef = NULL;  /* mark file handle as 'closed' */
   luaL_setmetatable(L, LUA_FILEHANDLE);
   return p;
@@ -11817,8 +11816,8 @@ static LStream *newprefile (lua_State *L) {
 ** a bug in some versions of the Clang compiler (e.g., clang 3.0 for
 ** 32 bits).
 */
-static int aux_close (lua_State *L) {
-  LStream *p = tolstream(L);
+static int luai_aux_close (lua_State *L) {
+  luai_LStream *p = luai_tolstream(L);
   volatile lua_CFunction cf = p->closef;
   p->closef = NULL;  /* mark stream as closed */
   return (*cf)(L);  /* close it */
@@ -11827,16 +11826,16 @@ static int aux_close (lua_State *L) {
 
 static int luai_io_close (lua_State *L) {
   if (lua_isnone(L, 1))  /* no argument? */
-    lua_getfield(L, LUA_REGISTRYINDEX, IO_OUTPUT);  /* use standard output */
-  tofile(L);  /* make sure argument is an open stream */
-  return aux_close(L);
+    lua_getfield(L, LUA_REGISTRYINDEX, LUAI_IO_OUTPUT);  /* use standard output */
+  luai_tofile(L);  /* make sure argument is an open stream */
+  return luai_aux_close(L);
 }
 
 
 static int luai_f_gc (lua_State *L) {
-  LStream *p = tolstream(L);
-  if (!isclosed(p) && p->f != NULL)
-    aux_close(L);  /* ignore closed and incompletely open files */
+  luai_LStream *p = luai_tolstream(L);
+  if (!luai_isclosed(p) && p->f != NULL)
+    luai_aux_close(L);  /* ignore closed and incompletely open files */
   return 0;
 }
 
@@ -11845,22 +11844,22 @@ static int luai_f_gc (lua_State *L) {
 ** function to close regular files
 */
 static int luai_io_fclose (lua_State *L) {
-  LStream *p = tolstream(L);
+  luai_LStream *p = luai_tolstream(L);
   int res = fclose(p->f);
   return luaL_fileresult(L, (res == 0), NULL);
 }
 
 
-static LStream *newfile (lua_State *L) {
-  LStream *p = newprefile(L);
+static luai_LStream *luai_newfile (lua_State *L) {
+  luai_LStream *p = luai_toprefile(L);
   p->f = NULL;
   p->closef = &luai_io_fclose;
   return p;
 }
 
 
-static void opencheck (lua_State *L, const char *fname, const char *mode) {
-  LStream *p = newfile(L);
+static void luai_opencheck (lua_State *L, const char *fname, const char *mode) {
+  luai_LStream *p = luai_newfile(L);
   p->f = fopen(fname, mode);
   if (p->f == NULL)
     luaL_error(L, "cannot open file '%s' (%s)", fname, strerror(errno));
@@ -11870,9 +11869,9 @@ static void opencheck (lua_State *L, const char *fname, const char *mode) {
 static int luai_io_open (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   const char *mode = luaL_optstring(L, 2, "r");
-  LStream *p = newfile(L);
-  const char *md = mode;  /* to traverse/check mode */
-  luaL_argcheck(L, l_checkmode(md), 2, "invalid mode");
+  luai_LStream *p = luai_newfile(L);
+  const char *md = mode;  /* to traverse/luai_check mode */
+  luaL_argcheck(L, luai_l_checkmode(md), 2, "invalid mode");
   p->f = fopen(filename, mode);
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
@@ -11882,45 +11881,45 @@ static int luai_io_open (lua_State *L) {
 ** function to close 'popen' files
 */
 static int luai_io_pclose (lua_State *L) {
-  LStream *p = tolstream(L);
-  return luaL_execresult(L, l_pclose(L, p->f));
+  luai_LStream *p = luai_tolstream(L);
+  return luaL_execresult(L, luai_l_pclose(L, p->f));
 }
 
 
 static int luai_io_popen (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   const char *mode = luaL_optstring(L, 2, "r");
-  LStream *p = newprefile(L);
-  p->f = l_popen(L, filename, mode);
+  luai_LStream *p = luai_toprefile(L);
+  p->f = luai_l_popen(L, filename, mode);
   p->closef = &luai_io_pclose;
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
 
 
 static int luai_io_tmpfile (lua_State *L) {
-  LStream *p = newfile(L);
+  luai_LStream *p = luai_newfile(L);
   p->f = tmpfile();
   return (p->f == NULL) ? luaL_fileresult(L, 0, NULL) : 1;
 }
 
 
-static FILE *getiofile (lua_State *L, const char *findex) {
-  LStream *p;
+static FILE *luai_getiofile (lua_State *L, const char *findex) {
+  luai_LStream *p;
   lua_getfield(L, LUA_REGISTRYINDEX, findex);
-  p = (LStream *)lua_touserdata(L, -1);
-  if (isclosed(p))
-    luaL_error(L, "standard %s file is closed", findex + IOPREF_LEN);
+  p = (luai_LStream *)lua_touserdata(L, -1);
+  if (luai_isclosed(p))
+    luaL_error(L, "standard %s file is closed", findex + LUAI_IOPREF_LEN);
   return p->f;
 }
 
 
-static int g_iofile (lua_State *L, const char *f, const char *mode) {
+static int luai_g_iofile (lua_State *L, const char *f, const char *mode) {
   if (!lua_isnoneornil(L, 1)) {
     const char *filename = lua_tostring(L, 1);
     if (filename)
-      opencheck(L, filename, mode);
+      luai_opencheck(L, filename, mode);
     else {
-      tofile(L);  /* check that it's a valid file handle */
+      luai_tofile(L);  /* luai_check that it's a valid file handle */
       lua_pushvalue(L, 1);
     }
     lua_setfield(L, LUA_REGISTRYINDEX, f);
@@ -11932,12 +11931,12 @@ static int g_iofile (lua_State *L, const char *f, const char *mode) {
 
 
 static int luai_io_input (lua_State *L) {
-  return g_iofile(L, IO_INPUT, "r");
+  return luai_g_iofile(L, LUAI_IO_INPUT, "r");
 }
 
 
 static int luai_io_output (lua_State *L) {
-  return g_iofile(L, IO_OUTPUT, "w");
+  return luai_g_iofile(L, LUAI_IO_OUTPUT, "w");
 }
 
 
@@ -11948,11 +11947,11 @@ static int luai_io_readline (lua_State *L);
 ** maximum number of arguments to 'f:lines'/'io.lines' (it + 3 must fit
 ** in the limit for upvalues of a closure)
 */
-#define MAXARGLINE	250
+#define LUAI_MAXARGLINE	250
 
-static void aux_lines (lua_State *L, int toclose) {
+static void luai_aux_lines (lua_State *L, int toclose) {
   int n = lua_gettop(L) - 1;  /* number of arguments to read */
-  luaL_argcheck(L, n <= MAXARGLINE, MAXARGLINE + 2, "too many arguments");
+  luaL_argcheck(L, n <= LUAI_MAXARGLINE, LUAI_MAXARGLINE + 2, "too many arguments");
   lua_pushinteger(L, n);  /* number of arguments to read */
   lua_pushboolean(L, toclose);  /* close/not close file when finished */
   lua_rotate(L, 2, 2);  /* move 'n' and 'toclose' to their positions */
@@ -11961,8 +11960,8 @@ static void aux_lines (lua_State *L, int toclose) {
 
 
 static int luai_f_lines (lua_State *L) {
-  tofile(L);  /* check that it's a valid file handle */
-  aux_lines(L, 0);
+  luai_tofile(L);  /* luai_check that it's a valid file handle */
+  luai_aux_lines(L, 0);
   return 1;
 }
 
@@ -11971,18 +11970,18 @@ static int luai_io_lines (lua_State *L) {
   int toclose;
   if (lua_isnone(L, 1)) lua_pushnil(L);  /* at least one argument */
   if (lua_isnil(L, 1)) {  /* no file name? */
-    lua_getfield(L, LUA_REGISTRYINDEX, IO_INPUT);  /* get default input */
+    lua_getfield(L, LUA_REGISTRYINDEX, LUAI_IO_INPUT);  /* get default input */
     lua_replace(L, 1);  /* put it at index 1 */
-    tofile(L);  /* check that it's a valid file handle */
+    luai_tofile(L);  /* luai_check that it's a valid file handle */
     toclose = 0;  /* do not close it after iteration */
   }
   else {  /* open a new file */
     const char *filename = luaL_checkstring(L, 1);
-    opencheck(L, filename, "r");
+    luai_opencheck(L, filename, "r");
     lua_replace(L, 1);  /* put file at index 1 */
     toclose = 1;  /* close it after iteration */
   }
-  aux_lines(L, toclose);
+  luai_aux_lines(L, toclose);
   return 1;
 }
 
@@ -11995,31 +11994,31 @@ static int luai_io_lines (lua_State *L) {
 
 
 /* maximum length of a numeral */
-#if !defined (L_MAXLENNUM)
-#define L_MAXLENNUM     200
+#if !defined (LUAI_L_MAXLENNUM)
+#define LUAI_L_MAXLENNUM     200
 #endif
 
 
-/* auxiliary structure used by 'read_number' */
+/* auxiliary structure used by 'luai_read_number' */
 typedef struct {
   FILE *f;  /* file being read */
   int c;  /* current character (look ahead) */
   int n;  /* number of elements in buffer 'buff' */
-  char buff[L_MAXLENNUM + 1];  /* +1 for ending '\0' */
-} RN;
+  char buff[LUAI_L_MAXLENNUM + 1];  /* +1 for ending '\0' */
+} luai_RN;
 
 
 /*
-** Add current char to buffer (if not out of space) and read next one
+** Add current char to buffer (if not out of space) and read luai_next one
 */
-static int nextc (RN *rn) {
-  if (rn->n >= L_MAXLENNUM) {  /* buffer overflow? */
+static int luai_nextc (luai_RN *rn) {
+  if (rn->n >= LUAI_L_MAXLENNUM) {  /* buffer overflow? */
     rn->buff[0] = '\0';  /* invalidate result */
     return 0;  /* fail */
   }
   else {
-    rn->buff[rn->n++] = rn->c;  /* save current char */
-    rn->c = l_getc(rn->f);  /* read next one */
+    rn->buff[rn->n++] = rn->c;  /* luai_save current char */
+    rn->c = luai_l_getc(rn->f);  /* read luai_next one */
     return 1;
   }
 }
@@ -12028,9 +12027,9 @@ static int nextc (RN *rn) {
 /*
 ** Accept current char if it is in 'set' (of size 2)
 */
-static int test2 (RN *rn, const char *set) {
+static int luai_test2 (luai_RN *rn, const char *set) {
   if (rn->c == set[0] || rn->c == set[1])
-    return nextc(rn);
+    return luai_nextc(rn);
   else return 0;
 }
 
@@ -12038,9 +12037,9 @@ static int test2 (RN *rn, const char *set) {
 /*
 ** Read a sequence of (hex)digits
 */
-static int readdigits (RN *rn, int hex) {
+static int luai_readdigits (luai_RN *rn, int hex) {
   int count = 0;
-  while ((hex ? isxdigit(rn->c) : isdigit(rn->c)) && nextc(rn))
+  while ((hex ? isxdigit(rn->c) : isdigit(rn->c)) && luai_nextc(rn))
     count++;
   return count;
 }
@@ -12048,33 +12047,33 @@ static int readdigits (RN *rn, int hex) {
 
 /*
 ** Read a number: first reads a valid prefix of a numeral into a buffer.
-** Then it calls 'lua_stringtonumber' to check whether the format is
+** Then it calls 'lua_stringtonumber' to luai_check whether the format is
 ** correct and to convert it to a Lua number
 */
-static int read_number (lua_State *L, FILE *f) {
-  RN rn;
+static int luai_read_number (lua_State *L, FILE *f) {
+  luai_RN rn;
   int count = 0;
   int hex = 0;
   char decp[2];
   rn.f = f; rn.n = 0;
   decp[0] = lua_getlocaledecpoint();  /* get decimal point from locale */
   decp[1] = '.';  /* always accept a dot */
-  l_lockfile(rn.f);
-  do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
-  test2(&rn, "-+");  /* optional signal */
-  if (test2(&rn, "00")) {
-    if (test2(&rn, "xX")) hex = 1;  /* numeral is hexadecimal */
-    else count = 1;  /* count initial '0' as a valid digit */
+  luai_l_lockfile(rn.f);
+  do { rn.c = luai_l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
+  luai_test2(&rn, "-+");  /* optional signal */
+  if (luai_test2(&rn, "00")) {
+    if (luai_test2(&rn, "xX")) hex = 1;  /* numeral is hexadecimal */
+    else count = 1;  /* count initial '0' as a valid luai_digit */
   }
-  count += readdigits(&rn, hex);  /* integral part */
-  if (test2(&rn, decp))  /* decimal point? */
-    count += readdigits(&rn, hex);  /* fractional part */
-  if (count > 0 && test2(&rn, (hex ? "pP" : "eE"))) {  /* exponent mark? */
-    test2(&rn, "-+");  /* exponent signal */
-    readdigits(&rn, 0);  /* exponent digits */
+  count += luai_readdigits(&rn, hex);  /* integral part */
+  if (luai_test2(&rn, decp))  /* decimal point? */
+    count += luai_readdigits(&rn, hex);  /* fractional part */
+  if (count > 0 && luai_test2(&rn, (hex ? "pP" : "eE"))) {  /* exponent mark? */
+    luai_test2(&rn, "-+");  /* exponent signal */
+    luai_readdigits(&rn, 0);  /* exponent digits */
   }
   ungetc(rn.c, rn.f);  /* unread look-ahead char */
-  l_unlockfile(rn.f);
+  luai_l_unlockfile(rn.f);
   rn.buff[rn.n] = '\0';  /* finish string */
   if (lua_stringtonumber(L, rn.buff))  /* is this a valid number? */
     return 1;  /* ok */
@@ -12085,7 +12084,7 @@ static int read_number (lua_State *L, FILE *f) {
 }
 
 
-static int test_eof (lua_State *L, FILE *f) {
+static int luai_test_eof (lua_State *L, FILE *f) {
   int c = getc(f);
   ungetc(c, f);  /* no-op when c == EOF */
   lua_pushliteral(L, "");
@@ -12093,17 +12092,17 @@ static int test_eof (lua_State *L, FILE *f) {
 }
 
 
-static int read_line (lua_State *L, FILE *f, int chop) {
+static int luai_read_line (lua_State *L, FILE *f, int chop) {
   luaL_Buffer b;
   int c = '\0';
   luaL_buffinit(L, &b);
   while (c != EOF && c != '\n') {  /* repeat until end of line */
     char *buff = luaL_prepbuffer(&b);  /* preallocate buffer */
     int i = 0;
-    l_lockfile(f);  /* no memory errors can happen inside the lock */
-    while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != '\n')
+    luai_l_lockfile(f);  /* no memory errors can happen inside the lock */
+    while (i < LUAL_BUFFERSIZE && (c = luai_l_getc(f)) != EOF && c != '\n')
       buff[i++] = c;
-    l_unlockfile(f);
+    luai_l_unlockfile(f);
     luaL_addsize(&b, i);
   }
   if (!chop && c == '\n')  /* want a newline and have one? */
@@ -12114,7 +12113,7 @@ static int read_line (lua_State *L, FILE *f, int chop) {
 }
 
 
-static void read_all (lua_State *L, FILE *f) {
+static void luai_read_all (lua_State *L, FILE *f) {
   size_t nr;
   luaL_Buffer b;
   luaL_buffinit(L, &b);
@@ -12127,12 +12126,12 @@ static void read_all (lua_State *L, FILE *f) {
 }
 
 
-static int read_chars (lua_State *L, FILE *f, size_t n) {
+static int luai_read_chars (lua_State *L, FILE *f, size_t n) {
   size_t nr;  /* number of chars actually read */
   char *p;
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  p = luaL_prepbuffsize(&b, n);  /* prepare buffer to read whole block */
+  p = luaL_prepbuffsize(&b, n);  /* prepare buffer to read whole luai_getblock */
   nr = fread(p, sizeof(char), n, f);  /* try to read 'n' chars */
   luaL_addsize(&b, nr);
   luaL_pushresult(&b);  /* close buffer */
@@ -12140,13 +12139,13 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
 }
 
 
-static int g_read (lua_State *L, FILE *f, int first) {
+static int luai_g_read (lua_State *L, FILE *f, int first) {
   int nargs = lua_gettop(L) - 1;
   int success;
   int n;
   clearerr(f);
   if (nargs == 0) {  /* no arguments? */
-    success = read_line(L, f, 1);
+    success = luai_read_line(L, f, 1);
     n = first+1;  /* to return 1 result */
   }
   else {  /* ensure stack space for all results and for auxlib's buffer */
@@ -12155,23 +12154,23 @@ static int g_read (lua_State *L, FILE *f, int first) {
     for (n = first; nargs-- && success; n++) {
       if (lua_type(L, n) == LUA_TNUMBER) {
         size_t l = (size_t)luaL_checkinteger(L, n);
-        success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
+        success = (l == 0) ? luai_test_eof(L, f) : luai_read_chars(L, f, l);
       }
       else {
         const char *p = luaL_checkstring(L, n);
         if (*p == '*') p++;  /* skip optional '*' (for compatibility) */
         switch (*p) {
           case 'n':  /* number */
-            success = read_number(L, f);
+            success = luai_read_number(L, f);
             break;
           case 'l':  /* line */
-            success = read_line(L, f, 1);
+            success = luai_read_line(L, f, 1);
             break;
           case 'L':  /* line with end-of-line */
-            success = read_line(L, f, 0);
+            success = luai_read_line(L, f, 0);
             break;
           case 'a':  /* file */
-            read_all(L, f);  /* read entire file */
+            luai_read_all(L, f);  /* read entire file */
             success = 1; /* always success */
             break;
           default:
@@ -12191,26 +12190,26 @@ static int g_read (lua_State *L, FILE *f, int first) {
 
 
 static int luai_io_read (lua_State *L) {
-  return g_read(L, getiofile(L, IO_INPUT), 1);
+  return luai_g_read(L, luai_getiofile(L, LUAI_IO_INPUT), 1);
 }
 
 
 static int luai_f_read (lua_State *L) {
-  return g_read(L, tofile(L), 2);
+  return luai_g_read(L, luai_tofile(L), 2);
 }
 
 
 static int luai_io_readline (lua_State *L) {
-  LStream *p = (LStream *)lua_touserdata(L, lua_upvalueindex(1));
+  luai_LStream *p = (luai_LStream *)lua_touserdata(L, lua_upvalueindex(1));
   int i;
   int n = (int)lua_tointeger(L, lua_upvalueindex(2));
-  if (isclosed(p))  /* file is already closed? */
+  if (luai_isclosed(p))  /* file is already closed? */
     return luaL_error(L, "file is already closed");
   lua_settop(L , 1);
   luaL_checkstack(L, n, "too many arguments");
-  for (i = 1; i <= n; i++)  /* push arguments to 'g_read' */
+  for (i = 1; i <= n; i++)  /* push arguments to 'luai_g_read' */
     lua_pushvalue(L, lua_upvalueindex(3 + i));
-  n = g_read(L, p->f, 2);  /* 'n' is number of results */
+  n = luai_g_read(L, p->f, 2);  /* 'n' is number of results */
   lua_assert(n > 0);  /* should return at least a nil */
   if (lua_toboolean(L, -n))  /* read at least one value? */
     return n;  /* return them */
@@ -12222,7 +12221,7 @@ static int luai_io_readline (lua_State *L) {
     if (lua_toboolean(L, lua_upvalueindex(3))) {  /* generator created file? */
       lua_settop(L, 0);
       lua_pushvalue(L, lua_upvalueindex(1));
-      aux_close(L);  /* close it */
+      luai_aux_close(L);  /* close it */
     }
     return 0;
   }
@@ -12231,7 +12230,7 @@ static int luai_io_readline (lua_State *L) {
 /* }====================================================== */
 
 
-static int g_write (lua_State *L, FILE *f, int arg) {
+static int luai_g_write (lua_State *L, FILE *f, int arg) {
   int nargs = lua_gettop(L) - arg;
   int status = 1;
   for (; nargs--; arg++) {
@@ -12256,31 +12255,31 @@ static int g_write (lua_State *L, FILE *f, int arg) {
 
 
 static int luai_io_write (lua_State *L) {
-  return g_write(L, getiofile(L, IO_OUTPUT), 1);
+  return luai_g_write(L, luai_getiofile(L, LUAI_IO_OUTPUT), 1);
 }
 
 
 static int luai_f_write (lua_State *L) {
-  FILE *f = tofile(L);
+  FILE *f = luai_tofile(L);
   lua_pushvalue(L, 1);  /* push file at the stack top (to be returned) */
-  return g_write(L, f, 2);
+  return luai_g_write(L, f, 2);
 }
 
 
 static int luai_f_seek (lua_State *L) {
   static const int mode[] = {SEEK_SET, SEEK_CUR, SEEK_END};
   static const char *const modenames[] = {"set", "cur", "end", NULL};
-  FILE *f = tofile(L);
+  FILE *f = luai_tofile(L);
   int op = luaL_checkoption(L, 2, "cur", modenames);
   lua_Integer p3 = luaL_optinteger(L, 3, 0);
-  l_seeknum offset = (l_seeknum)p3;
+  luai_l_seeknum offset = (luai_l_seeknum)p3;
   luaL_argcheck(L, (lua_Integer)offset == p3, 3,
                   "not an integer in proper range");
-  op = l_fseek(f, offset, mode[op]);
+  op = luai_l_fseek(f, offset, mode[op]);
   if (op)
     return luaL_fileresult(L, 0, NULL);  /* error */
   else {
-    lua_pushinteger(L, (lua_Integer)l_ftell(f));
+    lua_pushinteger(L, (lua_Integer)luai_l_ftell(f));
     return 1;
   }
 }
@@ -12289,7 +12288,7 @@ static int luai_f_seek (lua_State *L) {
 static int luai_f_setvbuf (lua_State *L) {
   static const int mode[] = {_IONBF, _IOFBF, _IOLBF};
   static const char *const modenames[] = {"no", "full", "line", NULL};
-  FILE *f = tofile(L);
+  FILE *f = luai_tofile(L);
   int op = luaL_checkoption(L, 2, NULL, modenames);
   lua_Integer sz = luaL_optinteger(L, 3, LUAL_BUFFERSIZE);
   int res = setvbuf(f, NULL, mode[op], (size_t)sz);
@@ -12299,12 +12298,12 @@ static int luai_f_setvbuf (lua_State *L) {
 
 
 static int luai_io_flush (lua_State *L) {
-  return luaL_fileresult(L, fflush(getiofile(L, IO_OUTPUT)) == 0, NULL);
+  return luaL_fileresult(L, fflush(luai_getiofile(L, LUAI_IO_OUTPUT)) == 0, NULL);
 }
 
 
 static int luai_f_flush (lua_State *L) {
-  return luaL_fileresult(L, fflush(tofile(L)) == 0, NULL);
+  return luaL_fileresult(L, fflush(luai_tofile(L)) == 0, NULL);
 }
 
 
@@ -12357,7 +12356,7 @@ static void luai_createmeta (lua_State *L) {
 ** function to (not) close the standard files stdin, stdout, and stderr
 */
 static int luai_io_noclose (lua_State *L) {
-  LStream *p = tolstream(L);
+  luai_LStream *p = luai_tolstream(L);
   p->closef = &luai_io_noclose;  /* keep file opened */
   lua_pushnil(L);
   lua_pushliteral(L, "cannot close standard file");
@@ -12367,7 +12366,7 @@ static int luai_io_noclose (lua_State *L) {
 
 static void luai_createstdfile (lua_State *L, FILE *f, const char *k,
                            const char *fname) {
-  LStream *p = newprefile(L);
+  luai_LStream *p = luai_toprefile(L);
   p->f = f;
   p->closef = &luai_io_noclose;
   if (k != NULL) {
@@ -12382,19 +12381,19 @@ LUAMOD_API int luaopen_io (lua_State *L) {
   luaL_newlib(L, luai_iolib);  /* new module */
   luai_createmeta(L);
   /* create (and set) default files */
-  luai_createstdfile(L, stdin, IO_INPUT, "stdin");
-  luai_createstdfile(L, stdout, IO_OUTPUT, "stdout");
+  luai_createstdfile(L, stdin, LUAI_IO_INPUT, "stdin");
+  luai_createstdfile(L, stdout, LUAI_IO_OUTPUT, "stdout");
   luai_createstdfile(L, stderr, NULL, "stderr");
   return 1;
 }
 
 /*__llex.c__*/
 
-#define next(ls) (ls->current = zgetc(ls->z))
+#define luai_next(ls) (ls->current = luai_zgetc(ls->z))
 
 
 
-#define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
+#define luai_currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
 
 
 /* ORDER RESERVED */
@@ -12409,13 +12408,13 @@ static const char *const luaX_tokens [] = {
 };
 
 
-#define save_and_next(ls) (save(ls, ls->current), next(ls))
+#define luai_save_and_next(ls) (luai_save(ls, ls->current), luai_next(ls))
 
 
-static l_noret luai_lexerror (LexState *ls, const char *msg, int token);
+static luai_l_noret luai_lexerror (LexState *ls, const char *msg, int token);
 
 
-static void save (LexState *ls, int c) {
+static void luai_save (LexState *ls, int c) {
   Mbuffer *b = ls->buff;
   if (luaZ_bufflen(b) + 1 > luaZ_sizebuffer(b)) {
     size_t newsize;
@@ -12424,30 +12423,30 @@ static void save (LexState *ls, int c) {
     newsize = luaZ_sizebuffer(b) * 2;
     luaZ_resizebuffer(ls->L, b, newsize);
   }
-  b->buffer[luaZ_bufflen(b)++] = cast(char, c);
+  b->buffer[luaZ_bufflen(b)++] = luai_cast(char, c);
 }
 
 
 void luaX_init (lua_State *L) {
   int i;
-  TString *e = luaS_newliteral(L, LUA_ENV);  /* create env name */
+  luai_TString *e = luaS_newliteral(L, LUA_ENV);  /* create env name */
   luaC_fix(L, obj2gco(e));  /* never collect this name */
   for (i=0; i<NUM_RESERVED; i++) {
-    TString *ts = luaS_new(L, luaX_tokens[i]);
+    luai_TString *ts = luaS_new(L, luaX_tokens[i]);
     luaC_fix(L, obj2gco(ts));  /* reserved words are never collected */
-    ts->extra = cast_byte(i+1);  /* reserved word */
+    ts->extra = luai_cast_byte(i+1);  /* reserved word */
   }
 }
 
 
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {  /* single-byte symbols? */
-    lua_assert(token == cast_uchar(token));
+    lua_assert(token == luai_cast_uchar(token));
     return luaO_pushfstring(ls->L, "'%c'", token);
   }
   else {
     const char *s = luaX_tokens[token - FIRST_RESERVED];
-    if (token < TK_EOS)  /* fixed format (symbols and reserved words)? */
+    if (token < LUAI_TK_EOS)  /* fixed format (symbols and reserved words)? */
       return luaO_pushfstring(ls->L, "'%s'", s);
     else  /* names, strings, and numerals */
       return s;
@@ -12457,9 +12456,9 @@ const char *luaX_token2str (LexState *ls, int token) {
 
 static const char *luai_txtToken (LexState *ls, int token) {
   switch (token) {
-    case TK_NAME: case TK_STRING:
-    case TK_FLT: case TK_INT:
-      save(ls, '\0');
+    case LUAI_TK_NAME: case LUAI_TK_STRING:
+    case LUAI_TK_FLT: case LUAI_TK_INT:
+      luai_save(ls, '\0');
       return luaO_pushfstring(ls->L, "'%s'", luaZ_buffer(ls->buff));
     default:
       return luaX_token2str(ls, token);
@@ -12467,7 +12466,7 @@ static const char *luai_txtToken (LexState *ls, int token) {
 }
 
 
-static l_noret luai_lexerror (LexState *ls, const char *msg, int token) {
+static luai_l_noret luai_lexerror (LexState *ls, const char *msg, int token) {
   msg = luaG_addinfo(ls->L, msg, ls->source, ls->linenumber);
   if (token)
     luaO_pushfstring(ls->L, "%s near %s", msg, luai_txtToken(ls, token));
@@ -12475,7 +12474,7 @@ static l_noret luai_lexerror (LexState *ls, const char *msg, int token) {
 }
 
 
-l_noret luaX_syntaxerror (LexState *ls, const char *msg) {
+luai_l_noret luaX_syntaxerror (LexState *ls, const char *msg) {
   luai_lexerror(ls, msg, ls->t.token);
 }
 
@@ -12485,20 +12484,20 @@ l_noret luaX_syntaxerror (LexState *ls, const char *msg) {
 ** it will not be collected until the end of the compilation
 ** (by that time it should be anchored somewhere)
 */
-TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
+luai_TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   lua_State *L = ls->L;
-  TValue *o;  /* entry for 'str' */
-  TString *ts = luaS_newlstr(L, str, l);  /* create new string */
+  luai_TValue *o;  /* entry for 'str' */
+  luai_TString *ts = luaS_newlstr(L, str, l);  /* create new string */
   setsvalue2s(L, L->top++, ts);  /* temporarily anchor it in stack */
   o = luaH_set(L, ls->h, L->top - 1);
   if (ttisnil(o)) {  /* not in use yet? */
-    /* boolean value does not need GC barrier;
+    /* boolean value does not need LUAI_GC barrier;
        table has no metatable, so it does not need to invalidate cache */
     setbvalue(o, 1);  /* t[string] = true */
     luaC_checkGC(L);
   }
   else {  /* string already present */
-    ts = tsvalue(keyfromval(o));  /* re-use value previously stored */
+    ts = tsvalue(luai_keyfromval(o));  /* re-use value previously stored */
   }
   L->top--;  /* remove string from stack */
   return ts;
@@ -12511,21 +12510,21 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
 */
 static void luai_inclinenumber (LexState *ls) {
   int old = ls->current;
-  lua_assert(currIsNewline(ls));
-  next(ls);  /* skip '\n' or '\r' */
-  if (currIsNewline(ls) && ls->current != old)
-    next(ls);  /* skip '\n\r' or '\r\n' */
+  lua_assert(luai_currIsNewline(ls));
+  luai_next(ls);  /* skip '\n' or '\r' */
+  if (luai_currIsNewline(ls) && ls->current != old)
+    luai_next(ls);  /* skip '\n\r' or '\r\n' */
   if (++ls->linenumber >= MAX_INT)
     luai_lexerror(ls, "chunk has too many lines", 0);
 }
 
 
-void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
+void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, luai_TString *source,
                     int firstchar) {
   ls->t.token = 0;
   ls->L = L;
   ls->current = firstchar;
-  ls->lookahead.token = TK_EOS;  /* no look-ahead token */
+  ls->lookahead.token = LUAI_TK_EOS;  /* no look-ahead token */
   ls->z = z;
   ls->fs = NULL;
   ls->linenumber = 1;
@@ -12546,7 +12545,7 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
 
 static int luai_check_next1 (LexState *ls, int c) {
   if (ls->current == c) {
-    next(ls);
+    luai_next(ls);
     return 1;
   }
   else return 0;
@@ -12560,7 +12559,7 @@ static int luai_check_next1 (LexState *ls, int c) {
 static int luai_check_next2 (LexState *ls, const char *set) {
   lua_assert(set[2] == '\0');
   if (ls->current == set[0] || ls->current == set[1]) {
-    save_and_next(ls);
+    luai_save_and_next(ls);
     return 1;
   }
   else return 0;
@@ -12572,34 +12571,34 @@ static int luai_check_next2 (LexState *ls, const char *set) {
 ** this function is quite liberal in what it accepts, as 'luaO_str2num'
 ** will reject ill-formed numerals.
 */
-static int read_numeral (LexState *ls, SemInfo *seminfo) {
-  TValue obj;
+static int luai_read_numeral (LexState *ls, SemInfo *seminfo) {
+  luai_TValue obj;
   const char *expo = "Ee";
   int first = ls->current;
-  lua_assert(lisdigit(ls->current));
-  save_and_next(ls);
+  lua_assert(luai_lisdigit(ls->current));
+  luai_save_and_next(ls);
   if (first == '0' && luai_check_next2(ls, "xX"))  /* hexadecimal? */
     expo = "Pp";
   for (;;) {
     if (luai_check_next2(ls, expo))  /* exponent part? */
       luai_check_next2(ls, "-+");  /* optional exponent sign */
-    if (lisxdigit(ls->current))
-      save_and_next(ls);
+    if (luai_lisxdigit(ls->current))
+      luai_save_and_next(ls);
     else if (ls->current == '.')
-      save_and_next(ls);
+      luai_save_and_next(ls);
     else break;
   }
-  save(ls, '\0');
+  luai_save(ls, '\0');
   if (luaO_str2num(luaZ_buffer(ls->buff), &obj) == 0)  /* format error? */
-    luai_lexerror(ls, "malformed number", TK_FLT);
+    luai_lexerror(ls, "malformed number", LUAI_TK_FLT);
   if (ttisinteger(&obj)) {
     seminfo->i = ivalue(&obj);
-    return TK_INT;
+    return LUAI_TK_INT;
   }
   else {
     lua_assert(ttisfloat(&obj));
     seminfo->r = fltvalue(&obj);
-    return TK_FLT;
+    return LUAI_TK_FLT;
   }
 }
 
@@ -12609,23 +12608,23 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
 ** its number of '='s; otherwise, return a negative number (-1 iff there
 ** are no '='s after initial bracket)
 */
-static int skip_sep (LexState *ls) {
+static int luai_skip_sep (LexState *ls) {
   int count = 0;
   int s = ls->current;
   lua_assert(s == '[' || s == ']');
-  save_and_next(ls);
+  luai_save_and_next(ls);
   while (ls->current == '=') {
-    save_and_next(ls);
+    luai_save_and_next(ls);
     count++;
   }
   return (ls->current == s) ? count : (-count) - 1;
 }
 
 
-static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
+static void luai_read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
   int line = ls->linenumber;  /* initial line (for error message) */
-  save_and_next(ls);  /* skip 2nd '[' */
-  if (currIsNewline(ls))  /* string starts with a newline? */
+  luai_save_and_next(ls);  /* skip 2nd '[' */
+  if (luai_currIsNewline(ls))  /* string starts with a newline? */
     luai_inclinenumber(ls);  /* skip it */
   for (;;) {
     switch (ls->current) {
@@ -12633,25 +12632,25 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
         const char *what = (seminfo ? "string" : "comment");
         const char *msg = luaO_pushfstring(ls->L,
                      "unfinished long %s (starting at line %d)", what, line);
-        luai_lexerror(ls, msg, TK_EOS);
+        luai_lexerror(ls, msg, LUAI_TK_EOS);
         break;  /* to avoid warnings */
       }
       case ']': {
-        if (skip_sep(ls) == sep) {
-          save_and_next(ls);  /* skip 2nd ']' */
+        if (luai_skip_sep(ls) == sep) {
+          luai_save_and_next(ls);  /* skip 2nd ']' */
           goto endloop;
         }
         break;
       }
       case '\n': case '\r': {
-        save(ls, '\n');
+        luai_save(ls, '\n');
         luai_inclinenumber(ls);
         if (!seminfo) luaZ_resetbuffer(ls->buff);  /* avoid wasting space */
         break;
       }
       default: {
-        if (seminfo) save_and_next(ls);
-        else next(ls);
+        if (seminfo) luai_save_and_next(ls);
+        else luai_next(ls);
       }
     }
   } endloop:
@@ -12661,133 +12660,133 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 }
 
 
-static void esccheck (LexState *ls, int c, const char *msg) {
+static void luai_esccheck (LexState *ls, int c, const char *msg) {
   if (!c) {
     if (ls->current != EOZ)
-      save_and_next(ls);  /* add current to buffer for error message */
-    luai_lexerror(ls, msg, TK_STRING);
+      luai_save_and_next(ls);  /* add current to buffer for error message */
+    luai_lexerror(ls, msg, LUAI_TK_STRING);
   }
 }
 
 
-static int gethexa (LexState *ls) {
-  save_and_next(ls);
-  esccheck (ls, lisxdigit(ls->current), "hexadecimal digit expected");
+static int luai_gethexa (LexState *ls) {
+  luai_save_and_next(ls);
+  luai_esccheck (ls, luai_lisxdigit(ls->current), "hexadecimal luai_digit expected");
   return luaO_hexavalue(ls->current);
 }
 
 
-static int readhexaesc (LexState *ls) {
-  int r = gethexa(ls);
-  r = (r << 4) + gethexa(ls);
+static int luai_readhexaesc (LexState *ls) {
+  int r = luai_gethexa(ls);
+  r = (r << 4) + luai_gethexa(ls);
   luaZ_buffremove(ls->buff, 2);  /* remove saved chars from buffer */
   return r;
 }
 
 
-static unsigned long readutf8esc (LexState *ls) {
+static unsigned long luai_readutf8esc (LexState *ls) {
   unsigned long r;
-  int i = 4;  /* chars to be removed: '\', 'u', '{', and first digit */
-  save_and_next(ls);  /* skip 'u' */
-  esccheck(ls, ls->current == '{', "missing '{'");
-  r = gethexa(ls);  /* must have at least one digit */
-  while ((save_and_next(ls), lisxdigit(ls->current))) {
+  int i = 4;  /* chars to be removed: '\', 'u', '{', and first luai_digit */
+  luai_save_and_next(ls);  /* skip 'u' */
+  luai_esccheck(ls, ls->current == '{', "missing '{'");
+  r = luai_gethexa(ls);  /* must have at least one luai_digit */
+  while ((luai_save_and_next(ls), luai_lisxdigit(ls->current))) {
     i++;
     r = (r << 4) + luaO_hexavalue(ls->current);
-    esccheck(ls, r <= 0x10FFFF, "UTF-8 value too large");
+    luai_esccheck(ls, r <= 0x10FFFF, "UTF-8 value too large");
   }
-  esccheck(ls, ls->current == '}', "missing '}'");
-  next(ls);  /* skip '}' */
+  luai_esccheck(ls, ls->current == '}', "missing '}'");
+  luai_next(ls);  /* skip '}' */
   luaZ_buffremove(ls->buff, i);  /* remove saved chars from buffer */
   return r;
 }
 
 
-static void utf8esc (LexState *ls) {
+static void luai_utf8esc (LexState *ls) {
   char buff[UTF8BUFFSZ];
-  int n = luaO_utf8esc(buff, readutf8esc(ls));
+  int n = luaO_utf8esc(buff, luai_readutf8esc(ls));
   for (; n > 0; n--)  /* add 'buff' to string */
-    save(ls, buff[UTF8BUFFSZ - n]);
+    luai_save(ls, buff[UTF8BUFFSZ - n]);
 }
 
 
-static int readdecesc (LexState *ls) {
+static int luai_readdecesc (LexState *ls) {
   int i;
   int r = 0;  /* result accumulator */
-  for (i = 0; i < 3 && lisdigit(ls->current); i++) {  /* read up to 3 digits */
+  for (i = 0; i < 3 && luai_lisdigit(ls->current); i++) {  /* read up to 3 digits */
     r = 10*r + ls->current - '0';
-    save_and_next(ls);
+    luai_save_and_next(ls);
   }
-  esccheck(ls, r <= UCHAR_MAX, "decimal escape too large");
+  luai_esccheck(ls, r <= UCHAR_MAX, "decimal escape too large");
   luaZ_buffremove(ls->buff, i);  /* remove read digits from buffer */
   return r;
 }
 
 
-static void read_string (LexState *ls, int del, SemInfo *seminfo) {
-  save_and_next(ls);  /* keep delimiter (for error messages) */
+static void luai_read_string (LexState *ls, int del, SemInfo *seminfo) {
+  luai_save_and_next(ls);  /* keep delimiter (for error messages) */
   while (ls->current != del) {
     switch (ls->current) {
       case EOZ:
-        luai_lexerror(ls, "unfinished string", TK_EOS);
+        luai_lexerror(ls, "unfinished string", LUAI_TK_EOS);
         break;  /* to avoid warnings */
       case '\n':
       case '\r':
-        luai_lexerror(ls, "unfinished string", TK_STRING);
+        luai_lexerror(ls, "unfinished string", LUAI_TK_STRING);
         break;  /* to avoid warnings */
       case '\\': {  /* escape sequences */
         int c;  /* final character to be saved */
-        save_and_next(ls);  /* keep '\\' for error messages */
+        luai_save_and_next(ls);  /* keep '\\' for error messages */
         switch (ls->current) {
-          case 'a': c = '\a'; goto read_save;
-          case 'b': c = '\b'; goto read_save;
-          case 'f': c = '\f'; goto read_save;
-          case 'n': c = '\n'; goto read_save;
-          case 'r': c = '\r'; goto read_save;
-          case 't': c = '\t'; goto read_save;
-          case 'v': c = '\v'; goto read_save;
-          case 'x': c = readhexaesc(ls); goto read_save;
-          case 'u': utf8esc(ls);  goto no_save;
+          case 'a': c = '\a'; goto luai_read_save;
+          case 'b': c = '\b'; goto luai_read_save;
+          case 'f': c = '\f'; goto luai_read_save;
+          case 'n': c = '\n'; goto luai_read_save;
+          case 'r': c = '\r'; goto luai_read_save;
+          case 't': c = '\t'; goto luai_read_save;
+          case 'v': c = '\v'; goto luai_read_save;
+          case 'x': c = luai_readhexaesc(ls); goto luai_read_save;
+          case 'u': luai_utf8esc(ls);  goto no_save;
           case '\n': case '\r':
             luai_inclinenumber(ls); c = '\n'; goto only_save;
           case '\\': case '\"': case '\'':
-            c = ls->current; goto read_save;
-          case EOZ: goto no_save;  /* will raise an error next loop */
+            c = ls->current; goto luai_read_save;
+          case EOZ: goto no_save;  /* will raise an error luai_next loop */
           case 'z': {  /* zap following span of spaces */
             luaZ_buffremove(ls->buff, 1);  /* remove '\\' */
-            next(ls);  /* skip the 'z' */
-            while (lisspace(ls->current)) {
-              if (currIsNewline(ls)) luai_inclinenumber(ls);
-              else next(ls);
+            luai_next(ls);  /* skip the 'z' */
+            while (luai_lisspace(ls->current)) {
+              if (luai_currIsNewline(ls)) luai_inclinenumber(ls);
+              else luai_next(ls);
             }
             goto no_save;
           }
           default: {
-            esccheck(ls, lisdigit(ls->current), "invalid escape sequence");
-            c = readdecesc(ls);  /* digital escape '\ddd' */
+            luai_esccheck(ls, luai_lisdigit(ls->current), "invalid escape sequence");
+            c = luai_readdecesc(ls);  /* digital escape '\ddd' */
             goto only_save;
           }
         }
-       read_save:
-         next(ls);
+       luai_read_save:
+         luai_next(ls);
          /* go through */
        only_save:
          luaZ_buffremove(ls->buff, 1);  /* remove '\\' */
-         save(ls, c);
+         luai_save(ls, c);
          /* go through */
        no_save: break;
       }
       default:
-        save_and_next(ls);
+        luai_save_and_next(ls);
     }
   }
-  save_and_next(ls);  /* skip delimiter */
+  luai_save_and_next(ls);  /* skip delimiter */
   seminfo->ts = luaX_newstring(ls, luaZ_buffer(ls->buff) + 1,
                                    luaZ_bufflen(ls->buff) - 2);
 }
 
 
-static int llex (LexState *ls, SemInfo *seminfo) {
+static int luai_llex (LexState *ls, SemInfo *seminfo) {
   luaZ_resetbuffer(ls->buff);
   for (;;) {
     switch (ls->current) {
@@ -12796,109 +12795,109 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         break;
       }
       case ' ': case '\f': case '\t': case '\v': {  /* spaces */
-        next(ls);
+        luai_next(ls);
         break;
       }
       case '-': {  /* '-' or '--' (comment) */
-        next(ls);
+        luai_next(ls);
         if (ls->current != '-') return '-';
         /* else is a comment */
-        next(ls);
+        luai_next(ls);
         if (ls->current == '[') {  /* long comment? */
-          int sep = skip_sep(ls);
-          luaZ_resetbuffer(ls->buff);  /* 'skip_sep' may dirty the buffer */
+          int sep = luai_skip_sep(ls);
+          luaZ_resetbuffer(ls->buff);  /* 'luai_skip_sep' may dirty the buffer */
           if (sep >= 0) {
-            read_long_string(ls, NULL, sep);  /* skip long comment */
+            luai_read_long_string(ls, NULL, sep);  /* skip long comment */
             luaZ_resetbuffer(ls->buff);  /* previous call may dirty the buff. */
             break;
           }
         }
         /* else short comment */
-        while (!currIsNewline(ls) && ls->current != EOZ)
-          next(ls);  /* skip until end of line (or end of file) */
+        while (!luai_currIsNewline(ls) && ls->current != EOZ)
+          luai_next(ls);  /* skip until end of line (or end of file) */
         break;
       }
       case '[': {  /* long string or simply '[' */
-        int sep = skip_sep(ls);
+        int sep = luai_skip_sep(ls);
         if (sep >= 0) {
-          read_long_string(ls, seminfo, sep);
-          return TK_STRING;
+          luai_read_long_string(ls, seminfo, sep);
+          return LUAI_TK_STRING;
         }
         else if (sep != -1)  /* '[=...' missing second bracket */
-          luai_lexerror(ls, "invalid long string delimiter", TK_STRING);
+          luai_lexerror(ls, "invalid long string delimiter", LUAI_TK_STRING);
         return '[';
       }
       case '=': {
-        next(ls);
-        if (luai_check_next1(ls, '=')) return TK_EQ;
+        luai_next(ls);
+        if (luai_check_next1(ls, '=')) return LUAI_TK_EQ;
         else return '=';
       }
       case '<': {
-        next(ls);
-        if (luai_check_next1(ls, '=')) return TK_LE;
-        else if (luai_check_next1(ls, '<')) return TK_SHL;
+        luai_next(ls);
+        if (luai_check_next1(ls, '=')) return LUAI_TK_LE;
+        else if (luai_check_next1(ls, '<')) return LUAI_TK_SHL;
         else return '<';
       }
       case '>': {
-        next(ls);
-        if (luai_check_next1(ls, '=')) return TK_GE;
-        else if (luai_check_next1(ls, '>')) return TK_SHR;
+        luai_next(ls);
+        if (luai_check_next1(ls, '=')) return LUAI_TK_GE;
+        else if (luai_check_next1(ls, '>')) return LUAI_TK_SHR;
         else return '>';
       }
       case '/': {
-        next(ls);
-        if (luai_check_next1(ls, '/')) return TK_IDIV;
+        luai_next(ls);
+        if (luai_check_next1(ls, '/')) return LUAI_TK_IDIV;
         else return '/';
       }
       case '~': {
-        next(ls);
-        if (luai_check_next1(ls, '=')) return TK_NE;
+        luai_next(ls);
+        if (luai_check_next1(ls, '=')) return LUAI_TK_NE;
         else return '~';
       }
       case ':': {
-        next(ls);
-        if (luai_check_next1(ls, ':')) return TK_DBCOLON;
+        luai_next(ls);
+        if (luai_check_next1(ls, ':')) return LUAI_TK_DBCOLON;
         else return ':';
       }
       case '"': case '\'': {  /* short literal strings */
-        read_string(ls, ls->current, seminfo);
-        return TK_STRING;
+        luai_read_string(ls, ls->current, seminfo);
+        return LUAI_TK_STRING;
       }
       case '.': {  /* '.', '..', '...', or number */
-        save_and_next(ls);
+        luai_save_and_next(ls);
         if (luai_check_next1(ls, '.')) {
           if (luai_check_next1(ls, '.'))
-            return TK_DOTS;   /* '...' */
-          else return TK_CONCAT;   /* '..' */
+            return LUAI_TK_DOTS;   /* '...' */
+          else return LUAI_TK_CONCAT;   /* '..' */
         }
-        else if (!lisdigit(ls->current)) return '.';
-        else return read_numeral(ls, seminfo);
+        else if (!luai_lisdigit(ls->current)) return '.';
+        else return luai_read_numeral(ls, seminfo);
       }
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9': {
-        return read_numeral(ls, seminfo);
+        return luai_read_numeral(ls, seminfo);
       }
       case EOZ: {
-        return TK_EOS;
+        return LUAI_TK_EOS;
       }
       default: {
-        if (lislalpha(ls->current)) {  /* identifier or reserved word? */
-          TString *ts;
+        if (luai_lislalpha(ls->current)) {  /* identifier or reserved word? */
+          luai_TString *ts;
           do {
-            save_and_next(ls);
-          } while (lislalnum(ls->current));
+            luai_save_and_next(ls);
+          } while (luai_lislalnum(ls->current));
           ts = luaX_newstring(ls, luaZ_buffer(ls->buff),
                                   luaZ_bufflen(ls->buff));
           seminfo->ts = ts;
-          if (isreserved(ts))  /* reserved word? */
+          if (luai_isreserved(ts))  /* reserved word? */
             return ts->extra - 1 + FIRST_RESERVED;
           else {
-            return TK_NAME;
+            return LUAI_TK_NAME;
           }
         }
         else {  /* single-char tokens (+ - / ...) */
           int c = ls->current;
-          next(ls);
+          luai_next(ls);
           return c;
         }
       }
@@ -12909,35 +12908,35 @@ static int llex (LexState *ls, SemInfo *seminfo) {
 
 void luaX_next (LexState *ls) {
   ls->lastline = ls->linenumber;
-  if (ls->lookahead.token != TK_EOS) {  /* is there a look-ahead token? */
+  if (ls->lookahead.token != LUAI_TK_EOS) {  /* is there a look-ahead token? */
     ls->t = ls->lookahead;  /* use this one */
-    ls->lookahead.token = TK_EOS;  /* and discharge it */
+    ls->lookahead.token = LUAI_TK_EOS;  /* and discharge it */
   }
   else
-    ls->t.token = llex(ls, &ls->t.seminfo);  /* read next token */
+    ls->t.token = luai_llex(ls, &ls->t.seminfo);  /* read luai_next token */
 }
 
 
 int luaX_lookahead (LexState *ls) {
-  lua_assert(ls->lookahead.token == TK_EOS);
-  ls->lookahead.token = llex(ls, &ls->lookahead.seminfo);
+  lua_assert(ls->lookahead.token == LUAI_TK_EOS);
+  ls->lookahead.token = luai_llex(ls, &ls->lookahead.seminfo);
   return ls->lookahead.token;
 }
 
 /*__lmathlib.c__*/
 
-#define LUA_PI	(l_mathop(3.141592653589793238462643383279502884))
+#define LUA_PI	(luai_l_mathop(3.141592653589793238462643383279502884))
 
 
-#if !defined(l_rand)		/* { */
+#if !defined(luai_l_rand)		/* { */
 #if defined(LUA_USE_POSIX)
-#define l_rand()	random()
-#define l_srand(x)	srandom(x)
-#define L_RANDMAX	2147483647	/* (2^31 - 1), following POSIX */
+#define luai_l_rand()	random()
+#define luai_l_srand(x)	srandom(x)
+#define LUAI_L_RANDMAX	2147483647	/* (2^31 - 1), following POSIX */
 #else
-#define l_rand()	rand()
-#define l_srand(x)	srand(x)
-#define L_RANDMAX	RAND_MAX
+#define luai_l_rand()	rand()
+#define luai_l_srand(x)	srand(x)
+#define LUAI_L_RANDMAX	RAND_MAX
 #endif
 #endif				/* } */
 
@@ -12949,39 +12948,39 @@ static int luai_math_abs (lua_State *L) {
     lua_pushinteger(L, n);
   }
   else
-    lua_pushnumber(L, l_mathop(fabs)(luaL_checknumber(L, 1)));
+    lua_pushnumber(L, luai_l_mathop(fabs)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_sin (lua_State *L) {
-  lua_pushnumber(L, l_mathop(sin)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(sin)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_cos (lua_State *L) {
-  lua_pushnumber(L, l_mathop(cos)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(cos)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_tan (lua_State *L) {
-  lua_pushnumber(L, l_mathop(tan)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(tan)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_asin (lua_State *L) {
-  lua_pushnumber(L, l_mathop(asin)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(asin)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_acos (lua_State *L) {
-  lua_pushnumber(L, l_mathop(acos)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(acos)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_atan (lua_State *L) {
   lua_Number y = luaL_checknumber(L, 1);
   lua_Number x = luaL_optnumber(L, 2, 1);
-  lua_pushnumber(L, l_mathop(atan2)(y, x));
+  lua_pushnumber(L, luai_l_mathop(atan2)(y, x));
   return 1;
 }
 
@@ -12999,7 +12998,7 @@ static int luai_math_toint (lua_State *L) {
 }
 
 
-static void pushnumint (lua_State *L, lua_Number d) {
+static void luai_pushnumint (lua_State *L, lua_Number d) {
   lua_Integer n;
   if (lua_numbertointeger(d, &n))  /* does 'd' fit in an integer? */
     lua_pushinteger(L, n);  /* result is integer */
@@ -13012,8 +13011,8 @@ static int luai_math_floor (lua_State *L) {
   if (lua_isinteger(L, 1))
     lua_settop(L, 1);  /* integer is its own floor */
   else {
-    lua_Number d = l_mathop(floor)(luaL_checknumber(L, 1));
-    pushnumint(L, d);
+    lua_Number d = luai_l_mathop(floor)(luaL_checknumber(L, 1));
+    luai_pushnumint(L, d);
   }
   return 1;
 }
@@ -13023,8 +13022,8 @@ static int luai_math_ceil (lua_State *L) {
   if (lua_isinteger(L, 1))
     lua_settop(L, 1);  /* integer is its own ceil */
   else {
-    lua_Number d = l_mathop(ceil)(luaL_checknumber(L, 1));
-    pushnumint(L, d);
+    lua_Number d = luai_l_mathop(ceil)(luaL_checknumber(L, 1));
+    luai_pushnumint(L, d);
   }
   return 1;
 }
@@ -13041,14 +13040,14 @@ static int luai_math_fmod (lua_State *L) {
       lua_pushinteger(L, lua_tointeger(L, 1) % d);
   }
   else
-    lua_pushnumber(L, l_mathop(fmod)(luaL_checknumber(L, 1),
+    lua_pushnumber(L, luai_l_mathop(fmod)(luaL_checknumber(L, 1),
                                      luaL_checknumber(L, 2)));
   return 1;
 }
 
 
 /*
-** next function does not use 'modf', avoiding problems with 'double*'
+** luai_next function does not use 'modf', avoiding problems with 'double*'
 ** (which is not compatible with 'float*') when lua_Number is not
 ** 'double'.
 */
@@ -13060,17 +13059,17 @@ static int luai_math_modf (lua_State *L) {
   else {
     lua_Number n = luaL_checknumber(L, 1);
     /* integer part (rounds toward zero) */
-    lua_Number ip = (n < 0) ? l_mathop(ceil)(n) : l_mathop(floor)(n);
-    pushnumint(L, ip);
+    lua_Number ip = (n < 0) ? luai_l_mathop(ceil)(n) : luai_l_mathop(floor)(n);
+    luai_pushnumint(L, ip);
     /* fractional part (test needed for inf/-inf) */
-    lua_pushnumber(L, (n == ip) ? l_mathop(0.0) : (n - ip));
+    lua_pushnumber(L, (n == ip) ? luai_l_mathop(0.0) : (n - ip));
   }
   return 2;
 }
 
 
 static int luai_math_sqrt (lua_State *L) {
-  lua_pushnumber(L, l_mathop(sqrt)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(sqrt)(luaL_checknumber(L, 1)));
   return 1;
 }
 
@@ -13086,34 +13085,34 @@ static int luai_math_log (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
   lua_Number res;
   if (lua_isnoneornil(L, 2))
-    res = l_mathop(log)(x);
+    res = luai_l_mathop(log)(x);
   else {
     lua_Number base = luaL_checknumber(L, 2);
 #if !defined(LUA_USE_C89)
-    if (base == l_mathop(2.0))
-      res = l_mathop(log2)(x); else
+    if (base == luai_l_mathop(2.0))
+      res = luai_l_mathop(log2)(x); else
 #endif
-    if (base == l_mathop(10.0))
-      res = l_mathop(log10)(x);
+    if (base == luai_l_mathop(10.0))
+      res = luai_l_mathop(log10)(x);
     else
-      res = l_mathop(log)(x)/l_mathop(log)(base);
+      res = luai_l_mathop(log)(x)/luai_l_mathop(log)(base);
   }
   lua_pushnumber(L, res);
   return 1;
 }
 
 static int luai_math_exp (lua_State *L) {
-  lua_pushnumber(L, l_mathop(exp)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(exp)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_deg (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1) * (l_mathop(180.0) / LUA_PI));
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (luai_l_mathop(180.0) / LUA_PI));
   return 1;
 }
 
 static int luai_math_rad (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1) * (LUA_PI / l_mathop(180.0)));
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (LUA_PI / luai_l_mathop(180.0)));
   return 1;
 }
 
@@ -13147,13 +13146,13 @@ static int luai_math_max (lua_State *L) {
 
 /*
 ** This function uses 'double' (instead of 'lua_Number') to ensure that
-** all bits from 'l_rand' can be represented, and that 'RANDMAX + 1.0'
+** all bits from 'luai_l_rand' can be represented, and that 'RANDMAX + 1.0'
 ** will keep full precision (ensuring that 'r' is always less than 1.0.)
 */
 static int luai_math_random (lua_State *L) {
   lua_Integer low, up;
-  double r = (double)l_rand() * (1.0 / ((double)L_RANDMAX + 1.0));
-  switch (lua_gettop(L)) {  /* check number of arguments */
+  double r = (double)luai_l_rand() * (1.0 / ((double)LUAI_L_RANDMAX + 1.0));
+  switch (lua_gettop(L)) {  /* luai_check number of arguments */
     case 0: {  /* no arguments */
       lua_pushnumber(L, (lua_Number)r);  /* Number between 0 and 1 */
       return 1;
@@ -13181,8 +13180,8 @@ static int luai_math_random (lua_State *L) {
 
 
 static int luai_math_randomseed (lua_State *L) {
-  l_srand((unsigned int)(lua_Integer)luaL_checknumber(L, 1));
-  (void)l_rand(); /* discard first value to avoid undesirable correlations */
+  luai_l_srand((unsigned int)(lua_Integer)luaL_checknumber(L, 1));
+  (void)luai_l_rand(); /* discard first value to avoid undesirable correlations */
   return 0;
 }
 
@@ -13210,30 +13209,30 @@ static int luai_math_type (lua_State *L) {
 #if defined(LUA_COMPAT_MATHLIB)
 
 static int luai_math_cosh (lua_State *L) {
-  lua_pushnumber(L, l_mathop(cosh)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(cosh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_sinh (lua_State *L) {
-  lua_pushnumber(L, l_mathop(sinh)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(sinh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_tanh (lua_State *L) {
-  lua_pushnumber(L, l_mathop(tanh)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(tanh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int luai_math_pow (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
   lua_Number y = luaL_checknumber(L, 2);
-  lua_pushnumber(L, l_mathop(pow)(x, y));
+  lua_pushnumber(L, luai_l_mathop(pow)(x, y));
   return 1;
 }
 
 static int luai_math_frexp (lua_State *L) {
   int e;
-  lua_pushnumber(L, l_mathop(frexp)(luaL_checknumber(L, 1), &e));
+  lua_pushnumber(L, luai_l_mathop(frexp)(luaL_checknumber(L, 1), &e));
   lua_pushinteger(L, e);
   return 2;
 }
@@ -13241,12 +13240,12 @@ static int luai_math_frexp (lua_State *L) {
 static int luai_math_ldexp (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
   int ep = (int)luaL_checkinteger(L, 2);
-  lua_pushnumber(L, l_mathop(ldexp)(x, ep));
+  lua_pushnumber(L, luai_l_mathop(ldexp)(x, ep));
   return 1;
 }
 
 static int luai_math_log10 (lua_State *L) {
-  lua_pushnumber(L, l_mathop(log10)(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, luai_l_mathop(log10)(luaL_checknumber(L, 1)));
   return 1;
 }
 
@@ -13321,10 +13320,10 @@ LUAMOD_API int luaopen_math (lua_State *L) {
 ** void * frealloc (void *ud, void *ptr, size_t osize, size_t nsize);
 ** ('osize' is the old size, 'nsize' is the new size)
 **
-** * frealloc(ud, NULL, x, s) creates a new block of size 's' (no
+** * frealloc(ud, NULL, x, s) creates a new luai_getblock of size 's' (no
 ** matter 'x').
 **
-** * frealloc(ud, p, x, 0) frees the block 'p'
+** * frealloc(ud, p, x, 0) frees the luai_getblock 'p'
 ** (in this specific case, frealloc must return NULL);
 ** particularly, frealloc(ud, NULL, 0, 0) does nothing
 ** (which is equivalent to free(NULL) in ISO C)
@@ -13338,7 +13337,7 @@ LUAMOD_API int luaopen_math (lua_State *L) {
 #define MINSIZEARRAY	4
 
 
-void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
+void *luaM_growaux_ (lua_State *L, void *luai_getblock, int *size, size_t size_elems,
                      int limit, const char *what) {
   void *newblock;
   int newsize;
@@ -13352,14 +13351,14 @@ void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
     if (newsize < MINSIZEARRAY)
       newsize = MINSIZEARRAY;  /* minimum size */
   }
-  newblock = luaM_reallocv(L, block, *size, newsize, size_elems);
+  newblock = luaM_reallocv(L, luai_getblock, *size, newsize, size_elems);
   *size = newsize;  /* update only when everything else is OK */
   return newblock;
 }
 
 
-l_noret luaM_toobig (lua_State *L) {
-  luaG_runerror(L, "memory allocation error: block too big");
+luai_l_noret luaM_toobig (lua_State *L) {
+  luaG_runerror(L, "memory allocation error: luai_getblock too big");
 }
 
 
@@ -13367,27 +13366,27 @@ l_noret luaM_toobig (lua_State *L) {
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
+void *luaM_realloc_ (lua_State *L, void *luai_getblock, size_t osize, size_t nsize) {
   void *newblock;
   global_State *g = G(L);
-  size_t realosize = (block) ? osize : 0;
-  lua_assert((realosize == 0) == (block == NULL));
+  size_t realosize = (luai_getblock) ? osize : 0;
+  lua_assert((realosize == 0) == (luai_getblock == NULL));
 #if defined(HARDMEMTESTS)
   if (nsize > realosize && g->gcrunning)
-    luaC_fullgc(L, 1);  /* force a GC whenever possible */
+    luaC_fullgc(L, 1);  /* force a LUAI_GC whenever possible */
 #endif
-  newblock = (*g->frealloc)(g->ud, block, osize, nsize);
+  newblock = (*g->frealloc)(g->ud, luai_getblock, osize, nsize);
   if (newblock == NULL && nsize > 0) {
-    lua_assert(nsize > realosize);  /* cannot fail when shrinking a block */
+    lua_assert(nsize > realosize);  /* cannot fail when shrinking a luai_getblock */
     if (g->version) {  /* is state fully built? */
       luaC_fullgc(L, 1);  /* try to free some memory... */
-      newblock = (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
+      newblock = (*g->frealloc)(g->ud, luai_getblock, osize, nsize);  /* try again */
     }
     if (newblock == NULL)
       luaD_throw(L, LUA_ERRMEM);
   }
   lua_assert((nsize == 0) == (newblock == NULL));
-  g->GCdebt = (g->GCdebt + nsize) - realosize;
+  g->LUAI_GCdebt = (g->LUAI_GCdebt + nsize) - realosize;
   return newblock;
 }
 
@@ -13428,12 +13427,12 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
 ** unique key for table in the registry that keeps handles
 ** for all loaded C libraries
 */
-static const int CLIBS = 0;
+static const int LUAI_CLIBS = 0;
 
-#define LIB_FAIL	"open"
+#define LUAI_LIB_FAIL	"open"
 
 
-#define setprogdir(L)           ((void)0)
+#define luai_setprogdir(L)           ((void)0)
 
 
 /*
@@ -13443,7 +13442,7 @@ static const int CLIBS = 0;
 /*
 ** unload library 'lib'
 */
-static void lsys_unloadlib (void *lib);
+static void luai_lsys_unloadlib (void *lib);
 
 /*
 ** load C library in file 'path'. If 'seeglb', load with all names in
@@ -13451,14 +13450,14 @@ static void lsys_unloadlib (void *lib);
 ** Returns the library; in case of error, returns NULL plus an
 ** error string in the stack.
 */
-static void *lsys_load (lua_State *L, const char *path, int seeglb);
+static void *luai_lsys_load (lua_State *L, const char *path, int seeglb);
 
 /*
 ** Try to find a function named 'sym' in library 'lib'.
 ** Returns the function; in case of error, returns NULL plus an
 ** error string in the stack.
 */
-static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym);
+static lua_CFunction luai_lsys_sym (lua_State *L, void *lib, const char *sym);
 
 
 
@@ -13476,31 +13475,31 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym);
 #include <dlfcn.h>
 
 /*
-** Macro to convert pointer-to-void* to pointer-to-function. This cast
+** Macro to convert pointer-to-void* to pointer-to-function. This luai_cast
 ** is undefined according to ISO C, but POSIX assumes that it works.
 ** (The '__extension__' in gnu compilers is only to avoid warnings.)
 */
 #if defined(__GNUC__)
-#define cast_func(p) (__extension__ (lua_CFunction)(p))
+#define luai_cast_func(p) (__extension__ (lua_CFunction)(p))
 #else
-#define cast_func(p) ((lua_CFunction)(p))
+#define luai_cast_func(p) ((lua_CFunction)(p))
 #endif
 
 
-static void lsys_unloadlib (void *lib) {
+static void luai_lsys_unloadlib (void *lib) {
   dlclose(lib);
 }
 
 
-static void *lsys_load (lua_State *L, const char *path, int seeglb) {
+static void *luai_lsys_load (lua_State *L, const char *path, int seeglb) {
   void *lib = dlopen(path, RTLD_NOW | (seeglb ? RTLD_GLOBAL : RTLD_LOCAL));
   if (lib == NULL) lua_pushstring(L, dlerror());
   return lib;
 }
 
 
-static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
-  lua_CFunction f = cast_func(dlsym(lib, sym));
+static lua_CFunction luai_lsys_sym (lua_State *L, void *lib, const char *sym) {
+  lua_CFunction f = luai_cast_func(dlsym(lib, sym));
   if (f == NULL) lua_pushstring(L, dlerror());
   return f;
 }
@@ -13527,14 +13526,14 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 #endif
 
 
-#undef setprogdir
+#undef luai_setprogdir
 
 
 /*
 ** Replace in the path (on the top of the stack) any occurrence
 ** of LUA_EXEC_DIR with the executable's path.
 */
-static void setprogdir (lua_State *L) {
+static void luai_setprogdir (lua_State *L) {
   char buff[MAX_PATH + 1];
   char *lb;
   DWORD nsize = sizeof(buff)/sizeof(char);
@@ -13551,7 +13550,7 @@ static void setprogdir (lua_State *L) {
 
 
 
-static void pusherror (lua_State *L) {
+static void luai_pusherror (lua_State *L) {
   int error = GetLastError();
   char buffer[128];
   if (FormatMessageA(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -13561,22 +13560,22 @@ static void pusherror (lua_State *L) {
     lua_pushfstring(L, "system error %d\n", error);
 }
 
-static void lsys_unloadlib (void *lib) {
+static void luai_lsys_unloadlib (void *lib) {
   FreeLibrary((HMODULE)lib);
 }
 
 
-static void *lsys_load (lua_State *L, const char *path, int seeglb) {
+static void *luai_lsys_load (lua_State *L, const char *path, int seeglb) {
   HMODULE lib = LoadLibraryExA(path, NULL, LUA_LLE_FLAGS);
   (void)(seeglb);  /* not used: symbols are 'global' by default */
-  if (lib == NULL) pusherror(L);
+  if (lib == NULL) luai_pusherror(L);
   return lib;
 }
 
 
-static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
+static lua_CFunction luai_lsys_sym (lua_State *L, void *lib, const char *sym) {
   lua_CFunction f = (lua_CFunction)GetProcAddress((HMODULE)lib, sym);
-  if (f == NULL) pusherror(L);
+  if (f == NULL) luai_pusherror(L);
   return f;
 }
 
@@ -13590,28 +13589,28 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 ** =======================================================
 */
 
-#undef LIB_FAIL
-#define LIB_FAIL	"absent"
+#undef LUAI_LIB_FAIL
+#define LUAI_LIB_FAIL	"absent"
 
 
-#define DLMSG	"dynamic libraries not enabled; check your Lua installation"
+#define LUAI_DLMSG	"dynamic libraries not enabled; luai_check your Lua installation"
 
 
-static void lsys_unloadlib (void *lib) {
+static void luai_lsys_unloadlib (void *lib) {
   (void)(lib);  /* not used */
 }
 
 
-static void *lsys_load (lua_State *L, const char *path, int seeglb) {
+static void *luai_lsys_load (lua_State *L, const char *path, int seeglb) {
   (void)(path); (void)(seeglb);  /* not used */
-  lua_pushliteral(L, DLMSG);
+  lua_pushliteral(L, LUAI_DLMSG);
   return NULL;
 }
 
 
-static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
+static lua_CFunction luai_lsys_sym (lua_State *L, void *lib, const char *sym) {
   (void)(lib); (void)(sym);  /* not used */
-  lua_pushliteral(L, DLMSG);
+  lua_pushliteral(L, LUAI_DLMSG);
   return NULL;
 }
 
@@ -13627,7 +13626,7 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 
 /*
 ** LUA_PATH_VAR and LUA_CPATH_VAR are the names of the environment
-** variables that Lua check to set its paths.
+** variables that Lua luai_check to set its paths.
 */
 #if !defined(LUA_PATH_VAR)
 #define LUA_PATH_VAR    "LUA_PATH"
@@ -13638,13 +13637,13 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 #endif
 
 
-#define AUXMARK         "\1"	/* auxiliary mark */
+#define LUAI_AUXMARK         "\1"	/* auxiliary mark */
 
 
 /*
 ** return registry.LUA_NOENV as a boolean
 */
-static int noenv (lua_State *L) {
+static int luai_noenv (lua_State *L) {
   int b;
   lua_getfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
   b = lua_toboolean(L, -1);
@@ -13656,23 +13655,23 @@ static int noenv (lua_State *L) {
 /*
 ** Set a path
 */
-static void setpath (lua_State *L, const char *fieldname,
+static void luai_setpath (lua_State *L, const char *fieldname,
                                    const char *envname,
                                    const char *dft) {
   const char *nver = lua_pushfstring(L, "%s%s", envname, LUA_VERSUFFIX);
   const char *path = getenv(nver);  /* use versioned name */
   if (path == NULL)  /* no environment variable? */
     path = getenv(envname);  /* try unversioned name */
-  if (path == NULL || noenv(L))  /* no environment variable? */
+  if (path == NULL || luai_noenv(L))  /* no environment variable? */
     lua_pushstring(L, dft);  /* use default */
   else {
-    /* replace ";;" by ";AUXMARK;" and then AUXMARK by default path */
+    /* replace ";;" by ";LUAI_AUXMARK;" and then LUAI_AUXMARK by default path */
     path = luaL_gsub(L, path, LUA_PATH_SEP LUA_PATH_SEP,
-                              LUA_PATH_SEP AUXMARK LUA_PATH_SEP);
-    luaL_gsub(L, path, AUXMARK, dft);
+                              LUA_PATH_SEP LUAI_AUXMARK LUA_PATH_SEP);
+    luaL_gsub(L, path, LUAI_AUXMARK, dft);
     lua_remove(L, -2); /* remove result from 1st 'gsub' */
   }
-  setprogdir(L);
+  luai_setprogdir(L);
   lua_setfield(L, -3, fieldname);  /* package[fieldname] = path value */
   lua_pop(L, 1);  /* pop versioned variable name */
 }
@@ -13681,41 +13680,41 @@ static void setpath (lua_State *L, const char *fieldname,
 
 
 /*
-** return registry.CLIBS[path]
+** return registry.LUAI_CLIBS[path]
 */
-static void *checkclib (lua_State *L, const char *path) {
+static void *luai_checkclib (lua_State *L, const char *path) {
   void *plib;
-  lua_rawgetp(L, LUA_REGISTRYINDEX, &CLIBS);
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &LUAI_CLIBS);
   lua_getfield(L, -1, path);
-  plib = lua_touserdata(L, -1);  /* plib = CLIBS[path] */
-  lua_pop(L, 2);  /* pop CLIBS table and 'plib' */
+  plib = lua_touserdata(L, -1);  /* plib = LUAI_CLIBS[path] */
+  lua_pop(L, 2);  /* pop LUAI_CLIBS table and 'plib' */
   return plib;
 }
 
 
 /*
-** registry.CLIBS[path] = plib        -- for queries
-** registry.CLIBS[#CLIBS + 1] = plib  -- also keep a list of all libraries
+** registry.LUAI_CLIBS[path] = plib        -- for queries
+** registry.LUAI_CLIBS[#LUAI_CLIBS + 1] = plib  -- also keep a list of all libraries
 */
-static void addtoclib (lua_State *L, const char *path, void *plib) {
-  lua_rawgetp(L, LUA_REGISTRYINDEX, &CLIBS);
+static void luai_addtoclib (lua_State *L, const char *path, void *plib) {
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &LUAI_CLIBS);
   lua_pushlightuserdata(L, plib);
   lua_pushvalue(L, -1);
-  lua_setfield(L, -3, path);  /* CLIBS[path] = plib */
-  lua_rawseti(L, -2, luaL_len(L, -2) + 1);  /* CLIBS[#CLIBS + 1] = plib */
-  lua_pop(L, 1);  /* pop CLIBS table */
+  lua_setfield(L, -3, path);  /* LUAI_CLIBS[path] = plib */
+  lua_rawseti(L, -2, luaL_len(L, -2) + 1);  /* LUAI_CLIBS[#LUAI_CLIBS + 1] = plib */
+  lua_pop(L, 1);  /* pop LUAI_CLIBS table */
 }
 
 
 /*
-** __gc tag method for CLIBS table: calls 'lsys_unloadlib' for all lib
-** handles in list CLIBS
+** __gc tag method for LUAI_CLIBS table: calls 'luai_lsys_unloadlib' for all lib
+** handles in list LUAI_CLIBS
 */
-static int gctm (lua_State *L) {
+static int luai_gctm (lua_State *L) {
   lua_Integer n = luaL_len(L, 1);
   for (; n >= 1; n--) {  /* for each handle, in reverse order */
-    lua_rawgeti(L, 1, n);  /* get handle CLIBS[n] */
-    lsys_unloadlib(lua_touserdata(L, -1));
+    lua_rawgeti(L, 1, n);  /* get handle LUAI_CLIBS[n] */
+    luai_lsys_unloadlib(lua_touserdata(L, -1));
     lua_pop(L, 1);  /* pop handle */
   }
   return 0;
@@ -13723,14 +13722,14 @@ static int gctm (lua_State *L) {
 
 
 
-/* error codes for 'lookforfunc' */
-#define ERRLIB		1
-#define ERRFUNC		2
+/* error codes for 'luai_lookforfunc' */
+#define LUAI_ERRLIB		1
+#define LUAI_ERRFUNC		2
 
 /*
 ** Look for a C function named 'sym' in a dynamically loaded library
 ** 'path'.
-** First, check whether the library is already loaded; if not, try
+** First, luai_check whether the library is already loaded; if not, try
 ** to load it.
 ** Then, if 'sym' is '*', return true (as library has been loaded).
 ** Otherwise, look for symbol 'sym' in the library and push a
@@ -13738,21 +13737,21 @@ static int gctm (lua_State *L) {
 ** Return 0 and 'true' or a function in the stack; in case of
 ** errors, return an error code and an error message in the stack.
 */
-static int lookforfunc (lua_State *L, const char *path, const char *sym) {
-  void *reg = checkclib(L, path);  /* check loaded C libraries */
+static int luai_lookforfunc (lua_State *L, const char *path, const char *sym) {
+  void *reg = luai_checkclib(L, path);  /* luai_check loaded C libraries */
   if (reg == NULL) {  /* must load library? */
-    reg = lsys_load(L, path, *sym == '*');  /* global symbols if 'sym'=='*' */
-    if (reg == NULL) return ERRLIB;  /* unable to load library */
-    addtoclib(L, path, reg);
+    reg = luai_lsys_load(L, path, *sym == '*');  /* global symbols if 'sym'=='*' */
+    if (reg == NULL) return LUAI_ERRLIB;  /* unable to load library */
+    luai_addtoclib(L, path, reg);
   }
   if (*sym == '*') {  /* loading only library (no function)? */
     lua_pushboolean(L, 1);  /* return 'true' */
     return 0;  /* no errors */
   }
   else {
-    lua_CFunction f = lsys_sym(L, reg, sym);
+    lua_CFunction f = luai_lsys_sym(L, reg, sym);
     if (f == NULL)
-      return ERRFUNC;  /* unable to find function */
+      return LUAI_ERRFUNC;  /* unable to find function */
     lua_pushcfunction(L, f);  /* else create new function */
     return 0;  /* no errors */
   }
@@ -13762,13 +13761,13 @@ static int lookforfunc (lua_State *L, const char *path, const char *sym) {
 static int luai_ll_loadlib (lua_State *L) {
   const char *path = luaL_checkstring(L, 1);
   const char *init = luaL_checkstring(L, 2);
-  int stat = lookforfunc(L, path, init);
+  int stat = luai_lookforfunc(L, path, init);
   if (stat == 0)  /* no errors? */
     return 1;  /* return the loaded function */
   else {  /* error; error message is on stack top */
     lua_pushnil(L);
     lua_insert(L, -2);
-    lua_pushstring(L, (stat == ERRLIB) ?  LIB_FAIL : "init");
+    lua_pushstring(L, (stat == LUAI_ERRLIB) ?  LUAI_LIB_FAIL : "init");
     return 3;  /* return nil, error message, and where */
   }
 }
@@ -13782,7 +13781,7 @@ static int luai_ll_loadlib (lua_State *L) {
 */
 
 
-static int readable (const char *filename) {
+static int luai_readable (const char *filename) {
   FILE *f = fopen(filename, "r");  /* try to open file */
   if (f == NULL) return 0;  /* open failed */
   fclose(f);
@@ -13790,18 +13789,18 @@ static int readable (const char *filename) {
 }
 
 
-static const char *pushnexttemplate (lua_State *L, const char *path) {
+static const char *luai_pushnexttemplate (lua_State *L, const char *path) {
   const char *l;
   while (*path == *LUA_PATH_SEP) path++;  /* skip separators */
   if (*path == '\0') return NULL;  /* no more templates */
-  l = strchr(path, *LUA_PATH_SEP);  /* find next separator */
+  l = strchr(path, *LUA_PATH_SEP);  /* find luai_next separator */
   if (l == NULL) l = path + strlen(path);
   lua_pushlstring(L, path, l - path);  /* template */
   return l;
 }
 
 
-static const char *searchpath (lua_State *L, const char *name,
+static const char *luai_searchpath (lua_State *L, const char *name,
                                              const char *path,
                                              const char *sep,
                                              const char *dirsep) {
@@ -13809,11 +13808,11 @@ static const char *searchpath (lua_State *L, const char *name,
   luaL_buffinit(L, &msg);
   if (*sep != '\0')  /* non-empty separator? */
     name = luaL_gsub(L, name, sep, dirsep);  /* replace it by 'dirsep' */
-  while ((path = pushnexttemplate(L, path)) != NULL) {
+  while ((path = luai_pushnexttemplate(L, path)) != NULL) {
     const char *filename = luaL_gsub(L, lua_tostring(L, -1),
                                      LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
-    if (readable(filename))  /* does file exist and is readable? */
+    if (luai_readable(filename))  /* does file exist and is luai_readable? */
       return filename;  /* return that file name */
     lua_pushfstring(L, "\n\tno file '%s'", filename);
     lua_remove(L, -2);  /* remove file name */
@@ -13825,7 +13824,7 @@ static const char *searchpath (lua_State *L, const char *name,
 
 
 static int luai_ll_searchpath (lua_State *L) {
-  const char *f = searchpath(L, luaL_checkstring(L, 1),
+  const char *f = luai_searchpath(L, luaL_checkstring(L, 1),
                                 luaL_checkstring(L, 2),
                                 luaL_optstring(L, 3, "."),
                                 luaL_optstring(L, 4, LUA_DIRSEP));
@@ -13838,7 +13837,7 @@ static int luai_ll_searchpath (lua_State *L) {
 }
 
 
-static const char *findfile (lua_State *L, const char *name,
+static const char *luai_findfile (lua_State *L, const char *name,
                                            const char *pname,
                                            const char *dirsep) {
   const char *path;
@@ -13846,11 +13845,11 @@ static const char *findfile (lua_State *L, const char *name,
   path = lua_tostring(L, -1);
   if (path == NULL)
     luaL_error(L, "'package.%s' must be a string", pname);
-  return searchpath(L, name, path, ".", dirsep);
+  return luai_searchpath(L, name, path, ".", dirsep);
 }
 
 
-static int checkload (lua_State *L, int stat, const char *filename) {
+static int luai_checkload (lua_State *L, int stat, const char *filename) {
   if (stat) {  /* module loaded successfully? */
     lua_pushstring(L, filename);  /* will be 2nd argument to module */
     return 2;  /* return open function and file name */
@@ -13861,12 +13860,12 @@ static int checkload (lua_State *L, int stat, const char *filename) {
 }
 
 
-static int searcher_Lua (lua_State *L) {
+static int luai_searcher_Lua (lua_State *L) {
   const char *filename;
   const char *name = luaL_checkstring(L, 1);
-  filename = findfile(L, name, "path", LUA_LSUBSEP);
+  filename = luai_findfile(L, name, "path", LUA_LSUBSEP);
   if (filename == NULL) return 1;  /* module not found in this path */
-  return checkload(L, (luaL_loadfile(L, filename) == LUA_OK), filename);
+  return luai_checkload(L, (luaL_loadfile(L, filename) == LUA_OK), filename);
 }
 
 
@@ -13878,7 +13877,7 @@ static int searcher_Lua (lua_State *L) {
 ** fails, it also tries "luaopen_Y".) If there is no ignore mark,
 ** look for a function named "luaopen_modname".
 */
-static int loadfunc (lua_State *L, const char *filename, const char *modname) {
+static int luai_loadfunc (lua_State *L, const char *filename, const char *modname) {
   const char *openfunc;
   const char *mark;
   modname = luaL_gsub(L, modname, ".", LUA_OFSEP);
@@ -13887,35 +13886,35 @@ static int loadfunc (lua_State *L, const char *filename, const char *modname) {
     int stat;
     openfunc = lua_pushlstring(L, modname, mark - modname);
     openfunc = lua_pushfstring(L, LUA_POF"%s", openfunc);
-    stat = lookforfunc(L, filename, openfunc);
-    if (stat != ERRFUNC) return stat;
+    stat = luai_lookforfunc(L, filename, openfunc);
+    if (stat != LUAI_ERRFUNC) return stat;
     modname = mark + 1;  /* else go ahead and try old-style name */
   }
   openfunc = lua_pushfstring(L, LUA_POF"%s", modname);
-  return lookforfunc(L, filename, openfunc);
+  return luai_lookforfunc(L, filename, openfunc);
 }
 
 
-static int searcher_C (lua_State *L) {
+static int luai_searcher_C (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
-  const char *filename = findfile(L, name, "cpath", LUA_CSUBSEP);
+  const char *filename = luai_findfile(L, name, "cpath", LUA_CSUBSEP);
   if (filename == NULL) return 1;  /* module not found in this path */
-  return checkload(L, (loadfunc(L, filename, name) == 0), filename);
+  return luai_checkload(L, (luai_loadfunc(L, filename, name) == 0), filename);
 }
 
 
-static int searcher_Croot (lua_State *L) {
+static int luai_searcher_Croot (lua_State *L) {
   const char *filename;
   const char *name = luaL_checkstring(L, 1);
   const char *p = strchr(name, '.');
   int stat;
   if (p == NULL) return 0;  /* is root */
   lua_pushlstring(L, name, p - name);
-  filename = findfile(L, lua_tostring(L, -1), "cpath", LUA_CSUBSEP);
+  filename = luai_findfile(L, lua_tostring(L, -1), "cpath", LUA_CSUBSEP);
   if (filename == NULL) return 1;  /* root not found */
-  if ((stat = loadfunc(L, filename, name)) != 0) {
-    if (stat != ERRFUNC)
-      return checkload(L, 0, filename);  /* real error */
+  if ((stat = luai_loadfunc(L, filename, name)) != 0) {
+    if (stat != LUAI_ERRFUNC)
+      return luai_checkload(L, 0, filename);  /* real error */
     else {  /* open function not found */
       lua_pushfstring(L, "\n\tno module '%s' in file '%s'", name, filename);
       return 1;
@@ -13926,16 +13925,16 @@ static int searcher_Croot (lua_State *L) {
 }
 
 
-static int searcher_preload (lua_State *L) {
+static int luai_searcherpreload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   lua_getfield(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
   if (lua_getfield(L, -1, name) == LUA_TNIL)  /* not found? */
-    lua_pushfstring(L, "\n\tno field package.preload['%s']", name);
+    lua_pushfstring(L, "\n\tno luai_field package.preload['%s']", name);
   return 1;
 }
 
 
-static void findloader (lua_State *L, const char *name) {
+static void luai_findloader (lua_State *L, const char *name) {
   int i;
   luaL_Buffer msg;  /* to build error message */
   luaL_buffinit(L, &msg);
@@ -13971,8 +13970,8 @@ static int luai_ll_require (lua_State *L) {
   if (lua_toboolean(L, -1))  /* is it there? */
     return 1;  /* package is already loaded */
   /* else must load package */
-  lua_pop(L, 1);  /* remove 'getfield' result */
-  findloader(L, name);
+  lua_pop(L, 1);  /* remove 'luai_getfield' result */
+  luai_findloader(L, name);
   lua_pushstring(L, name);  /* pass name as argument to module loader */
   lua_insert(L, -2);  /* name is 1st argument (before search data) */
   lua_call(L, 2, 1);  /* run loader to load module */
@@ -14000,7 +13999,7 @@ static int luai_ll_require (lua_State *L) {
 /*
 ** changes the environment variable of calling function
 */
-static void set_env (lua_State *L) {
+static void luai_set_env (lua_State *L) {
   lua_Debug ar;
   if (lua_getstack(L, 1, &ar) == 0 ||
       lua_getinfo(L, "f", &ar) == 0 ||  /* get calling function */
@@ -14012,7 +14011,7 @@ static void set_env (lua_State *L) {
 }
 
 
-static void dooptions (lua_State *L, int n) {
+static void luai_dooptions (lua_State *L, int n) {
   int i;
   for (i = 2; i <= n; i++) {
     if (lua_isfunction(L, i)) {  /* avoid 'calling' extra info. */
@@ -14024,7 +14023,7 @@ static void dooptions (lua_State *L, int n) {
 }
 
 
-static void modinit (lua_State *L, const char *modname) {
+static void luai_modinit (lua_State *L, const char *modname) {
   const char *dot;
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "_M");  /* module._M = module */
@@ -14043,16 +14042,16 @@ static int luai_ll_module (lua_State *L) {
   const char *modname = luaL_checkstring(L, 1);
   int lastarg = lua_gettop(L);  /* last parameter */
   luaL_pushmodule(L, modname, 1);  /* get/create module table */
-  /* check whether table already has a _NAME field */
+  /* luai_check whether table already has a _NAME luai_field */
   if (lua_getfield(L, -1, "_NAME") != LUA_TNIL)
     lua_pop(L, 1);  /* table is an initialized module */
   else {  /* no; initialize it */
     lua_pop(L, 1);
-    modinit(L, modname);
+    luai_modinit(L, modname);
   }
   lua_pushvalue(L, -1);
-  set_env(L);
-  dooptions(L, lastarg);
+  luai_set_env(L);
+  luai_dooptions(L, lastarg);
   return 1;
 }
 
@@ -14099,9 +14098,9 @@ static const luaL_Reg luai_ll_funcs[] = {
 };
 
 
-static void createsearcherstable (lua_State *L) {
+static void luai_createsearcherstable (lua_State *L) {
   static const lua_CFunction searchers[] =
-    {searcher_preload, searcher_Lua, searcher_C, searcher_Croot, NULL};
+    {luai_searcherpreload, luai_searcher_Lua, luai_searcher_C, luai_searcher_Croot, NULL};
   int i;
   /* create 'searchers' table */
   lua_createtable(L, sizeof(searchers)/sizeof(searchers[0]) - 1, 0);
@@ -14113,45 +14112,45 @@ static void createsearcherstable (lua_State *L) {
   }
 #if defined(LUA_COMPAT_LOADERS)
   lua_pushvalue(L, -1);  /* make a copy of 'searchers' table */
-  lua_setfield(L, -3, "loaders");  /* put it in field 'loaders' */
+  lua_setfield(L, -3, "loaders");  /* put it in luai_field 'loaders' */
 #endif
-  lua_setfield(L, -2, "searchers");  /* put it in field 'searchers' */
+  lua_setfield(L, -2, "searchers");  /* put it in luai_field 'searchers' */
 }
 
 
 /*
-** create table CLIBS to keep track of loaded C libraries,
+** create table LUAI_CLIBS to keep track of loaded C libraries,
 ** setting a finalizer to close all libraries when closing state.
 */
-static void createclibstable (lua_State *L) {
-  lua_newtable(L);  /* create CLIBS table */
-  lua_createtable(L, 0, 1);  /* create metatable for CLIBS */
-  lua_pushcfunction(L, gctm);
-  lua_setfield(L, -2, "__gc");  /* set finalizer for CLIBS table */
+static void luai_createclibstable (lua_State *L) {
+  lua_newtable(L);  /* create LUAI_CLIBS table */
+  lua_createtable(L, 0, 1);  /* create metatable for LUAI_CLIBS */
+  lua_pushcfunction(L, luai_gctm);
+  lua_setfield(L, -2, "__gc");  /* set finalizer for LUAI_CLIBS table */
   lua_setmetatable(L, -2);
-  lua_rawsetp(L, LUA_REGISTRYINDEX, &CLIBS);  /* set CLIBS table in registry */
+  lua_rawsetp(L, LUA_REGISTRYINDEX, &LUAI_CLIBS);  /* set LUAI_CLIBS table in registry */
 }
 
 
 LUAMOD_API int luaopen_package (lua_State *L) {
-  createclibstable(L);
+  luai_createclibstable(L);
   luaL_newlib(L, luai_pk_funcs);  /* create 'package' table */
-  createsearcherstable(L);
+  luai_createsearcherstable(L);
   /* set paths */
-  setpath(L, "path", LUA_PATH_VAR, LUA_PATH_DEFAULT);
-  setpath(L, "cpath", LUA_CPATH_VAR, LUA_CPATH_DEFAULT);
+  luai_setpath(L, "path", LUA_PATH_VAR, LUA_PATH_DEFAULT);
+  luai_setpath(L, "cpath", LUA_CPATH_VAR, LUA_CPATH_DEFAULT);
   /* store config information */
   lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATH_SEP "\n" LUA_PATH_MARK "\n"
                      LUA_EXEC_DIR "\n" LUA_IGMARK "\n");
   lua_setfield(L, -2, "config");
-  /* set field 'loaded' */
+  /* set luai_field 'loaded' */
   luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
   lua_setfield(L, -2, "loaded");
-  /* set field 'preload' */
+  /* set luai_field 'preload' */
   luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
   lua_setfield(L, -2, "preload");
   lua_pushglobaltable(L);
-  lua_pushvalue(L, -2);  /* set 'package' as upvalue for next lib */
+  lua_pushvalue(L, -2);  /* set 'package' as upvalue for luai_next lib */
   luaL_setfuncs(L, luai_ll_funcs, 1);  /* open lib into global table */
   lua_pop(L, 1);  /* pop global table */
   return 1;  /* return 'package' table */
@@ -14159,7 +14158,7 @@ LUAMOD_API int luaopen_package (lua_State *L) {
 
 /*__lobject.c__*/
 
-LUAI_DDEF const TValue luaO_nilobject_ = {NILCONSTANT};
+LUAI_DDEF const luai_TValue luaO_nilobject_ = {NILCONSTANT};
 
 
 /*
@@ -14178,7 +14177,7 @@ int luaO_int2fb (unsigned int x) {
     x = (x + 1) >> 1;  /* x = ceil(x / 2) */
     e++;
   }
-  return ((e+1) << 3) | (cast_int(x) - 8);
+  return ((e+1) << 3) | (luai_cast_int(x) - 8);
 }
 
 
@@ -14209,7 +14208,7 @@ int luaO_ceillog2 (unsigned int x) {
 }
 
 
-static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
+static lua_Integer luai_intarith (lua_State *L, int op, lua_Integer v1,
                                                    lua_Integer v2) {
   switch (op) {
     case LUA_OPADD: return intop(+, v1, v2);
@@ -14223,13 +14222,13 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPSHL: return luaV_shiftl(v1, v2);
     case LUA_OPSHR: return luaV_shiftl(v1, -v2);
     case LUA_OPUNM: return intop(-, 0, v1);
-    case LUA_OPBNOT: return intop(^, ~l_castS2U(0), v1);
+    case LUA_OPBNOT: return intop(^, ~luai_l_castS2U(0), v1);
     default: lua_assert(0); return 0;
   }
 }
 
 
-static lua_Number numarith (lua_State *L, int op, lua_Number v1,
+static lua_Number luai_numarith (lua_State *L, int op, lua_Number v1,
                                                   lua_Number v2) {
   switch (op) {
     case LUA_OPADD: return luai_numadd(L, v1, v2);
@@ -14249,15 +14248,15 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
 }
 
 
-void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
-                 TValue *res) {
+void luaO_arith (lua_State *L, int op, const luai_TValue *p1, const luai_TValue *p2,
+                 luai_TValue *res) {
   switch (op) {
     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
     case LUA_OPSHL: case LUA_OPSHR:
     case LUA_OPBNOT: {  /* operate only on integers */
       lua_Integer i1; lua_Integer i2;
       if (tointeger(p1, &i1) && tointeger(p2, &i2)) {
-        setivalue(res, intarith(L, op, i1, i2));
+        setivalue(res, luai_intarith(L, op, i1, i2));
         return;
       }
       else break;  /* go to the end */
@@ -14265,7 +14264,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
     case LUA_OPDIV: case LUA_OPPOW: {  /* operate only on floats */
       lua_Number n1; lua_Number n2;
       if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
-        setfltvalue(res, numarith(L, op, n1, n2));
+        setfltvalue(res, luai_numarith(L, op, n1, n2));
         return;
       }
       else break;  /* go to the end */
@@ -14273,11 +14272,11 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
     default: {  /* other operations */
       lua_Number n1; lua_Number n2;
       if (ttisinteger(p1) && ttisinteger(p2)) {
-        setivalue(res, intarith(L, op, ivalue(p1), ivalue(p2)));
+        setivalue(res, luai_intarith(L, op, ivalue(p1), ivalue(p2)));
         return;
       }
       else if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
-        setfltvalue(res, numarith(L, op, n1, n2));
+        setfltvalue(res, luai_numarith(L, op, n1, n2));
         return;
       }
       else break;  /* go to the end */
@@ -14285,17 +14284,17 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
   }
   /* could not perform raw operation; try metamethod */
   lua_assert(L != NULL);  /* should not fail when folding (compile time) */
-  luaT_trybinTM(L, p1, p2, res, cast(TMS, (op - LUA_OPADD) + TM_ADD));
+  luaT_trybinTM(L, p1, p2, res, luai_cast(TMS, (op - LUA_OPADD) + TM_ADD));
 }
 
 
 int luaO_hexavalue (int c) {
-  if (lisdigit(c)) return c - '0';
-  else return (ltolower(c) - 'a') + 10;
+  if (luai_lisdigit(c)) return c - '0';
+  else return (luai_tolower(c) - 'a') + 10;
 }
 
 
-static int isneg (const char **s) {
+static int luai_isneg (const char **s) {
   if (**s == '-') { (*s)++; return 1; }
   else if (**s == '+') (*s)++;
   return 0;
@@ -14313,7 +14312,7 @@ static int isneg (const char **s) {
 
 /* maximum number of significant digits to read (to avoid overflows
    even with single floats) */
-#define MAXSIGDIG	30
+#define LUAI_MAXSIGDIG	30
 
 /*
 ** convert an hexadecimal numeric string to a number, following
@@ -14327,45 +14326,45 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   int e = 0;  /* exponent correction */
   int neg;  /* 1 if number is negative */
   int hasdot = 0;  /* true after seen a dot */
-  *endptr = cast(char *, s);  /* nothing is valid yet */
-  while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
-  neg = isneg(&s);  /* check signal */
-  if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
+  *endptr = luai_cast(char *, s);  /* nothing is valid yet */
+  while (luai_lisspace(luai_cast_uchar(*s))) s++;  /* skip initial spaces */
+  neg = luai_isneg(&s);  /* luai_check signal */
+  if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* luai_check '0x' */
     return 0.0;  /* invalid format (no '0x') */
   for (s += 2; ; s++) {  /* skip '0x' and read numeral */
     if (*s == dot) {
       if (hasdot) break;  /* second dot? stop loop */
       else hasdot = 1;
     }
-    else if (lisxdigit(cast_uchar(*s))) {
-      if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
+    else if (luai_lisxdigit(luai_cast_uchar(*s))) {
+      if (sigdig == 0 && *s == '0')  /* non-significant luai_digit (zero)? */
         nosigdig++;
-      else if (++sigdig <= MAXSIGDIG)  /* can read it without overflow? */
-          r = (r * cast_num(16.0)) + luaO_hexavalue(*s);
+      else if (++sigdig <= LUAI_MAXSIGDIG)  /* can read it without overflow? */
+          r = (r * luai_cast_num(16.0)) + luaO_hexavalue(*s);
       else e++; /* too many digits; ignore, but still count for exponent */
-      if (hasdot) e--;  /* decimal digit? correct exponent */
+      if (hasdot) e--;  /* decimal luai_digit? correct exponent */
     }
-    else break;  /* neither a dot nor a digit */
+    else break;  /* neither a dot nor a luai_digit */
   }
   if (nosigdig + sigdig == 0)  /* no digits? */
     return 0.0;  /* invalid format */
-  *endptr = cast(char *, s);  /* valid up to here */
-  e *= 4;  /* each digit multiplies/divides value by 2^4 */
+  *endptr = luai_cast(char *, s);  /* valid up to here */
+  e *= 4;  /* each luai_digit multiplies/divides value by 2^4 */
   if (*s == 'p' || *s == 'P') {  /* exponent part? */
     int exp1 = 0;  /* exponent value */
     int neg1;  /* exponent signal */
     s++;  /* skip 'p' */
-    neg1 = isneg(&s);  /* signal */
-    if (!lisdigit(cast_uchar(*s)))
-      return 0.0;  /* invalid; must have at least one digit */
-    while (lisdigit(cast_uchar(*s)))  /* read exponent */
+    neg1 = luai_isneg(&s);  /* signal */
+    if (!luai_lisdigit(luai_cast_uchar(*s)))
+      return 0.0;  /* invalid; must have at least one luai_digit */
+    while (luai_lisdigit(luai_cast_uchar(*s)))  /* read exponent */
       exp1 = exp1 * 10 + *(s++) - '0';
     if (neg1) exp1 = -exp1;
     e += exp1;
-    *endptr = cast(char *, s);  /* valid up to here */
+    *endptr = luai_cast(char *, s);  /* valid up to here */
   }
   if (neg) r = -r;
-  return l_mathop(ldexp)(r, e);
+  return luai_l_mathop(ldexp)(r, e);
 }
 
 #endif
@@ -14373,16 +14372,16 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 
 
 /* maximum length of a numeral */
-#if !defined (L_MAXLENNUM)
-#define L_MAXLENNUM	200
+#if !defined (LUAI_L_MAXLENNUM)
+#define LUAI_L_MAXLENNUM	200
 #endif
 
-static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
+static const char *luai_l_str2dloc (const char *s, lua_Number *result, int mode) {
   char *endptr;
   *result = (mode == 'x') ? lua_strx2number(s, &endptr)  /* try to convert */
                           : lua_str2number(s, &endptr);
   if (endptr == s) return NULL;  /* nothing recognized? */
-  while (lisspace(cast_uchar(*endptr))) endptr++;  /* skip trailing spaces */
+  while (luai_lisspace(luai_cast_uchar(*endptr))) endptr++;  /* skip trailing spaces */
   return (*endptr == '\0') ? endptr : NULL;  /* OK if no trailing characters */
 }
 
@@ -14400,21 +14399,21 @@ static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
 ** to a buffer (because 's' is read-only), changes the dot to the
 ** current locale radix mark, and tries to convert again.
 */
-static const char *l_str2d (const char *s, lua_Number *result) {
+static const char *luai_l_str2d (const char *s, lua_Number *result) {
   const char *endptr;
   const char *pmode = strpbrk(s, ".xXnN");
-  int mode = pmode ? ltolower(cast_uchar(*pmode)) : 0;
+  int mode = pmode ? luai_tolower(luai_cast_uchar(*pmode)) : 0;
   if (mode == 'n')  /* reject 'inf' and 'nan' */
     return NULL;
-  endptr = l_str2dloc(s, result, mode);  /* try to convert */
+  endptr = luai_l_str2dloc(s, result, mode);  /* try to convert */
   if (endptr == NULL) {  /* failed? may be a different locale */
-    char buff[L_MAXLENNUM + 1];
+    char buff[LUAI_L_MAXLENNUM + 1];
     const char *pdot = strchr(s, '.');
-    if (strlen(s) > L_MAXLENNUM || pdot == NULL)
+    if (strlen(s) > LUAI_L_MAXLENNUM || pdot == NULL)
       return NULL;  /* string too long or no dot; fail */
     strcpy(buff, s);  /* copy string to buffer */
     buff[pdot - s] = lua_getlocaledecpoint();  /* correct decimal point */
-    endptr = l_str2dloc(buff, result, mode);  /* try again */
+    endptr = luai_l_str2dloc(buff, result, mode);  /* try again */
     if (endptr != NULL)
       endptr = s + (endptr - buff);  /* make relative to 's' */
   }
@@ -14422,48 +14421,48 @@ static const char *l_str2d (const char *s, lua_Number *result) {
 }
 
 
-#define MAXBY10		cast(lua_Unsigned, LUA_MAXINTEGER / 10)
-#define MAXLASTD	cast_int(LUA_MAXINTEGER % 10)
+#define LUAI_MAXBY10		luai_cast(lua_Unsigned, LUA_MAXINTEGER / 10)
+#define LUAI_MAXLASTD	luai_cast_int(LUA_MAXINTEGER % 10)
 
-static const char *l_str2int (const char *s, lua_Integer *result) {
+static const char *luai_l_str2int (const char *s, lua_Integer *result) {
   lua_Unsigned a = 0;
   int empty = 1;
   int neg;
-  while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
-  neg = isneg(&s);
+  while (luai_lisspace(luai_cast_uchar(*s))) s++;  /* skip initial spaces */
+  neg = luai_isneg(&s);
   if (s[0] == '0' &&
       (s[1] == 'x' || s[1] == 'X')) {  /* hex? */
     s += 2;  /* skip '0x' */
-    for (; lisxdigit(cast_uchar(*s)); s++) {
+    for (; luai_lisxdigit(luai_cast_uchar(*s)); s++) {
       a = a * 16 + luaO_hexavalue(*s);
       empty = 0;
     }
   }
   else {  /* decimal */
-    for (; lisdigit(cast_uchar(*s)); s++) {
+    for (; luai_lisdigit(luai_cast_uchar(*s)); s++) {
       int d = *s - '0';
-      if (a >= MAXBY10 && (a > MAXBY10 || d > MAXLASTD + neg))  /* overflow? */
+      if (a >= LUAI_MAXBY10 && (a > LUAI_MAXBY10 || d > LUAI_MAXLASTD + neg))  /* overflow? */
         return NULL;  /* do not accept it (as integer) */
       a = a * 10 + d;
       empty = 0;
     }
   }
-  while (lisspace(cast_uchar(*s))) s++;  /* skip trailing spaces */
+  while (luai_lisspace(luai_cast_uchar(*s))) s++;  /* skip trailing spaces */
   if (empty || *s != '\0') return NULL;  /* something wrong in the numeral */
   else {
-    *result = l_castU2S((neg) ? 0u - a : a);
+    *result = luai_l_castU2S((neg) ? 0u - a : a);
     return s;
   }
 }
 
 
-size_t luaO_str2num (const char *s, TValue *o) {
+size_t luaO_str2num (const char *s, luai_TValue *o) {
   lua_Integer i; lua_Number n;
   const char *e;
-  if ((e = l_str2int(s, &i)) != NULL) {  /* try as an integer */
+  if ((e = luai_l_str2int(s, &i)) != NULL) {  /* try as an integer */
     setivalue(o, i);
   }
-  else if ((e = l_str2d(s, &n)) != NULL) {  /* else try as a float */
+  else if ((e = luai_l_str2d(s, &n)) != NULL) {  /* else try as a float */
     setfltvalue(o, n);
   }
   else
@@ -14476,29 +14475,29 @@ int luaO_utf8esc (char *buff, unsigned long x) {
   int n = 1;  /* number of bytes put in buffer (backwards) */
   lua_assert(x <= 0x10FFFF);
   if (x < 0x80)  /* ascii? */
-    buff[UTF8BUFFSZ - 1] = cast(char, x);
+    buff[UTF8BUFFSZ - 1] = luai_cast(char, x);
   else {  /* need continuation bytes */
     unsigned int mfb = 0x3f;  /* maximum that fits in first byte */
     do {  /* add continuation bytes */
-      buff[UTF8BUFFSZ - (n++)] = cast(char, 0x80 | (x & 0x3f));
+      buff[UTF8BUFFSZ - (n++)] = luai_cast(char, 0x80 | (x & 0x3f));
       x >>= 6;  /* remove added bits */
       mfb >>= 1;  /* now there is one less bit available in first byte */
     } while (x > mfb);  /* still needs continuation byte? */
-    buff[UTF8BUFFSZ - n] = cast(char, (~mfb << 1) | x);  /* add first byte */
+    buff[UTF8BUFFSZ - n] = luai_cast(char, (~mfb << 1) | x);  /* add first byte */
   }
   return n;
 }
 
 
 /* maximum length of the conversion of a number to a string */
-#define MAXNUMBER2STR	50
+#define LUAI_MAXNUMBER2STR	50
 
 
 /*
 ** Convert a number object to a string
 */
 void luaO_tostring (lua_State *L, StkId obj) {
-  char buff[MAXNUMBER2STR];
+  char buff[LUAI_MAXNUMBER2STR];
   size_t len;
   lua_assert(ttisnumber(obj));
   if (ttisinteger(obj))
@@ -14516,7 +14515,7 @@ void luaO_tostring (lua_State *L, StkId obj) {
 }
 
 
-static void pushstr (lua_State *L, const char *str, size_t l) {
+static void luai_pushstr (lua_State *L, const char *str, size_t l) {
   setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
   luaD_inctop(L);
 }
@@ -14531,20 +14530,20 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   for (;;) {
     const char *e = strchr(fmt, '%');
     if (e == NULL) break;
-    pushstr(L, fmt, e - fmt);
+    luai_pushstr(L, fmt, e - fmt);
     switch (*(e+1)) {
       case 's': {  /* zero-terminated string */
         const char *s = va_arg(argp, char *);
         if (s == NULL) s = "(null)";
-        pushstr(L, s, strlen(s));
+        luai_pushstr(L, s, strlen(s));
         break;
       }
       case 'c': {  /* an 'int' as a character */
-        char buff = cast(char, va_arg(argp, int));
-        if (lisprint(cast_uchar(buff)))
-          pushstr(L, &buff, 1);
+        char buff = luai_cast(char, va_arg(argp, int));
+        if (luai_lisprint(luai_cast_uchar(buff)))
+          luai_pushstr(L, &buff, 1);
         else  /* non-printable character; print its code */
-          luaO_pushfstring(L, "<\\%d>", cast_uchar(buff));
+          luaO_pushfstring(L, "<\\%d>", luai_cast_uchar(buff));
         break;
       }
       case 'd': {  /* an 'int' */
@@ -14552,11 +14551,11 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         goto top2str;
       }
       case 'I': {  /* a 'lua_Integer' */
-        setivalue(L->top, cast(lua_Integer, va_arg(argp, l_uacInt)));
+        setivalue(L->top, luai_cast(lua_Integer, va_arg(argp, luai_l_uacInt)));
         goto top2str;
       }
       case 'f': {  /* a 'lua_Number' */
-        setfltvalue(L->top, cast_num(va_arg(argp, l_uacNumber)));
+        setfltvalue(L->top, luai_cast_num(va_arg(argp, luai_l_uacNumber)));
       top2str:  /* convert the top element to a string */
         luaD_inctop(L);
         luaO_tostring(L, L->top - 1);
@@ -14564,18 +14563,18 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'p': {  /* a pointer */
         char buff[4*sizeof(void *) + 8]; /* should be enough space for a '%p' */
-        int l = l_sprintf(buff, sizeof(buff), "%p", va_arg(argp, void *));
-        pushstr(L, buff, l);
+        int l = luai_l_sprintf(buff, sizeof(buff), "%p", va_arg(argp, void *));
+        luai_pushstr(L, buff, l);
         break;
       }
       case 'U': {  /* an 'int' as a UTF-8 sequence */
         char buff[UTF8BUFFSZ];
-        int l = luaO_utf8esc(buff, cast(long, va_arg(argp, long)));
-        pushstr(L, buff + UTF8BUFFSZ - l, l);
+        int l = luaO_utf8esc(buff, luai_cast(long, va_arg(argp, long)));
+        luai_pushstr(L, buff + UTF8BUFFSZ - l, l);
         break;
       }
       case '%': {
-        pushstr(L, "%", 1);
+        luai_pushstr(L, "%", 1);
         break;
       }
       default: {
@@ -14587,7 +14586,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     fmt = e+2;
   }
   luaD_checkstack(L, 1);
-  pushstr(L, fmt, strlen(fmt));
+  luai_pushstr(L, fmt, strlen(fmt));
   if (n > 0) luaV_concat(L, n + 1);
   return svalue(L->top - 1);
 }
@@ -14634,7 +14633,7 @@ void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   else {  /* string; format as [string "source"] */
     const char *nl = strchr(source, '\n');  /* find first new line (if any) */
     addstr(out, PRE, LL(PRE));  /* add prefix */
-    bufflen -= LL(PRE RETS POS) + 1;  /* save space for prefix+suffix+'\0' */
+    bufflen -= LL(PRE RETS POS) + 1;  /* luai_save space for prefix+suffix+'\0' */
     if (l < bufflen && nl == NULL) {  /* small one-line source? */
       addstr(out, source, l);  /* keep it */
     }
@@ -14652,7 +14651,7 @@ void luaO_chunkid (char *out, const char *source, size_t bufflen) {
 
 /* ORDER OP */
 
-LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
+LUAI_DDEF const char *const luaP_opnames[luai_NUM_OPCODES+1] = {
   "MOVE",
   "LOADK",
   "LOADKX",
@@ -14706,55 +14705,55 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
 
 #define opmode(t,a,b,c,m) (((t)<<7) | ((a)<<6) | ((b)<<4) | ((c)<<2) | (m))
 
-LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
+LUAI_DDEF const lu_byte luaP_opmodes[luai_NUM_OPCODES] = {
 /*       T  A    B       C     mode		   opcode	*/
-  opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_MOVE */
- ,opmode(0, 1, OpArgK, OpArgN, iABx)		/* OP_LOADK */
- ,opmode(0, 1, OpArgN, OpArgN, iABx)		/* OP_LOADKX */
- ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_LOADBOOL */
- ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_LOADNIL */
- ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_GETUPVAL */
- ,opmode(0, 1, OpArgU, OpArgK, iABC)		/* OP_GETTABUP */
- ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_GETTABLE */
- ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABUP */
- ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_SETUPVAL */
- ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABLE */
- ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_NEWTABLE */
- ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_SELF */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_ADD */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_SUB */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_MUL */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_MOD */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_POW */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_DIV */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_IDIV */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BAND */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BOR */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BXOR */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_SHL */
- ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_SHR */
- ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_UNM */
- ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_BNOT */
- ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_NOT */
- ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_LEN */
- ,opmode(0, 1, OpArgR, OpArgR, iABC)		/* OP_CONCAT */
- ,opmode(0, 0, OpArgR, OpArgN, iAsBx)		/* OP_JMP */
- ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_EQ */
- ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_LT */
- ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_LE */
- ,opmode(1, 0, OpArgN, OpArgU, iABC)		/* OP_TEST */
- ,opmode(1, 1, OpArgR, OpArgU, iABC)		/* OP_TESTSET */
- ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_CALL */
- ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_TAILCALL */
- ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_RETURN */
- ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORLOOP */
- ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORPREP */
- ,opmode(0, 0, OpArgN, OpArgU, iABC)		/* OP_TFORCALL */
- ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_TFORLOOP */
- ,opmode(0, 0, OpArgU, OpArgU, iABC)		/* OP_SETLIST */
- ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
- ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_VARARG */
- ,opmode(0, 0, OpArgU, OpArgU, iAx)		/* OP_EXTRAARG */
+  opmode(0, 1, luai_OpArgR, luai_OpArgN, luai_iABC)		/* luai_OP_MOVE */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgN, luai_iABx)		/* luai_OP_LOADK */
+ ,opmode(0, 1, luai_OpArgN, luai_OpArgN, luai_iABx)		/* luai_OP_LOADKX */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgU, luai_iABC)		/* luai_OP_LOADBOOL */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgN, luai_iABC)		/* luai_OP_LOADNIL */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgN, luai_iABC)		/* luai_OP_GETUPVAL */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgK, luai_iABC)		/* luai_OP_GETTABUP */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgK, luai_iABC)		/* luai_OP_GETTABLE */
+ ,opmode(0, 0, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_SETTABUP */
+ ,opmode(0, 0, luai_OpArgU, luai_OpArgN, luai_iABC)		/* luai_OP_SETUPVAL */
+ ,opmode(0, 0, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_SETTABLE */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgU, luai_iABC)		/* luai_OP_NEWTABLE */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgK, luai_iABC)		/* luai_OP_SELF */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_ADD */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_SUB */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_MUL */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_MOD */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_POW */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_DIV */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_IDIV */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_BAND */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_BOR */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_BXOR */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_SHL */
+ ,opmode(0, 1, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_SHR */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgN, luai_iABC)		/* luai_OP_UNM */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgN, luai_iABC)		/* luai_OP_BNOT */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgN, luai_iABC)		/* luai_OP_NOT */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgN, luai_iABC)		/* luai_OP_LEN */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgR, luai_iABC)		/* luai_OP_CONCAT */
+ ,opmode(0, 0, luai_OpArgR, luai_OpArgN, luai_iAsBx)		/* luai_OP_JMP */
+ ,opmode(1, 0, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_EQ */
+ ,opmode(1, 0, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_LT */
+ ,opmode(1, 0, luai_OpArgK, luai_OpArgK, luai_iABC)		/* luai_OP_LE */
+ ,opmode(1, 0, luai_OpArgN, luai_OpArgU, luai_iABC)		/* luai_OP_TEST */
+ ,opmode(1, 1, luai_OpArgR, luai_OpArgU, luai_iABC)		/* luai_OP_TESTSET */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgU, luai_iABC)		/* luai_OP_CALL */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgU, luai_iABC)		/* luai_OP_TAILCALL */
+ ,opmode(0, 0, luai_OpArgU, luai_OpArgN, luai_iABC)		/* luai_OP_RETURN */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgN, luai_iAsBx)		/* luai_OP_FORLOOP */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgN, luai_iAsBx)		/* luai_OP_FORPREP */
+ ,opmode(0, 0, luai_OpArgN, luai_OpArgU, luai_iABC)		/* luai_OP_TFORCALL */
+ ,opmode(0, 1, luai_OpArgR, luai_OpArgN, luai_iAsBx)		/* luai_OP_TFORLOOP */
+ ,opmode(0, 0, luai_OpArgU, luai_OpArgU, luai_iABC)		/* luai_OP_SETLIST */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgN, luai_iABx)		/* luai_OP_CLOSURE */
+ ,opmode(0, 1, luai_OpArgU, luai_OpArgN, luai_iABC)		/* luai_OP_VARARG */
+ ,opmode(0, 0, luai_OpArgU, luai_OpArgU, luai_iAx)		/* luai_OP_EXTRAARG */
 };
 
 /*__loslib.c__*/
@@ -14768,22 +14767,22 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
 #if !defined(LUA_STRFTIMEOPTIONS)	/* { */
 
 /* options for ANSI C 89 (only 1-char options) */
-#define L_STRFTIMEC89		"aAbBcdHIjmMpSUwWxXyYZ%"
+#define LUAI_L_STRFTIMEC89		"aAbBcdHIjmMpSUwWxXyYZ%"
 
 /* options for ISO C 99 and POSIX */
-#define L_STRFTIMEC99 "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%" \
+#define LUAI_L_STRFTIMEC99 "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%" \
     "||" "EcECExEXEyEY" "OdOeOHOIOmOMOSOuOUOVOwOWOy"  /* two-char options */
 
 /* options for Windows */
-#define L_STRFTIMEWIN "aAbBcdHIjmMpSUwWxXyYzZ%" \
+#define LUAI_L_STRFTIMEWIN "aAbBcdHIjmMpSUwWxXyYzZ%" \
     "||" "#c#x#d#H#I#j#m#M#S#U#w#W#y#Y"  /* two-char options */
 
 #if defined(LUA_USE_WINDOWS)
-#define LUA_STRFTIMEOPTIONS	L_STRFTIMEWIN
+#define LUA_STRFTIMEOPTIONS	LUAI_L_STRFTIMEWIN
 #elif defined(LUA_USE_C89)
-#define LUA_STRFTIMEOPTIONS	L_STRFTIMEC89
+#define LUA_STRFTIMEOPTIONS	LUAI_L_STRFTIMEC89
 #else  /* C99 specification */
-#define LUA_STRFTIMEOPTIONS	L_STRFTIMEC99
+#define LUA_STRFTIMEOPTIONS	LUAI_L_STRFTIMEC99
 #endif
 
 #endif					/* } */
@@ -14796,14 +14795,14 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
 ** ===================================================================
 */
 
-#if !defined(l_time_t)		/* { */
+#if !defined(luai_l_time_t)		/* { */
 /*
 ** type to represent time_t in Lua
 */
-#define l_timet			lua_Integer
-#define l_pushtime(L,t)		lua_pushinteger(L,(lua_Integer)(t))
+#define luai_l_timet			lua_Integer
+#define luai_l_pushtime(L,t)		lua_pushinteger(L,(lua_Integer)(t))
 
-static time_t l_checktime (lua_State *L, int arg) {
+static time_t luai_l_checktime (lua_State *L, int arg) {
   lua_Integer t = luaL_checkinteger(L, arg);
   luaL_argcheck(L, (time_t)t == t, arg, "time out-of-bounds");
   return (time_t)t;
@@ -14812,7 +14811,7 @@ static time_t l_checktime (lua_State *L, int arg) {
 #endif				/* } */
 
 
-#if !defined(l_gmtime)		/* { */
+#if !defined(luai_l_gmtime)		/* { */
 /*
 ** By default, Lua uses gmtime/localtime, except when POSIX is available,
 ** where it uses gmtime_r/localtime_r
@@ -14820,14 +14819,14 @@ static time_t l_checktime (lua_State *L, int arg) {
 
 #if defined(LUA_USE_POSIX)	/* { */
 
-#define l_gmtime(t,r)		gmtime_r(t,r)
-#define l_localtime(t,r)	localtime_r(t,r)
+#define luai_l_gmtime(t,r)		gmtime_r(t,r)
+#define luai_l_localtime(t,r)	localtime_r(t,r)
 
 #else				/* }{ */
 
 /* ISO C definitions */
-#define l_gmtime(t,r)		((void)(r)->tm_sec, gmtime(t))
-#define l_localtime(t,r)  	((void)(r)->tm_sec, localtime(t))
+#define luai_l_gmtime(t,r)		((void)(r)->tm_sec, gmtime(t))
+#define luai_l_localtime(t,r)  	((void)(r)->tm_sec, localtime(t))
 
 #endif				/* } */
 
@@ -14931,14 +14930,14 @@ static int luai_os_clock (lua_State *L) {
 ** =======================================================
 */
 
-static void setfield (lua_State *L, const char *key, int value) {
+static void luai_setfield (lua_State *L, const char *key, int value) {
   lua_pushinteger(L, value);
   lua_setfield(L, -2, key);
 }
 
-static void setboolfield (lua_State *L, const char *key, int value) {
+static void luai_setboolfield (lua_State *L, const char *key, int value) {
   if (value < 0)  /* undefined? */
-    return;  /* does not set field */
+    return;  /* does not set luai_field */
   lua_pushboolean(L, value);
   lua_setfield(L, -2, key);
 }
@@ -14947,20 +14946,20 @@ static void setboolfield (lua_State *L, const char *key, int value) {
 /*
 ** Set all fields from structure 'tm' in the table on top of the stack
 */
-static void setallfields (lua_State *L, struct tm *stm) {
-  setfield(L, "sec", stm->tm_sec);
-  setfield(L, "min", stm->tm_min);
-  setfield(L, "hour", stm->tm_hour);
-  setfield(L, "day", stm->tm_mday);
-  setfield(L, "month", stm->tm_mon + 1);
-  setfield(L, "year", stm->tm_year + 1900);
-  setfield(L, "wday", stm->tm_wday + 1);
-  setfield(L, "yday", stm->tm_yday + 1);
-  setboolfield(L, "isdst", stm->tm_isdst);
+static void luai_setallfields (lua_State *L, struct tm *stm) {
+  luai_setfield(L, "sec", stm->tm_sec);
+  luai_setfield(L, "min", stm->tm_min);
+  luai_setfield(L, "hour", stm->tm_hour);
+  luai_setfield(L, "day", stm->tm_mday);
+  luai_setfield(L, "month", stm->tm_mon + 1);
+  luai_setfield(L, "year", stm->tm_year + 1900);
+  luai_setfield(L, "wday", stm->tm_wday + 1);
+  luai_setfield(L, "yday", stm->tm_yday + 1);
+  luai_setboolfield(L, "isdst", stm->tm_isdst);
 }
 
 
-static int getboolfield (lua_State *L, const char *key) {
+static int luai_getboolfield (lua_State *L, const char *key) {
   int res;
   res = (lua_getfield(L, -1, key) == LUA_TNIL) ? -1 : lua_toboolean(L, -1);
   lua_pop(L, 1);
@@ -14969,24 +14968,24 @@ static int getboolfield (lua_State *L, const char *key) {
 
 
 /* maximum value for date fields (to avoid arithmetic overflows with 'int') */
-#if !defined(L_MAXDATEFIELD)
-#define L_MAXDATEFIELD	(INT_MAX / 2)
+#if !defined(LUAI_L_MAXDATEFIELD)
+#define LUAI_L_MAXDATEFIELD	(INT_MAX / 2)
 #endif
 
-static int getfield (lua_State *L, const char *key, int d, int delta) {
+static int luai_getfield (lua_State *L, const char *key, int d, int delta) {
   int isnum;
-  int t = lua_getfield(L, -1, key);  /* get field and its type */
+  int t = lua_getfield(L, -1, key);  /* get luai_field and its type */
   lua_Integer res = lua_tointegerx(L, -1, &isnum);
-  if (!isnum) {  /* field is not an integer? */
+  if (!isnum) {  /* luai_field is not an integer? */
     if (t != LUA_TNIL)  /* some other value? */
-      return luaL_error(L, "field '%s' is not an integer", key);
-    else if (d < 0)  /* absent field; no default? */
-      return luaL_error(L, "field '%s' missing in date table", key);
+      return luaL_error(L, "luai_field '%s' is not an integer", key);
+    else if (d < 0)  /* absent luai_field; no default? */
+      return luaL_error(L, "luai_field '%s' missing in date table", key);
     res = d;
   }
   else {
-    if (!(-L_MAXDATEFIELD <= res && res <= L_MAXDATEFIELD))
-      return luaL_error(L, "field '%s' is out-of-bound", key);
+    if (!(-LUAI_L_MAXDATEFIELD <= res && res <= LUAI_L_MAXDATEFIELD))
+      return luaL_error(L, "luai_field '%s' is out-of-bound", key);
     res -= delta;
   }
   lua_pop(L, 1);
@@ -14994,17 +14993,17 @@ static int getfield (lua_State *L, const char *key, int d, int delta) {
 }
 
 
-static const char *checkoption (lua_State *L, const char *conv,
+static const char *luai_checkoption (lua_State *L, const char *conv,
                                 ptrdiff_t convlen, char *buff) {
   const char *option = LUA_STRFTIMEOPTIONS;
   int oplen = 1;  /* length of options being checked */
   for (; *option != '\0' && oplen <= convlen; option += oplen) {
-    if (*option == '|')  /* next block? */
-      oplen++;  /* will check options with next length (+1) */
+    if (*option == '|')  /* luai_next luai_getblock? */
+      oplen++;  /* will luai_check options with luai_next length (+1) */
     else if (memcmp(conv, option, oplen) == 0) {  /* match? */
       memcpy(buff, conv, oplen);  /* copy valid option to buffer */
       buff[oplen] = '\0';
-      return conv + oplen;  /* return next item */
+      return conv + oplen;  /* return luai_next item */
     }
   }
   luaL_argerror(L, 1,
@@ -15014,26 +15013,26 @@ static const char *checkoption (lua_State *L, const char *conv,
 
 
 /* maximum size for an individual 'strftime' item */
-#define SIZETIMEFMT	250
+#define LUAI_SIZETIMEFMT	250
 
 
 static int luai_os_date (lua_State *L) {
   size_t slen;
   const char *s = luaL_optlstring(L, 1, "%c", &slen);
-  time_t t = luaL_opt(L, l_checktime, 2, time(NULL));
+  time_t t = luaL_opt(L, luai_l_checktime, 2, time(NULL));
   const char *se = s + slen;  /* 's' end */
   struct tm tmr, *stm;
   if (*s == '!') {  /* UTC? */
-    stm = l_gmtime(&t, &tmr);
+    stm = luai_l_gmtime(&t, &tmr);
     s++;  /* skip '!' */
   }
   else
-    stm = l_localtime(&t, &tmr);
+    stm = luai_l_localtime(&t, &tmr);
   if (stm == NULL)  /* invalid date? */
     luaL_error(L, "time result cannot be represented in this installation");
   if (strcmp(s, "*t") == 0) {
     lua_createtable(L, 0, 9);  /* 9 = number of fields */
-    setallfields(L, stm);
+    luai_setallfields(L, stm);
   }
   else {
     char cc[4];  /* buffer for individual conversion specifiers */
@@ -15045,10 +15044,10 @@ static int luai_os_date (lua_State *L) {
         luaL_addchar(&b, *s++);
       else {
         size_t reslen;
-        char *buff = luaL_prepbuffsize(&b, SIZETIMEFMT);
+        char *buff = luaL_prepbuffsize(&b, LUAI_SIZETIMEFMT);
         s++;  /* skip '%' */
-        s = checkoption(L, s, se - s, cc + 1);  /* copy specifier to 'cc' */
-        reslen = strftime(buff, SIZETIMEFMT, cc, stm);
+        s = luai_checkoption(L, s, se - s, cc + 1);  /* copy specifier to 'cc' */
+        reslen = strftime(buff, LUAI_SIZETIMEFMT, cc, stm);
         luaL_addsize(&b, reslen);
       }
     }
@@ -15066,26 +15065,26 @@ static int luai_os_time (lua_State *L) {
     struct tm ts;
     luaL_checktype(L, 1, LUA_TTABLE);
     lua_settop(L, 1);  /* make sure table is at the top */
-    ts.tm_sec = getfield(L, "sec", 0, 0);
-    ts.tm_min = getfield(L, "min", 0, 0);
-    ts.tm_hour = getfield(L, "hour", 12, 0);
-    ts.tm_mday = getfield(L, "day", -1, 0);
-    ts.tm_mon = getfield(L, "month", -1, 1);
-    ts.tm_year = getfield(L, "year", -1, 1900);
-    ts.tm_isdst = getboolfield(L, "isdst");
+    ts.tm_sec = luai_getfield(L, "sec", 0, 0);
+    ts.tm_min = luai_getfield(L, "min", 0, 0);
+    ts.tm_hour = luai_getfield(L, "hour", 12, 0);
+    ts.tm_mday = luai_getfield(L, "day", -1, 0);
+    ts.tm_mon = luai_getfield(L, "month", -1, 1);
+    ts.tm_year = luai_getfield(L, "year", -1, 1900);
+    ts.tm_isdst = luai_getboolfield(L, "isdst");
     t = mktime(&ts);
-    setallfields(L, &ts);  /* update fields with normalized values */
+    luai_setallfields(L, &ts);  /* update fields with normalized values */
   }
-  if (t != (time_t)(l_timet)t || t == (time_t)(-1))
+  if (t != (time_t)(luai_l_timet)t || t == (time_t)(-1))
     luaL_error(L, "time result cannot be represented in this installation");
-  l_pushtime(L, t);
+  luai_l_pushtime(L, t);
   return 1;
 }
 
 
 static int luai_os_difftime (lua_State *L) {
-  time_t t1 = l_checktime(L, 1);
-  time_t t2 = l_checktime(L, 2);
+  time_t t1 = luai_l_checktime(L, 1);
+  time_t t2 = luai_l_checktime(L, 2);
   lua_pushnumber(L, (lua_Number)difftime(t1, t2));
   return 1;
 }
@@ -15149,7 +15148,7 @@ LUAMOD_API int luaopen_os (lua_State *L) {
 #define MAXVARS		200
 
 
-#define hasmultret(k)		((k) == VCALL || (k) == VVARARG)
+#define hasmultret(k)		((k) == LUAI_VCALL || (k) == LUAI_VVARARG)
 
 
 /* because all strings are unified by the scanner, the parser
@@ -15158,40 +15157,40 @@ LUAMOD_API int luaopen_os (lua_State *L) {
 
 
 /*
-** nodes for block list (list of active blocks)
+** nodes for luai_getblock list (list of active blocks)
 */
-typedef struct BlockCnt {
-  struct BlockCnt *previous;  /* chain */
-  int firstlabel;  /* index of first label in this block */
-  int firstgoto;  /* index of first pending goto in this block */
-  lu_byte nactvar;  /* # active locals outside the block */
-  lu_byte upval;  /* true if some variable in the block is an upvalue */
-  lu_byte isloop;  /* true if 'block' is a loop */
-} BlockCnt;
+typedef struct luai_BlockCnt {
+  struct luai_BlockCnt *previous;  /* chain */
+  int firstlabel;  /* index of first label in this luai_getblock */
+  int firstgoto;  /* index of first pending goto in this luai_getblock */
+  lu_byte nactvar;  /* # active locals outside the luai_getblock */
+  lu_byte upval;  /* true if some variable in the luai_getblock is an upvalue */
+  lu_byte isloop;  /* true if 'luai_getblock' is a loop */
+} luai_BlockCnt;
 
 
 
 /*
 ** prototypes for recursive non-terminal functions
 */
-static void statement (LexState *ls);
-static void expr (LexState *ls, expdesc *v);
+static void luai_statement (LexState *ls);
+static void luai_expr (LexState *ls, luai_expdesc *v);
 
 
 /* semantic error */
-static l_noret semerror (LexState *ls, const char *msg) {
+static luai_l_noret luai_semerror (LexState *ls, const char *msg) {
   ls->t.token = 0;  /* remove "near <token>" from final message */
   luaX_syntaxerror(ls, msg);
 }
 
 
-static l_noret error_expected (LexState *ls, int token) {
+static luai_l_noret luai_error_expected (LexState *ls, int token) {
   luaX_syntaxerror(ls,
       luaO_pushfstring(ls->L, "%s expected", luaX_token2str(ls, token)));
 }
 
 
-static l_noret errorlimit (FuncState *fs, int limit, const char *what) {
+static luai_l_noret luai_errorlimit (luai_FuncState *fs, int limit, const char *what) {
   lua_State *L = fs->ls->L;
   const char *msg;
   int line = fs->f->linedefined;
@@ -15204,12 +15203,12 @@ static l_noret errorlimit (FuncState *fs, int limit, const char *what) {
 }
 
 
-static void checklimit (FuncState *fs, int v, int l, const char *what) {
-  if (v > l) errorlimit(fs, l, what);
+static void luai_checklimit (luai_FuncState *fs, int v, int l, const char *what) {
+  if (v > l) luai_errorlimit(fs, l, what);
 }
 
 
-static int testnext (LexState *ls, int c) {
+static int luai_testnext (LexState *ls, int c) {
   if (ls->t.token == c) {
     luaX_next(ls);
     return 1;
@@ -15218,14 +15217,14 @@ static int testnext (LexState *ls, int c) {
 }
 
 
-static void check (LexState *ls, int c) {
+static void luai_check (LexState *ls, int c) {
   if (ls->t.token != c)
-    error_expected(ls, c);
+    luai_error_expected(ls, c);
 }
 
 
-static void checknext (LexState *ls, int c) {
-  check(ls, c);
+static void luai_checknext (LexState *ls, int c) {
+  luai_check(ls, c);
   luaX_next(ls);
 }
 
@@ -15235,9 +15234,9 @@ static void checknext (LexState *ls, int c) {
 
 
 static void luai_check_match (LexState *ls, int what, int who, int where) {
-  if (!testnext(ls, what)) {
+  if (!luai_testnext(ls, what)) {
     if (where == ls->linenumber)
-      error_expected(ls, what);
+      luai_error_expected(ls, what);
     else {
       luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
              "%s expected (to close %s at line %d)",
@@ -15247,35 +15246,35 @@ static void luai_check_match (LexState *ls, int what, int who, int where) {
 }
 
 
-static TString *luai_str_checkname (LexState *ls) {
-  TString *ts;
-  check(ls, TK_NAME);
+static luai_TString *luai_str_checkname (LexState *ls) {
+  luai_TString *ts;
+  luai_check(ls, LUAI_TK_NAME);
   ts = ls->t.seminfo.ts;
   luaX_next(ls);
   return ts;
 }
 
 
-static void init_exp (expdesc *e, expkind k, int i) {
-  e->f = e->t = NO_JUMP;
+static void luai_init_exp (luai_expdesc *e, luai_expkind k, int i) {
+  e->f = e->t = LUAI_NO_JUMP;
   e->k = k;
   e->u.info = i;
 }
 
 
-static void codestring (LexState *ls, expdesc *e, TString *s) {
-  init_exp(e, VK, luaK_stringK(ls->fs, s));
+static void luai_codestring (LexState *ls, luai_expdesc *e, luai_TString *s) {
+  luai_init_exp(e, LUAI_VK, luaK_stringK(ls->fs, s));
 }
 
 
-static void checkname (LexState *ls, expdesc *e) {
-  codestring(ls, e, luai_str_checkname(ls));
+static void luai_checkname (LexState *ls, luai_expdesc *e) {
+  luai_codestring(ls, e, luai_str_checkname(ls));
 }
 
 
-static int registerlocalvar (LexState *ls, TString *varname) {
-  FuncState *fs = ls->fs;
-  Proto *f = fs->f;
+static int luai_registerlocalvar (LexState *ls, luai_TString *varname) {
+  luai_FuncState *fs = ls->fs;
+  luai_Proto *f = fs->f;
   int oldsize = f->sizelocvars;
   luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
                   LocVar, SHRT_MAX, "local variables");
@@ -15287,50 +15286,50 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 }
 
 
-static void new_localvar (LexState *ls, TString *name) {
-  FuncState *fs = ls->fs;
-  Dyndata *dyd = ls->dyd;
-  int reg = registerlocalvar(ls, name);
-  checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
+static void luai_new_localvar (LexState *ls, luai_TString *name) {
+  luai_FuncState *fs = ls->fs;
+  luai_Dyndata *dyd = ls->dyd;
+  int reg = luai_registerlocalvar(ls, name);
+  luai_checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
                   MAXVARS, "local variables");
   luaM_growvector(ls->L, dyd->actvar.arr, dyd->actvar.n + 1,
-                  dyd->actvar.size, Vardesc, MAX_INT, "local variables");
-  dyd->actvar.arr[dyd->actvar.n++].idx = cast(short, reg);
+                  dyd->actvar.size, luai_Vardesc, MAX_INT, "local variables");
+  dyd->actvar.arr[dyd->actvar.n++].idx = luai_cast(short, reg);
 }
 
 
-static void new_localvarliteral_ (LexState *ls, const char *name, size_t sz) {
-  new_localvar(ls, luaX_newstring(ls, name, sz));
+static void luai_new_localvarliteral_ (LexState *ls, const char *name, size_t sz) {
+  luai_new_localvar(ls, luaX_newstring(ls, name, sz));
 }
 
-#define new_localvarliteral(ls,v) \
-	new_localvarliteral_(ls, "" v, (sizeof(v)/sizeof(char))-1)
+#define luai_new_localvarliteral(ls,v) \
+	luai_new_localvarliteral_(ls, "" v, (sizeof(v)/sizeof(char))-1)
 
 
-static LocVar *getlocvar (FuncState *fs, int i) {
+static LocVar *luai_getlocvar (luai_FuncState *fs, int i) {
   int idx = fs->ls->dyd->actvar.arr[fs->firstlocal + i].idx;
   lua_assert(idx < fs->nlocvars);
   return &fs->f->locvars[idx];
 }
 
 
-static void adjustlocalvars (LexState *ls, int nvars) {
-  FuncState *fs = ls->fs;
-  fs->nactvar = cast_byte(fs->nactvar + nvars);
+static void luai_ajustlocalvars (LexState *ls, int nvars) {
+  luai_FuncState *fs = ls->fs;
+  fs->nactvar = luai_cast_byte(fs->nactvar + nvars);
   for (; nvars; nvars--) {
-    getlocvar(fs, fs->nactvar - nvars)->startpc = fs->pc;
+    luai_getlocvar(fs, fs->nactvar - nvars)->startpc = fs->pc;
   }
 }
 
 
-static void removevars (FuncState *fs, int tolevel) {
+static void luai_removevars (luai_FuncState *fs, int tolevel) {
   fs->ls->dyd->actvar.n -= (fs->nactvar - tolevel);
   while (fs->nactvar > tolevel)
-    getlocvar(fs, --fs->nactvar)->endpc = fs->pc;
+    luai_getlocvar(fs, --fs->nactvar)->endpc = fs->pc;
 }
 
 
-static int searchupvalue (FuncState *fs, TString *name) {
+static int luai_searchupvalue (luai_FuncState *fs, luai_TString *name) {
   int i;
   Upvaldesc *up = fs->f->upvalues;
   for (i = 0; i < fs->nups; i++) {
@@ -15340,26 +15339,26 @@ static int searchupvalue (FuncState *fs, TString *name) {
 }
 
 
-static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
-  Proto *f = fs->f;
+static int luai_newupvalue (luai_FuncState *fs, luai_TString *name, luai_expdesc *v) {
+  luai_Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
-  checklimit(fs, fs->nups + 1, MAXUPVAL, "upvalues");
+  luai_checklimit(fs, fs->nups + 1, LUAI_MAXUPVAL, "upvalues");
   luaM_growvector(fs->ls->L, f->upvalues, fs->nups, f->sizeupvalues,
-                  Upvaldesc, MAXUPVAL, "upvalues");
+                  Upvaldesc, LUAI_MAXUPVAL, "upvalues");
   while (oldsize < f->sizeupvalues)
     f->upvalues[oldsize++].name = NULL;
-  f->upvalues[fs->nups].instack = (v->k == VLOCAL);
-  f->upvalues[fs->nups].idx = cast_byte(v->u.info);
+  f->upvalues[fs->nups].instack = (v->k == LUAI_VLOCAL);
+  f->upvalues[fs->nups].idx = luai_cast_byte(v->u.info);
   f->upvalues[fs->nups].name = name;
   luaC_objbarrier(fs->ls->L, f, name);
   return fs->nups++;
 }
 
 
-static int searchvar (FuncState *fs, TString *n) {
+static int luai_searchvar (luai_FuncState *fs, luai_TString *n) {
   int i;
-  for (i = cast_int(fs->nactvar) - 1; i >= 0; i--) {
-    if (eqstr(n, getlocvar(fs, i)->varname))
+  for (i = luai_cast_int(fs->nactvar) - 1; i >= 0; i--) {
+    if (eqstr(n, luai_getlocvar(fs, i)->varname))
       return i;
   }
   return -1;  /* not found */
@@ -15367,11 +15366,11 @@ static int searchvar (FuncState *fs, TString *n) {
 
 
 /*
-  Mark block where variable at given level was defined
+  Mark luai_getblock where variable at given level was defined
   (to emit close instructions later).
 */
-static void markupval (FuncState *fs, int level) {
-  BlockCnt *bl = fs->bl;
+static void luai_markupval (luai_FuncState *fs, int level) {
+  luai_BlockCnt *bl = fs->bl;
   while (bl->nactvar > level)
     bl = bl->previous;
   bl->upval = 1;
@@ -15382,47 +15381,47 @@ static void markupval (FuncState *fs, int level) {
   Find variable with given name 'n'. If it is an upvalue, add this
   upvalue into all intermediate functions.
 */
-static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
+static void luai_singlevaraux (luai_FuncState *fs, luai_TString *n, luai_expdesc *var, int base) {
   if (fs == NULL)  /* no more levels? */
-    init_exp(var, VVOID, 0);  /* default is global */
+    luai_init_exp(var, LUAI_VVOID, 0);  /* default is global */
   else {
-    int v = searchvar(fs, n);  /* look up locals at current level */
+    int v = luai_searchvar(fs, n);  /* look up locals at current level */
     if (v >= 0) {  /* found? */
-      init_exp(var, VLOCAL, v);  /* variable is local */
+      luai_init_exp(var, LUAI_VLOCAL, v);  /* variable is local */
       if (!base)
-        markupval(fs, v);  /* local will be used as an upval */
+        luai_markupval(fs, v);  /* local will be used as an upval */
     }
     else {  /* not found as local at current level; try upvalues */
-      int idx = searchupvalue(fs, n);  /* try existing upvalues */
+      int idx = luai_searchupvalue(fs, n);  /* try existing upvalues */
       if (idx < 0) {  /* not found? */
-        singlevaraux(fs->prev, n, var, 0);  /* try upper levels */
-        if (var->k == VVOID)  /* not found? */
+        luai_singlevaraux(fs->prev, n, var, 0);  /* try upper levels */
+        if (var->k == LUAI_VVOID)  /* not found? */
           return;  /* it is a global */
         /* else was LOCAL or UPVAL */
-        idx  = newupvalue(fs, n, var);  /* will be a new upvalue */
+        idx  = luai_newupvalue(fs, n, var);  /* will be a new upvalue */
       }
-      init_exp(var, VUPVAL, idx);  /* new or old upvalue */
+      luai_init_exp(var, LUAI_VUPVAL, idx);  /* new or old upvalue */
     }
   }
 }
 
 
-static void singlevar (LexState *ls, expdesc *var) {
-  TString *varname = luai_str_checkname(ls);
-  FuncState *fs = ls->fs;
-  singlevaraux(fs, varname, var, 1);
-  if (var->k == VVOID) {  /* global name? */
-    expdesc key;
-    singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
-    lua_assert(var->k != VVOID);  /* this one must exist */
-    codestring(ls, &key, varname);  /* key is variable name */
+static void luai_singlevar (LexState *ls, luai_expdesc *var) {
+  luai_TString *varname = luai_str_checkname(ls);
+  luai_FuncState *fs = ls->fs;
+  luai_singlevaraux(fs, varname, var, 1);
+  if (var->k == LUAI_VVOID) {  /* global name? */
+    luai_expdesc key;
+    luai_singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
+    lua_assert(var->k != LUAI_VVOID);  /* this one must exist */
+    luai_codestring(ls, &key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
   }
 }
 
 
-static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
-  FuncState *fs = ls->fs;
+static void luai_adjust_assign (LexState *ls, int nvars, int nexps, luai_expdesc *e) {
+  luai_FuncState *fs = ls->fs;
   int extra = nvars - nexps;
   if (hasmultret(e->k)) {
     extra++;  /* includes call itself */
@@ -15431,40 +15430,40 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
     if (extra > 1) luaK_reserveregs(fs, extra-1);
   }
   else {
-    if (e->k != VVOID) luaK_exp2nextreg(fs, e);  /* close last expression */
+    if (e->k != LUAI_VVOID) luaK_exp2nextreg(fs, e);  /* close last expression */
     if (extra > 0) {
-      int reg = fs->freereg;
+      int reg = fs->luai_freereg;
       luaK_reserveregs(fs, extra);
       luaK_nil(fs, reg, extra);
     }
   }
   if (nexps > nvars)
-    ls->fs->freereg -= nexps - nvars;  /* remove extra values */
+    ls->fs->luai_freereg -= nexps - nvars;  /* remove extra values */
 }
 
 
-static void enterlevel (LexState *ls) {
+static void luai_enterlevel (LexState *ls) {
   lua_State *L = ls->L;
   ++L->nCcalls;
-  checklimit(ls->fs, L->nCcalls, LUAI_MAXCCALLS, "C levels");
+  luai_checklimit(ls->fs, L->nCcalls, LUAI_MAXCCALLS, "C levels");
 }
 
 
-#define leavelevel(ls)	((ls)->L->nCcalls--)
+#define luai_leavelevel(ls)	((ls)->L->nCcalls--)
 
 
-static void closegoto (LexState *ls, int g, Labeldesc *label) {
+static void luai_closegoto (LexState *ls, int g, luai_Labeldesc *label) {
   int i;
-  FuncState *fs = ls->fs;
-  Labellist *gl = &ls->dyd->gt;
-  Labeldesc *gt = &gl->arr[g];
+  luai_FuncState *fs = ls->fs;
+  luai_Labellist *gl = &ls->dyd->gt;
+  luai_Labeldesc *gt = &gl->arr[g];
   lua_assert(eqstr(gt->name, label->name));
   if (gt->nactvar < label->nactvar) {
-    TString *vname = getlocvar(fs, gt->nactvar)->varname;
+    luai_TString *vname = luai_getlocvar(fs, gt->nactvar)->varname;
     const char *msg = luaO_pushfstring(ls->L,
       "<goto %s> at line %d jumps into the scope of local '%s'",
       getstr(gt->name), gt->line, getstr(vname));
-    semerror(ls, msg);
+    luai_semerror(ls, msg);
   }
   luaK_patchlist(fs, gt->pc, label->pc);
   /* remove goto from pending list */
@@ -15477,19 +15476,19 @@ static void closegoto (LexState *ls, int g, Labeldesc *label) {
 /*
 ** try to close a goto with existing labels; this solves backward jumps
 */
-static int findlabel (LexState *ls, int g) {
+static int luai_findlabel (LexState *ls, int g) {
   int i;
-  BlockCnt *bl = ls->fs->bl;
-  Dyndata *dyd = ls->dyd;
-  Labeldesc *gt = &dyd->gt.arr[g];
-  /* check labels in current block for a match */
+  luai_BlockCnt *bl = ls->fs->bl;
+  luai_Dyndata *dyd = ls->dyd;
+  luai_Labeldesc *gt = &dyd->gt.arr[g];
+  /* luai_check labels in current luai_getblock for a match */
   for (i = bl->firstlabel; i < dyd->label.n; i++) {
-    Labeldesc *lb = &dyd->label.arr[i];
+    luai_Labeldesc *lb = &dyd->label.arr[i];
     if (eqstr(lb->name, gt->name)) {  /* correct label? */
       if (gt->nactvar > lb->nactvar &&
           (bl->upval || dyd->label.n > bl->firstlabel))
         luaK_patchclose(ls->fs, gt->pc, lb->nactvar);
-      closegoto(ls, g, lb);  /* close it */
+      luai_closegoto(ls, g, lb);  /* close it */
       return 1;
     }
   }
@@ -15497,11 +15496,11 @@ static int findlabel (LexState *ls, int g) {
 }
 
 
-static int newlabelentry (LexState *ls, Labellist *l, TString *name,
+static int luai_newlabelentry (LexState *ls, luai_Labellist *l, luai_TString *name,
                           int line, int pc) {
   int n = l->n;
   luaM_growvector(ls->L, l->arr, n, l->size,
-                  Labeldesc, SHRT_MAX, "labels/gotos");
+                  luai_Labeldesc, SHRT_MAX, "labels/gotos");
   l->arr[n].name = name;
   l->arr[n].line = line;
   l->arr[n].nactvar = ls->fs->nactvar;
@@ -15512,15 +15511,15 @@ static int newlabelentry (LexState *ls, Labellist *l, TString *name,
 
 
 /*
-** check whether new label 'lb' matches any pending gotos in current
-** block; solves forward jumps
+** luai_check whether new label 'lb' matches any pending gotos in current
+** luai_getblock; solves forward jumps
 */
-static void findgotos (LexState *ls, Labeldesc *lb) {
-  Labellist *gl = &ls->dyd->gt;
+static void luai_findgotos (LexState *ls, luai_Labeldesc *lb) {
+  luai_Labellist *gl = &ls->dyd->gt;
   int i = ls->fs->bl->firstgoto;
   while (i < gl->n) {
     if (eqstr(gl->arr[i].name, lb->name))
-      closegoto(ls, i, lb);
+      luai_closegoto(ls, i, lb);
     else
       i++;
   }
@@ -15528,30 +15527,30 @@ static void findgotos (LexState *ls, Labeldesc *lb) {
 
 
 /*
-** export pending gotos to outer level, to check them against
-** outer labels; if the block being exited has upvalues, and
+** export pending gotos to outer level, to luai_check them against
+** outer labels; if the luai_getblock being exited has upvalues, and
 ** the goto exits the scope of any variable (which can be the
 ** upvalue), close those variables being exited.
 */
-static void movegotosout (FuncState *fs, BlockCnt *bl) {
+static void luai_movegotosout (luai_FuncState *fs, luai_BlockCnt *bl) {
   int i = bl->firstgoto;
-  Labellist *gl = &fs->ls->dyd->gt;
-  /* correct pending gotos to current block and try to close it
+  luai_Labellist *gl = &fs->ls->dyd->gt;
+  /* correct pending gotos to current luai_getblock and try to close it
      with visible labels */
   while (i < gl->n) {
-    Labeldesc *gt = &gl->arr[i];
+    luai_Labeldesc *gt = &gl->arr[i];
     if (gt->nactvar > bl->nactvar) {
       if (bl->upval)
         luaK_patchclose(fs, gt->pc, bl->nactvar);
       gt->nactvar = bl->nactvar;
     }
-    if (!findlabel(fs->ls, i))
-      i++;  /* move to next one */
+    if (!luai_findlabel(fs->ls, i))
+      i++;  /* move to luai_next one */
   }
 }
 
 
-static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
+static void luai_enterblock (luai_FuncState *fs, luai_BlockCnt *bl, lu_byte isloop) {
   bl->isloop = isloop;
   bl->nactvar = fs->nactvar;
   bl->firstlabel = fs->ls->dyd->label.n;
@@ -15559,34 +15558,34 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
   bl->upval = 0;
   bl->previous = fs->bl;
   fs->bl = bl;
-  lua_assert(fs->freereg == fs->nactvar);
+  lua_assert(fs->luai_freereg == fs->nactvar);
 }
 
 
 /*
 ** create a label named 'break' to resolve break statements
 */
-static void breaklabel (LexState *ls) {
-  TString *n = luaS_new(ls->L, "break");
-  int l = newlabelentry(ls, &ls->dyd->label, n, 0, ls->fs->pc);
-  findgotos(ls, &ls->dyd->label.arr[l]);
+static void luai_breaklabel (LexState *ls) {
+  luai_TString *n = luaS_new(ls->L, "break");
+  int l = luai_newlabelentry(ls, &ls->dyd->label, n, 0, ls->fs->pc);
+  luai_findgotos(ls, &ls->dyd->label.arr[l]);
 }
 
 /*
 ** generates an error for an undefined 'goto'; choose appropriate
 ** message when label name is a reserved word (which can only be 'break')
 */
-static l_noret undefgoto (LexState *ls, Labeldesc *gt) {
-  const char *msg = isreserved(gt->name)
+static luai_l_noret luai_undefgoto (LexState *ls, luai_Labeldesc *gt) {
+  const char *msg = luai_isreserved(gt->name)
                     ? "<%s> at line %d not inside a loop"
                     : "no visible label '%s' for <goto> at line %d";
   msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
-  semerror(ls, msg);
+  luai_semerror(ls, msg);
 }
 
 
-static void leaveblock (FuncState *fs) {
-  BlockCnt *bl = fs->bl;
+static void luai_leaveblock (luai_FuncState *fs) {
+  luai_BlockCnt *bl = fs->bl;
   LexState *ls = fs->ls;
   if (bl->previous && bl->upval) {
     /* create a 'jump to here' to close upvalues */
@@ -15595,30 +15594,30 @@ static void leaveblock (FuncState *fs) {
     luaK_patchtohere(fs, j);
   }
   if (bl->isloop)
-    breaklabel(ls);  /* close pending breaks */
+    luai_breaklabel(ls);  /* close pending breaks */
   fs->bl = bl->previous;
-  removevars(fs, bl->nactvar);
+  luai_removevars(fs, bl->nactvar);
   lua_assert(bl->nactvar == fs->nactvar);
-  fs->freereg = fs->nactvar;  /* free registers */
+  fs->luai_freereg = fs->nactvar;  /* free registers */
   ls->dyd->label.n = bl->firstlabel;  /* remove local labels */
-  if (bl->previous)  /* inner block? */
-    movegotosout(fs, bl);  /* update pending gotos to outer block */
-  else if (bl->firstgoto < ls->dyd->gt.n)  /* pending gotos in outer block? */
-    undefgoto(ls, &ls->dyd->gt.arr[bl->firstgoto]);  /* error */
+  if (bl->previous)  /* inner luai_getblock? */
+    luai_movegotosout(fs, bl);  /* update pending gotos to outer luai_getblock */
+  else if (bl->firstgoto < ls->dyd->gt.n)  /* pending gotos in outer luai_getblock? */
+    luai_undefgoto(ls, &ls->dyd->gt.arr[bl->firstgoto]);  /* error */
 }
 
 
 /*
 ** adds a new prototype into list of prototypes
 */
-static Proto *addprototype (LexState *ls) {
-  Proto *clp;
+static luai_Proto *luai_addprototype (LexState *ls) {
+  luai_Proto *clp;
   lua_State *L = ls->L;
-  FuncState *fs = ls->fs;
-  Proto *f = fs->f;  /* prototype of current function */
+  luai_FuncState *fs = ls->fs;
+  luai_Proto *f = fs->f;  /* prototype of current function */
   if (fs->np >= f->sizep) {
     int oldsize = f->sizep;
-    luaM_growvector(L, f->p, fs->np, f->sizep, Proto *, MAXARG_Bx, "functions");
+    luaM_growvector(L, f->p, fs->np, f->sizep, luai_Proto *, luai_MAXARG_Bx, "functions");
     while (oldsize < f->sizep)
       f->p[oldsize++] = NULL;
   }
@@ -15630,26 +15629,26 @@ static Proto *addprototype (LexState *ls) {
 
 /*
 ** codes instruction to create new closure in parent function.
-** The OP_CLOSURE instruction must use the last available register,
-** so that, if it invokes the GC, the GC knows which registers
+** The luai_OP_CLOSURE instruction must use the last available register,
+** so that, if it invokes the LUAI_GC, the LUAI_GC knows which registers
 ** are in use at that time.
 */
-static void codeclosure (LexState *ls, expdesc *v) {
-  FuncState *fs = ls->fs->prev;
-  init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np - 1));
+static void luai_codeclosure (LexState *ls, luai_expdesc *v) {
+  luai_FuncState *fs = ls->fs->prev;
+  luai_init_exp(v, LUAI_VRELOCABLE, luaK_codeABx(fs, luai_OP_CLOSURE, 0, fs->np - 1));
   luaK_exp2nextreg(fs, v);  /* fix it at the last register */
 }
 
 
-static void open_func (LexState *ls, FuncState *fs, BlockCnt *bl) {
-  Proto *f;
+static void luai_open_func (LexState *ls, luai_FuncState *fs, luai_BlockCnt *bl) {
+  luai_Proto *f;
   fs->prev = ls->fs;  /* linked list of luai_funcstates */
   fs->ls = ls;
   ls->fs = fs;
   fs->pc = 0;
   fs->lasttarget = 0;
-  fs->jpc = NO_JUMP;
-  fs->freereg = 0;
+  fs->jpc = LUAI_NO_JUMP;
+  fs->luai_freereg = 0;
   fs->nk = 0;
   fs->np = 0;
   fs->nups = 0;
@@ -15660,23 +15659,23 @@ static void open_func (LexState *ls, FuncState *fs, BlockCnt *bl) {
   f = fs->f;
   f->source = ls->source;
   f->maxstacksize = 2;  /* registers 0/1 are always valid */
-  enterblock(fs, bl, 0);
+  luai_enterblock(fs, bl, 0);
 }
 
 
-static void close_func (LexState *ls) {
+static void luai_close_func (LexState *ls) {
   lua_State *L = ls->L;
-  FuncState *fs = ls->fs;
-  Proto *f = fs->f;
+  luai_FuncState *fs = ls->fs;
+  luai_Proto *f = fs->f;
   luaK_ret(fs, 0, 0);  /* final return */
-  leaveblock(fs);
+  luai_leaveblock(fs);
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, int);
   f->sizelineinfo = fs->pc;
-  luaM_reallocvector(L, f->k, f->sizek, fs->nk, TValue);
+  luaM_reallocvector(L, f->k, f->sizek, fs->nk, luai_TValue);
   f->sizek = fs->nk;
-  luaM_reallocvector(L, f->p, f->sizep, fs->np, Proto *);
+  luaM_reallocvector(L, f->p, f->sizep, fs->np, luai_Proto *);
   f->sizep = fs->np;
   luaM_reallocvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
   f->sizelocvars = fs->nlocvars;
@@ -15695,50 +15694,50 @@ static void close_func (LexState *ls) {
 
 
 /*
-** check whether current token is in the follow set of a block.
+** luai_check whether current token is in the follow set of a luai_getblock.
 ** 'until' closes syntactical blocks, but do not close scope,
 ** so it is handled in separate.
 */
-static int block_follow (LexState *ls, int withuntil) {
+static int luai_block_follow (LexState *ls, int withuntil) {
   switch (ls->t.token) {
-    case TK_ELSE: case TK_ELSEIF:
-    case TK_END: case TK_EOS:
+    case LUAI_TK_ELSE: case LUAI_TK_ELSEIF:
+    case LUAI_TK_END: case LUAI_TK_EOS:
       return 1;
-    case TK_UNTIL: return withuntil;
+    case LUAI_TK_UNTIL: return withuntil;
     default: return 0;
   }
 }
 
 
-static void statlist (LexState *ls) {
-  /* statlist -> { stat [';'] } */
-  while (!block_follow(ls, 1)) {
-    if (ls->t.token == TK_RETURN) {
-      statement(ls);
-      return;  /* 'return' must be last statement */
+static void luai_statlist (LexState *ls) {
+  /* luai_statlist -> { stat [';'] } */
+  while (!luai_block_follow(ls, 1)) {
+    if (ls->t.token == LUAI_TK_RETURN) {
+      luai_statement(ls);
+      return;  /* 'return' must be last luai_statement */
     }
-    statement(ls);
+    luai_statement(ls);
   }
 }
 
 
-static void fieldsel (LexState *ls, expdesc *v) {
-  /* fieldsel -> ['.' | ':'] NAME */
-  FuncState *fs = ls->fs;
-  expdesc key;
+static void luai_fieldsel (LexState *ls, luai_expdesc *v) {
+  /* luai_fieldsel -> ['.' | ':'] NAME */
+  luai_FuncState *fs = ls->fs;
+  luai_expdesc key;
   luaK_exp2anyregup(fs, v);
   luaX_next(ls);  /* skip the dot or colon */
-  checkname(ls, &key);
+  luai_checkname(ls, &key);
   luaK_indexed(fs, v, &key);
 }
 
 
-static void yindex (LexState *ls, expdesc *v) {
-  /* index -> '[' expr ']' */
+static void luai_yindex (LexState *ls, luai_expdesc *v) {
+  /* index -> '[' luai_expr ']' */
   luaX_next(ls);  /* skip the '[' */
-  expr(ls, v);
+  luai_expr(ls, v);
   luaK_exp2val(ls->fs, v);
-  checknext(ls, ']');
+  luai_checknext(ls, ']');
 }
 
 
@@ -15749,48 +15748,48 @@ static void yindex (LexState *ls, expdesc *v) {
 */
 
 
-struct ConsControl {
-  expdesc v;  /* last list item read */
-  expdesc *t;  /* table descriptor */
+struct luai_ConsControl {
+  luai_expdesc v;  /* last list item read */
+  luai_expdesc *t;  /* table descriptor */
   int nh;  /* total number of 'record' elements */
   int na;  /* total number of array elements */
   int tostore;  /* number of array elements pending to be stored */
 };
 
 
-static void recfield (LexState *ls, struct ConsControl *cc) {
-  /* recfield -> (NAME | '['exp1']') = exp1 */
-  FuncState *fs = ls->fs;
-  int reg = ls->fs->freereg;
-  expdesc key, val;
+static void luai_recfield (LexState *ls, struct luai_ConsControl *cc) {
+  /* luai_recfield -> (NAME | '['exp1']') = exp1 */
+  luai_FuncState *fs = ls->fs;
+  int reg = ls->fs->luai_freereg;
+  luai_expdesc key, val;
   int rkkey;
-  if (ls->t.token == TK_NAME) {
-    checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
-    checkname(ls, &key);
+  if (ls->t.token == LUAI_TK_NAME) {
+    luai_checklimit(fs, cc->nh, MAX_INT, "items in a luai_constructor");
+    luai_checkname(ls, &key);
   }
   else  /* ls->t.token == '[' */
-    yindex(ls, &key);
+    luai_yindex(ls, &key);
   cc->nh++;
-  checknext(ls, '=');
+  luai_checknext(ls, '=');
   rkkey = luaK_exp2RK(fs, &key);
-  expr(ls, &val);
-  luaK_codeABC(fs, OP_SETTABLE, cc->t->u.info, rkkey, luaK_exp2RK(fs, &val));
-  fs->freereg = reg;  /* free registers */
+  luai_expr(ls, &val);
+  luaK_codeABC(fs, luai_OP_SETTABLE, cc->t->u.info, rkkey, luaK_exp2RK(fs, &val));
+  fs->luai_freereg = reg;  /* free registers */
 }
 
 
-static void closelistfield (FuncState *fs, struct ConsControl *cc) {
-  if (cc->v.k == VVOID) return;  /* there is no list item */
+static void luai_closelistfield (luai_FuncState *fs, struct luai_ConsControl *cc) {
+  if (cc->v.k == LUAI_VVOID) return;  /* there is no list item */
   luaK_exp2nextreg(fs, &cc->v);
-  cc->v.k = VVOID;
-  if (cc->tostore == LFIELDS_PER_FLUSH) {
+  cc->v.k = LUAI_VVOID;
+  if (cc->tostore == LUAI_LFIELDS_PER_FLUSH) {
     luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);  /* flush */
     cc->tostore = 0;  /* no more items pending */
   }
 }
 
 
-static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
+static void luai_lastlistfield (luai_FuncState *fs, struct luai_ConsControl *cc) {
   if (cc->tostore == 0) return;
   if (hasmultret(cc->v.k)) {
     luaK_setmultret(fs, &cc->v);
@@ -15798,178 +15797,178 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
     cc->na--;  /* do not count last expression (unknown number of elements) */
   }
   else {
-    if (cc->v.k != VVOID)
+    if (cc->v.k != LUAI_VVOID)
       luaK_exp2nextreg(fs, &cc->v);
     luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);
   }
 }
 
 
-static void listfield (LexState *ls, struct ConsControl *cc) {
+static void luai_listfield (LexState *ls, struct luai_ConsControl *cc) {
   /* listfield -> exp */
-  expr(ls, &cc->v);
-  checklimit(ls->fs, cc->na, MAX_INT, "items in a constructor");
+  luai_expr(ls, &cc->v);
+  luai_checklimit(ls->fs, cc->na, MAX_INT, "items in a luai_constructor");
   cc->na++;
   cc->tostore++;
 }
 
 
-static void field (LexState *ls, struct ConsControl *cc) {
-  /* field -> listfield | recfield */
+static void luai_field (LexState *ls, struct luai_ConsControl *cc) {
+  /* luai_field -> listfield | luai_recfield */
   switch(ls->t.token) {
-    case TK_NAME: {  /* may be 'listfield' or 'recfield' */
+    case LUAI_TK_NAME: {  /* may be 'listfield' or 'luai_recfield' */
       if (luaX_lookahead(ls) != '=')  /* expression? */
-        listfield(ls, cc);
+        luai_listfield(ls, cc);
       else
-        recfield(ls, cc);
+        luai_recfield(ls, cc);
       break;
     }
     case '[': {
-      recfield(ls, cc);
+      luai_recfield(ls, cc);
       break;
     }
     default: {
-      listfield(ls, cc);
+      luai_listfield(ls, cc);
       break;
     }
   }
 }
 
 
-static void constructor (LexState *ls, expdesc *t) {
-  /* constructor -> '{' [ field { sep field } [sep] ] '}'
+static void luai_constructor (LexState *ls, luai_expdesc *t) {
+  /* luai_constructor -> '{' [ luai_field { sep luai_field } [sep] ] '}'
      sep -> ',' | ';' */
-  FuncState *fs = ls->fs;
+  luai_FuncState *fs = ls->fs;
   int line = ls->linenumber;
-  int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
-  struct ConsControl cc;
+  int pc = luaK_codeABC(fs, luai_OP_NEWTABLE, 0, 0, 0);
+  struct luai_ConsControl cc;
   cc.na = cc.nh = cc.tostore = 0;
   cc.t = t;
-  init_exp(t, VRELOCABLE, pc);
-  init_exp(&cc.v, VVOID, 0);  /* no value (yet) */
+  luai_init_exp(t, LUAI_VRELOCABLE, pc);
+  luai_init_exp(&cc.v, LUAI_VVOID, 0);  /* no value (yet) */
   luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top */
-  checknext(ls, '{');
+  luai_checknext(ls, '{');
   do {
-    lua_assert(cc.v.k == VVOID || cc.tostore > 0);
+    lua_assert(cc.v.k == LUAI_VVOID || cc.tostore > 0);
     if (ls->t.token == '}') break;
-    closelistfield(fs, &cc);
-    field(ls, &cc);
-  } while (testnext(ls, ',') || testnext(ls, ';'));
+    luai_closelistfield(fs, &cc);
+    luai_field(ls, &cc);
+  } while (luai_testnext(ls, ',') || luai_testnext(ls, ';'));
   luai_check_match(ls, '}', '{', line);
-  lastlistfield(fs, &cc);
-  SETARG_B(fs->f->code[pc], luaO_int2fb(cc.na)); /* set initial array size */
-  SETARG_C(fs->f->code[pc], luaO_int2fb(cc.nh));  /* set initial table size */
+  luai_lastlistfield(fs, &cc);
+  luai_SETARG_B(fs->f->code[pc], luaO_int2fb(cc.na)); /* set initial array size */
+  luai_SETARG_C(fs->f->code[pc], luaO_int2fb(cc.nh));  /* set initial table size */
 }
 
 /* }====================================================================== */
 
 
 
-static void parlist (LexState *ls) {
-  /* parlist -> [ param { ',' param } ] */
-  FuncState *fs = ls->fs;
-  Proto *f = fs->f;
+static void luai_parlist (LexState *ls) {
+  /* luai_parlist -> [ param { ',' param } ] */
+  luai_FuncState *fs = ls->fs;
+  luai_Proto *f = fs->f;
   int nparams = 0;
   f->is_vararg = 0;
-  if (ls->t.token != ')') {  /* is 'parlist' not empty? */
+  if (ls->t.token != ')') {  /* is 'luai_parlist' not empty? */
     do {
       switch (ls->t.token) {
-        case TK_NAME: {  /* param -> NAME */
-          new_localvar(ls, luai_str_checkname(ls));
+        case LUAI_TK_NAME: {  /* param -> NAME */
+          luai_new_localvar(ls, luai_str_checkname(ls));
           nparams++;
           break;
         }
-        case TK_DOTS: {  /* param -> '...' */
+        case LUAI_TK_DOTS: {  /* param -> '...' */
           luaX_next(ls);
           f->is_vararg = 1;  /* declared vararg */
           break;
         }
         default: luaX_syntaxerror(ls, "<name> or '...' expected");
       }
-    } while (!f->is_vararg && testnext(ls, ','));
+    } while (!f->is_vararg && luai_testnext(ls, ','));
   }
-  adjustlocalvars(ls, nparams);
-  f->numparams = cast_byte(fs->nactvar);
+  luai_ajustlocalvars(ls, nparams);
+  f->numparams = luai_cast_byte(fs->nactvar);
   luaK_reserveregs(fs, fs->nactvar);  /* reserve register for parameters */
 }
 
 
-static void body (LexState *ls, expdesc *e, int ismethod, int line) {
-  /* body ->  '(' parlist ')' block END */
-  FuncState new_fs;
-  BlockCnt bl;
-  new_fs.f = addprototype(ls);
+static void luai_body (LexState *ls, luai_expdesc *e, int ismethod, int line) {
+  /* luai_body ->  '(' luai_parlist ')' luai_getblock END */
+  luai_FuncState new_fs;
+  luai_BlockCnt bl;
+  new_fs.f = luai_addprototype(ls);
   new_fs.f->linedefined = line;
-  open_func(ls, &new_fs, &bl);
-  checknext(ls, '(');
+  luai_open_func(ls, &new_fs, &bl);
+  luai_checknext(ls, '(');
   if (ismethod) {
-    new_localvarliteral(ls, "self");  /* create 'self' parameter */
-    adjustlocalvars(ls, 1);
+    luai_new_localvarliteral(ls, "self");  /* create 'self' parameter */
+    luai_ajustlocalvars(ls, 1);
   }
-  parlist(ls);
-  checknext(ls, ')');
-  statlist(ls);
+  luai_parlist(ls);
+  luai_checknext(ls, ')');
+  luai_statlist(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
-  luai_check_match(ls, TK_END, TK_FUNCTION, line);
-  codeclosure(ls, e);
-  close_func(ls);
+  luai_check_match(ls, LUAI_TK_END, LUAI_TK_FUNCTION, line);
+  luai_codeclosure(ls, e);
+  luai_close_func(ls);
 }
 
 
-static int explist (LexState *ls, expdesc *v) {
-  /* explist -> expr { ',' expr } */
+static int luai_explist (LexState *ls, luai_expdesc *v) {
+  /* luai_explist -> luai_expr { ',' luai_expr } */
   int n = 1;  /* at least one expression */
-  expr(ls, v);
-  while (testnext(ls, ',')) {
+  luai_expr(ls, v);
+  while (luai_testnext(ls, ',')) {
     luaK_exp2nextreg(ls->fs, v);
-    expr(ls, v);
+    luai_expr(ls, v);
     n++;
   }
   return n;
 }
 
 
-static void funcargs (LexState *ls, expdesc *f, int line) {
-  FuncState *fs = ls->fs;
-  expdesc args;
+static void luai_funcargs (LexState *ls, luai_expdesc *f, int line) {
+  luai_FuncState *fs = ls->fs;
+  luai_expdesc args;
   int base, nparams;
   switch (ls->t.token) {
-    case '(': {  /* funcargs -> '(' [ explist ] ')' */
+    case '(': {  /* luai_funcargs -> '(' [ luai_explist ] ')' */
       luaX_next(ls);
       if (ls->t.token == ')')  /* arg list is empty? */
-        args.k = VVOID;
+        args.k = LUAI_VVOID;
       else {
-        explist(ls, &args);
+        luai_explist(ls, &args);
         luaK_setmultret(fs, &args);
       }
       luai_check_match(ls, ')', '(', line);
       break;
     }
-    case '{': {  /* funcargs -> constructor */
-      constructor(ls, &args);
+    case '{': {  /* luai_funcargs -> luai_constructor */
+      luai_constructor(ls, &args);
       break;
     }
-    case TK_STRING: {  /* funcargs -> STRING */
-      codestring(ls, &args, ls->t.seminfo.ts);
-      luaX_next(ls);  /* must use 'seminfo' before 'next' */
+    case LUAI_TK_STRING: {  /* luai_funcargs -> STRING */
+      luai_codestring(ls, &args, ls->t.seminfo.ts);
+      luaX_next(ls);  /* must use 'seminfo' before 'luai_next' */
       break;
     }
     default: {
       luaX_syntaxerror(ls, "function arguments expected");
     }
   }
-  lua_assert(f->k == VNONRELOC);
+  lua_assert(f->k == LUAI_VNONRELOC);
   base = f->u.info;  /* base register for call */
   if (hasmultret(args.k))
     nparams = LUA_MULTRET;  /* open call */
   else {
-    if (args.k != VVOID)
+    if (args.k != LUAI_VVOID)
       luaK_exp2nextreg(fs, &args);  /* close last argument */
-    nparams = fs->freereg - (base+1);
+    nparams = fs->luai_freereg - (base+1);
   }
-  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
+  luai_init_exp(f, LUAI_VCALL, luaK_codeABC(fs, luai_OP_CALL, base, nparams+1, 2));
   luaK_fixline(fs, line);
-  fs->freereg = base+1;  /* call remove function and arguments and leaves
+  fs->luai_freereg = base+1;  /* call remove function and arguments and leaves
                             (unless changed) one result */
 }
 
@@ -15983,19 +15982,19 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
 */
 
 
-static void primaryexp (LexState *ls, expdesc *v) {
-  /* primaryexp -> NAME | '(' expr ')' */
+static void luai_primaryexp (LexState *ls, luai_expdesc *v) {
+  /* luai_primaryexp -> NAME | '(' luai_expr ')' */
   switch (ls->t.token) {
     case '(': {
       int line = ls->linenumber;
       luaX_next(ls);
-      expr(ls, v);
+      luai_expr(ls, v);
       luai_check_match(ls, ')', '(', line);
       luaK_dischargevars(ls->fs, v);
       return;
     }
-    case TK_NAME: {
-      singlevar(ls, v);
+    case LUAI_TK_NAME: {
+      luai_singlevar(ls, v);
       return;
     }
     default: {
@@ -16005,36 +16004,36 @@ static void primaryexp (LexState *ls, expdesc *v) {
 }
 
 
-static void suffixedexp (LexState *ls, expdesc *v) {
-  /* suffixedexp ->
-       primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
-  FuncState *fs = ls->fs;
+static void luai_suffixedexp (LexState *ls, luai_expdesc *v) {
+  /* luai_suffixedexp ->
+       luai_primaryexp { '.' NAME | '[' exp ']' | ':' NAME luai_funcargs | luai_funcargs } */
+  luai_FuncState *fs = ls->fs;
   int line = ls->linenumber;
-  primaryexp(ls, v);
+  luai_primaryexp(ls, v);
   for (;;) {
     switch (ls->t.token) {
-      case '.': {  /* fieldsel */
-        fieldsel(ls, v);
+      case '.': {  /* luai_fieldsel */
+        luai_fieldsel(ls, v);
         break;
       }
       case '[': {  /* '[' exp1 ']' */
-        expdesc key;
+        luai_expdesc key;
         luaK_exp2anyregup(fs, v);
-        yindex(ls, &key);
+        luai_yindex(ls, &key);
         luaK_indexed(fs, v, &key);
         break;
       }
-      case ':': {  /* ':' NAME funcargs */
-        expdesc key;
+      case ':': {  /* ':' NAME luai_funcargs */
+        luai_expdesc key;
         luaX_next(ls);
-        checkname(ls, &key);
+        luai_checkname(ls, &key);
         luaK_self(fs, v, &key);
-        funcargs(ls, v, line);
+        luai_funcargs(ls, v, line);
         break;
       }
-      case '(': case TK_STRING: case '{': {  /* funcargs */
+      case '(': case LUAI_TK_STRING: case '{': {  /* luai_funcargs */
         luaK_exp2nextreg(fs, v);
-        funcargs(ls, v, line);
+        luai_funcargs(ls, v, line);
         break;
       }
       default: return;
@@ -16043,54 +16042,54 @@ static void suffixedexp (LexState *ls, expdesc *v) {
 }
 
 
-static void simpleexp (LexState *ls, expdesc *v) {
-  /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
-                  constructor | FUNCTION body | suffixedexp */
+static void luai_simpleexp (LexState *ls, luai_expdesc *v) {
+  /* luai_simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
+                  luai_constructor | FUNCTION luai_body | luai_suffixedexp */
   switch (ls->t.token) {
-    case TK_FLT: {
-      init_exp(v, VKFLT, 0);
+    case LUAI_TK_FLT: {
+      luai_init_exp(v, LUAI_VKFLT, 0);
       v->u.nval = ls->t.seminfo.r;
       break;
     }
-    case TK_INT: {
-      init_exp(v, VKINT, 0);
+    case LUAI_TK_INT: {
+      luai_init_exp(v, LUAI_VKINT, 0);
       v->u.ival = ls->t.seminfo.i;
       break;
     }
-    case TK_STRING: {
-      codestring(ls, v, ls->t.seminfo.ts);
+    case LUAI_TK_STRING: {
+      luai_codestring(ls, v, ls->t.seminfo.ts);
       break;
     }
-    case TK_NIL: {
-      init_exp(v, VNIL, 0);
+    case LUAI_TK_NIL: {
+      luai_init_exp(v, LUAI_VNIL, 0);
       break;
     }
-    case TK_TRUE: {
-      init_exp(v, VTRUE, 0);
+    case LUAI_TK_TRUE: {
+      luai_init_exp(v, LUAI_VTRUE, 0);
       break;
     }
-    case TK_FALSE: {
-      init_exp(v, VFALSE, 0);
+    case LUAI_TK_FALSE: {
+      luai_init_exp(v, LUAI_VFALSE, 0);
       break;
     }
-    case TK_DOTS: {  /* vararg */
-      FuncState *fs = ls->fs;
+    case LUAI_TK_DOTS: {  /* vararg */
+      luai_FuncState *fs = ls->fs;
       luai_check_condition(ls, fs->f->is_vararg,
                       "cannot use '...' outside a vararg function");
-      init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 1, 0));
+      luai_init_exp(v, LUAI_VVARARG, luaK_codeABC(fs, luai_OP_VARARG, 0, 1, 0));
       break;
     }
-    case '{': {  /* constructor */
-      constructor(ls, v);
+    case '{': {  /* luai_constructor */
+      luai_constructor(ls, v);
       return;
     }
-    case TK_FUNCTION: {
+    case LUAI_TK_FUNCTION: {
       luaX_next(ls);
-      body(ls, v, 0, ls->linenumber);
+      luai_body(ls, v, 0, ls->linenumber);
       return;
     }
     default: {
-      suffixedexp(ls, v);
+      luai_suffixedexp(ls, v);
       return;
     }
   }
@@ -16098,41 +16097,41 @@ static void simpleexp (LexState *ls, expdesc *v) {
 }
 
 
-static UnOpr getunopr (int op) {
+static laui_UnOpr luai_getunopr (int op) {
   switch (op) {
-    case TK_NOT: return OPR_NOT;
-    case '-': return OPR_MINUS;
-    case '~': return OPR_BNOT;
-    case '#': return OPR_LEN;
-    default: return OPR_NOUNOPR;
+    case LUAI_TK_NOT: return LUAI_OPRNOT;
+    case '-': return LUAI_OPRMINUS;
+    case '~': return LUAI_OPRBNOT;
+    case '#': return LUAI_OPRLEN;
+    default: return LUAI_OPRNOUNOPR;
   }
 }
 
 
-static BinOpr getbinopr (int op) {
+static luai_BinOpr getbinopr (int op) {
   switch (op) {
-    case '+': return OPR_ADD;
-    case '-': return OPR_SUB;
-    case '*': return OPR_MUL;
-    case '%': return OPR_MOD;
-    case '^': return OPR_POW;
-    case '/': return OPR_DIV;
-    case TK_IDIV: return OPR_IDIV;
-    case '&': return OPR_BAND;
-    case '|': return OPR_BOR;
-    case '~': return OPR_BXOR;
-    case TK_SHL: return OPR_SHL;
-    case TK_SHR: return OPR_SHR;
-    case TK_CONCAT: return OPR_CONCAT;
-    case TK_NE: return OPR_NE;
-    case TK_EQ: return OPR_EQ;
-    case '<': return OPR_LT;
-    case TK_LE: return OPR_LE;
-    case '>': return OPR_GT;
-    case TK_GE: return OPR_GE;
-    case TK_AND: return OPR_AND;
-    case TK_OR: return OPR_OR;
-    default: return OPR_NOBINOPR;
+    case '+': return LUAI_OPRADD;
+    case '-': return LUAI_OPRSUB;
+    case '*': return LUAI_OPRMUL;
+    case '%': return LUAI_OPRMOD;
+    case '^': return LUAI_OPRPOW;
+    case '/': return LUAI_OPRDIV;
+    case LUAI_TK_IDIV: return LUAI_OPRIDIV;
+    case '&': return LUAI_OPRBAND;
+    case '|': return LUAI_OPRBOR;
+    case '~': return LUAI_OPRBXOR;
+    case LUAI_TK_SHL: return LUAI_OPRSHL;
+    case LUAI_TK_SHR: return LUAI_OPRSHR;
+    case LUAI_TK_CONCAT: return LUAI_OPRCONCAT;
+    case LUAI_TK_NE: return LUAI_OPRNE;
+    case LUAI_TK_EQ: return LUAI_OPREQ;
+    case '<': return LUAI_OPRLT;
+    case LUAI_TK_LE: return LUAI_OPRLE;
+    case '>': return LUAI_OPRGT;
+    case LUAI_TK_GE: return LUAI_OPRGE;
+    case LUAI_TK_AND: return LUAI_OPRAND;
+    case LUAI_TK_OR: return LUAI_OPROR;
+    default: return LUAI_OPRNOBINOPR;
   }
 }
 
@@ -16157,26 +16156,26 @@ static const struct {
 
 
 /*
-** subexpr -> (simpleexp | unop subexpr) { binop subexpr }
+** subexpr -> (luai_simpleexp | unop subexpr) { binop subexpr }
 ** where 'binop' is any binary operator with a priority higher than 'limit'
 */
-static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
-  BinOpr op;
-  UnOpr uop;
-  enterlevel(ls);
-  uop = getunopr(ls->t.token);
-  if (uop != OPR_NOUNOPR) {
+static luai_BinOpr subexpr (LexState *ls, luai_expdesc *v, int limit) {
+  luai_BinOpr op;
+  laui_UnOpr uop;
+  luai_enterlevel(ls);
+  uop = luai_getunopr(ls->t.token);
+  if (uop != LUAI_OPRNOUNOPR) {
     int line = ls->linenumber;
     luaX_next(ls);
     subexpr(ls, v, UNARY_PRIORITY);
     luaK_prefix(ls->fs, uop, v, line);
   }
-  else simpleexp(ls, v);
+  else luai_simpleexp(ls, v);
   /* expand while operators have priorities higher than 'limit' */
   op = getbinopr(ls->t.token);
-  while (op != OPR_NOBINOPR && priority[op].left > limit) {
-    expdesc v2;
-    BinOpr nextop;
+  while (op != LUAI_OPRNOBINOPR && priority[op].left > limit) {
+    luai_expdesc v2;
+    luai_BinOpr nextop;
     int line = ls->linenumber;
     luaX_next(ls);
     luaK_infix(ls->fs, op, v);
@@ -16185,12 +16184,12 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
     luaK_posfix(ls->fs, op, v, &v2, line);
     op = nextop;
   }
-  leavelevel(ls);
+  luai_leavelevel(ls);
   return op;  /* return first untreated operator */
 }
 
 
-static void expr (LexState *ls, expdesc *v) {
+static void luai_expr (LexState *ls, luai_expdesc *v) {
   subexpr(ls, v, 0);
 }
 
@@ -16205,95 +16204,95 @@ static void expr (LexState *ls, expdesc *v) {
 */
 
 
-static void block (LexState *ls) {
-  /* block -> statlist */
-  FuncState *fs = ls->fs;
-  BlockCnt bl;
-  enterblock(fs, &bl, 0);
-  statlist(ls);
-  leaveblock(fs);
+static void luai_getblock (LexState *ls) {
+  /* luai_getblock -> luai_statlist */
+  luai_FuncState *fs = ls->fs;
+  luai_BlockCnt bl;
+  luai_enterblock(fs, &bl, 0);
+  luai_statlist(ls);
+  luai_leaveblock(fs);
 }
 
 
 /*
 ** structure to chain all variables in the left-hand side of an
-** assignment
+** luai_assignment
 */
-struct LHS_assign {
-  struct LHS_assign *prev;
-  expdesc v;  /* variable (global, local, upvalue, or indexed) */
+struct luai_LHS_assign {
+  struct luai_LHS_assign *prev;
+  luai_expdesc v;  /* variable (global, local, upvalue, or indexed) */
 };
 
 
 /*
-** check whether, in an assignment to an upvalue/local variable, the
-** upvalue/local variable is begin used in a previous assignment to a
-** table. If so, save original upvalue/local value in a safe place and
-** use this safe copy in the previous assignment.
+** luai_check whether, in an luai_assignment to an upvalue/local variable, the
+** upvalue/local variable is begin used in a previous luai_assignment to a
+** table. If so, luai_save original upvalue/local value in a safe place and
+** use this safe copy in the previous luai_assignment.
 */
-static void luai_check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
-  FuncState *fs = ls->fs;
-  int extra = fs->freereg;  /* eventual position to save local variable */
+static void luai_check_conflict (LexState *ls, struct luai_LHS_assign *lh, luai_expdesc *v) {
+  luai_FuncState *fs = ls->fs;
+  int extra = fs->luai_freereg;  /* eventual position to luai_save local variable */
   int conflict = 0;
-  for (; lh; lh = lh->prev) {  /* check all previous assignments */
-    if (lh->v.k == VINDEXED) {  /* assigning to a table? */
+  for (; lh; lh = lh->prev) {  /* luai_check all previous assignments */
+    if (lh->v.k == LUAI_VINDEXED) {  /* assigning to a table? */
       /* table is the upvalue/local being assigned now? */
       if (lh->v.u.ind.vt == v->k && lh->v.u.ind.t == v->u.info) {
         conflict = 1;
-        lh->v.u.ind.vt = VLOCAL;
-        lh->v.u.ind.t = extra;  /* previous assignment will use safe copy */
+        lh->v.u.ind.vt = LUAI_VLOCAL;
+        lh->v.u.ind.t = extra;  /* previous luai_assignment will use safe copy */
       }
       /* index is the local being assigned? (index cannot be upvalue) */
-      if (v->k == VLOCAL && lh->v.u.ind.idx == v->u.info) {
+      if (v->k == LUAI_VLOCAL && lh->v.u.ind.idx == v->u.info) {
         conflict = 1;
-        lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
+        lh->v.u.ind.idx = extra;  /* previous luai_assignment will use safe copy */
       }
     }
   }
   if (conflict) {
     /* copy upvalue/local value to a temporary (in position 'extra') */
-    OpCode op = (v->k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
+    luai_OpCode op = (v->k == LUAI_VLOCAL) ? luai_OP_MOVE : luai_OP_GETUPVAL;
     luaK_codeABC(fs, op, extra, v->u.info, 0);
     luaK_reserveregs(fs, 1);
   }
 }
 
 
-static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
-  expdesc e;
-  luai_check_condition(ls, vkisvar(lh->v.k), "syntax error");
-  if (testnext(ls, ',')) {  /* assignment -> ',' suffixedexp assignment */
-    struct LHS_assign nv;
+static void luai_assignment (LexState *ls, struct luai_LHS_assign *lh, int nvars) {
+  luai_expdesc e;
+  luai_check_condition(ls, luai_vkisvar(lh->v.k), "syntax error");
+  if (luai_testnext(ls, ',')) {  /* luai_assignment -> ',' luai_suffixedexp luai_assignment */
+    struct luai_LHS_assign nv;
     nv.prev = lh;
-    suffixedexp(ls, &nv.v);
-    if (nv.v.k != VINDEXED)
+    luai_suffixedexp(ls, &nv.v);
+    if (nv.v.k != LUAI_VINDEXED)
       luai_check_conflict(ls, lh, &nv.v);
-    checklimit(ls->fs, nvars + ls->L->nCcalls, LUAI_MAXCCALLS,
+    luai_checklimit(ls->fs, nvars + ls->L->nCcalls, LUAI_MAXCCALLS,
                     "C levels");
-    assignment(ls, &nv, nvars+1);
+    luai_assignment(ls, &nv, nvars+1);
   }
-  else {  /* assignment -> '=' explist */
+  else {  /* luai_assignment -> '=' luai_explist */
     int nexps;
-    checknext(ls, '=');
-    nexps = explist(ls, &e);
+    luai_checknext(ls, '=');
+    nexps = luai_explist(ls, &e);
     if (nexps != nvars)
-      adjust_assign(ls, nvars, nexps, &e);
+      luai_adjust_assign(ls, nvars, nexps, &e);
     else {
       luaK_setoneret(ls->fs, &e);  /* close last expression */
       luaK_storevar(ls->fs, &lh->v, &e);
       return;  /* avoid default */
     }
   }
-  init_exp(&e, VNONRELOC, ls->fs->freereg-1);  /* default assignment */
+  luai_init_exp(&e, LUAI_VNONRELOC, ls->fs->luai_freereg-1);  /* default luai_assignment */
   luaK_storevar(ls->fs, &lh->v, &e);
 }
 
 
 static int cond (LexState *ls) {
   /* cond -> exp */
-  expdesc v;
-  expr(ls, &v);  /* read condition */
-  if (v.k == VNIL) v.k = VFALSE;  /* 'falses' are all equal here */
+  luai_expdesc v;
+  luai_expr(ls, &v);  /* read condition */
+  if (v.k == LUAI_VNIL) v.k = LUAI_VFALSE;  /* 'falses' are all equal here */
   luaK_goiftrue(ls->fs, &v);
   return v.f;
 }
@@ -16301,28 +16300,28 @@ static int cond (LexState *ls) {
 
 static void gotostat (LexState *ls, int pc) {
   int line = ls->linenumber;
-  TString *label;
+  luai_TString *label;
   int g;
-  if (testnext(ls, TK_GOTO))
+  if (luai_testnext(ls, LUAI_TK_GOTO))
     label = luai_str_checkname(ls);
   else {
     luaX_next(ls);  /* skip break */
     label = luaS_new(ls->L, "break");
   }
-  g = newlabelentry(ls, &ls->dyd->gt, label, line, pc);
-  findlabel(ls, g);  /* close it if label already defined */
+  g = luai_newlabelentry(ls, &ls->dyd->gt, label, line, pc);
+  luai_findlabel(ls, g);  /* close it if label already defined */
 }
 
 
-/* check for repeated labels on the same block */
-static void checkrepeated (FuncState *fs, Labellist *ll, TString *label) {
+/* luai_check for repeated labels on the same luai_getblock */
+static void checkrepeated (luai_FuncState *fs, luai_Labellist *ll, luai_TString *label) {
   int i;
   for (i = fs->bl->firstlabel; i < ll->n; i++) {
     if (eqstr(label, ll->arr[i].name)) {
       const char *msg = luaO_pushfstring(fs->ls->L,
                           "label '%s' already defined on line %d",
                           getstr(label), ll->arr[i].line);
-      semerror(fs->ls, msg);
+      luai_semerror(fs->ls, msg);
     }
   }
 }
@@ -16330,147 +16329,147 @@ static void checkrepeated (FuncState *fs, Labellist *ll, TString *label) {
 
 /* skip no-op statements */
 static void skipnoopstat (LexState *ls) {
-  while (ls->t.token == ';' || ls->t.token == TK_DBCOLON)
-    statement(ls);
+  while (ls->t.token == ';' || ls->t.token == LUAI_TK_DBCOLON)
+    luai_statement(ls);
 }
 
 
-static void labelstat (LexState *ls, TString *label, int line) {
+static void labelstat (LexState *ls, luai_TString *label, int line) {
   /* label -> '::' NAME '::' */
-  FuncState *fs = ls->fs;
-  Labellist *ll = &ls->dyd->label;
+  luai_FuncState *fs = ls->fs;
+  luai_Labellist *ll = &ls->dyd->label;
   int l;  /* index of new label being created */
-  checkrepeated(fs, ll, label);  /* check for repeated labels */
-  checknext(ls, TK_DBCOLON);  /* skip double colon */
+  checkrepeated(fs, ll, label);  /* luai_check for repeated labels */
+  luai_checknext(ls, LUAI_TK_DBCOLON);  /* skip double colon */
   /* create new entry for this label */
-  l = newlabelentry(ls, ll, label, line, luaK_getlabel(fs));
+  l = luai_newlabelentry(ls, ll, label, line, luaK_getlabel(fs));
   skipnoopstat(ls);  /* skip other no-op statements */
-  if (block_follow(ls, 0)) {  /* label is last no-op statement in the block? */
+  if (luai_block_follow(ls, 0)) {  /* label is last no-op luai_statement in the luai_getblock? */
     /* assume that locals are already out of scope */
     ll->arr[l].nactvar = fs->bl->nactvar;
   }
-  findgotos(ls, &ll->arr[l]);
+  luai_findgotos(ls, &ll->arr[l]);
 }
 
 
 static void whilestat (LexState *ls, int line) {
-  /* whilestat -> WHILE cond DO block END */
-  FuncState *fs = ls->fs;
+  /* whilestat -> WHILE cond DO luai_getblock END */
+  luai_FuncState *fs = ls->fs;
   int whileinit;
   int condexit;
-  BlockCnt bl;
+  luai_BlockCnt bl;
   luaX_next(ls);  /* skip WHILE */
   whileinit = luaK_getlabel(fs);
   condexit = cond(ls);
-  enterblock(fs, &bl, 1);
-  checknext(ls, TK_DO);
-  block(ls);
+  luai_enterblock(fs, &bl, 1);
+  luai_checknext(ls, LUAI_TK_DO);
+  luai_getblock(ls);
   luaK_jumpto(fs, whileinit);
-  luai_check_match(ls, TK_END, TK_WHILE, line);
-  leaveblock(fs);
+  luai_check_match(ls, LUAI_TK_END, LUAI_TK_WHILE, line);
+  luai_leaveblock(fs);
   luaK_patchtohere(fs, condexit);  /* false conditions finish the loop */
 }
 
 
 static void repeatstat (LexState *ls, int line) {
-  /* repeatstat -> REPEAT block UNTIL cond */
+  /* repeatstat -> REPEAT luai_getblock UNTIL cond */
   int condexit;
-  FuncState *fs = ls->fs;
+  luai_FuncState *fs = ls->fs;
   int repeat_init = luaK_getlabel(fs);
-  BlockCnt bl1, bl2;
-  enterblock(fs, &bl1, 1);  /* loop block */
-  enterblock(fs, &bl2, 0);  /* scope block */
+  luai_BlockCnt bl1, bl2;
+  luai_enterblock(fs, &bl1, 1);  /* loop luai_getblock */
+  luai_enterblock(fs, &bl2, 0);  /* scope luai_getblock */
   luaX_next(ls);  /* skip REPEAT */
-  statlist(ls);
-  luai_check_match(ls, TK_UNTIL, TK_REPEAT, line);
-  condexit = cond(ls);  /* read condition (inside scope block) */
+  luai_statlist(ls);
+  luai_check_match(ls, LUAI_TK_UNTIL, LUAI_TK_REPEAT, line);
+  condexit = cond(ls);  /* read condition (inside scope luai_getblock) */
   if (bl2.upval)  /* upvalues? */
     luaK_patchclose(fs, condexit, bl2.nactvar);
-  leaveblock(fs);  /* finish scope */
+  luai_leaveblock(fs);  /* finish scope */
   luaK_patchlist(fs, condexit, repeat_init);  /* close the loop */
-  leaveblock(fs);  /* finish loop */
+  luai_leaveblock(fs);  /* finish loop */
 }
 
 
 static int exp1 (LexState *ls) {
-  expdesc e;
+  luai_expdesc e;
   int reg;
-  expr(ls, &e);
+  luai_expr(ls, &e);
   luaK_exp2nextreg(ls->fs, &e);
-  lua_assert(e.k == VNONRELOC);
+  lua_assert(e.k == LUAI_VNONRELOC);
   reg = e.u.info;
   return reg;
 }
 
 
 static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
-  /* forbody -> DO block */
-  BlockCnt bl;
-  FuncState *fs = ls->fs;
+  /* forbody -> DO luai_getblock */
+  luai_BlockCnt bl;
+  luai_FuncState *fs = ls->fs;
   int prep, endfor;
-  adjustlocalvars(ls, 3);  /* control variables */
-  checknext(ls, TK_DO);
-  prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
-  enterblock(fs, &bl, 0);  /* scope for declared variables */
-  adjustlocalvars(ls, nvars);
+  luai_ajustlocalvars(ls, 3);  /* control variables */
+  luai_checknext(ls, LUAI_TK_DO);
+  prep = isnum ? luaK_codeAsBx(fs, luai_OP_FORPREP, base, LUAI_NO_JUMP) : luaK_jump(fs);
+  luai_enterblock(fs, &bl, 0);  /* scope for declared variables */
+  luai_ajustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
-  block(ls);
-  leaveblock(fs);  /* end of scope for declared variables */
+  luai_getblock(ls);
+  luai_leaveblock(fs);  /* end of scope for declared variables */
   luaK_patchtohere(fs, prep);
   if (isnum)  /* numeric for? */
-    endfor = luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP);
+    endfor = luaK_codeAsBx(fs, luai_OP_FORLOOP, base, LUAI_NO_JUMP);
   else {  /* generic for */
-    luaK_codeABC(fs, OP_TFORCALL, base, 0, nvars);
+    luaK_codeABC(fs, luai_OP_TFORCALL, base, 0, nvars);
     luaK_fixline(fs, line);
-    endfor = luaK_codeAsBx(fs, OP_TFORLOOP, base + 2, NO_JUMP);
+    endfor = luaK_codeAsBx(fs, luai_OP_TFORLOOP, base + 2, LUAI_NO_JUMP);
   }
   luaK_patchlist(fs, endfor, prep + 1);
   luaK_fixline(fs, line);
 }
 
 
-static void fornum (LexState *ls, TString *varname, int line) {
+static void fornum (LexState *ls, luai_TString *varname, int line) {
   /* fornum -> NAME = exp1,exp1[,exp1] forbody */
-  FuncState *fs = ls->fs;
-  int base = fs->freereg;
-  new_localvarliteral(ls, "(for index)");
-  new_localvarliteral(ls, "(for limit)");
-  new_localvarliteral(ls, "(for step)");
-  new_localvar(ls, varname);
-  checknext(ls, '=');
+  luai_FuncState *fs = ls->fs;
+  int base = fs->luai_freereg;
+  luai_new_localvarliteral(ls, "(for index)");
+  luai_new_localvarliteral(ls, "(for limit)");
+  luai_new_localvarliteral(ls, "(for step)");
+  luai_new_localvar(ls, varname);
+  luai_checknext(ls, '=');
   exp1(ls);  /* initial value */
-  checknext(ls, ',');
+  luai_checknext(ls, ',');
   exp1(ls);  /* limit */
-  if (testnext(ls, ','))
+  if (luai_testnext(ls, ','))
     exp1(ls);  /* optional step */
   else {  /* default step = 1 */
-    luaK_codek(fs, fs->freereg, luaK_intK(fs, 1));
+    luaK_codek(fs, fs->luai_freereg, luaK_intK(fs, 1));
     luaK_reserveregs(fs, 1);
   }
   forbody(ls, base, line, 1, 1);
 }
 
 
-static void forlist (LexState *ls, TString *indexname) {
-  /* forlist -> NAME {,NAME} IN explist forbody */
-  FuncState *fs = ls->fs;
-  expdesc e;
+static void forlist (LexState *ls, luai_TString *indexname) {
+  /* forlist -> NAME {,NAME} IN luai_explist forbody */
+  luai_FuncState *fs = ls->fs;
+  luai_expdesc e;
   int nvars = 4;  /* gen, state, control, plus at least one declared var */
   int line;
-  int base = fs->freereg;
+  int base = fs->luai_freereg;
   /* create control variables */
-  new_localvarliteral(ls, "(for generator)");
-  new_localvarliteral(ls, "(for state)");
-  new_localvarliteral(ls, "(for control)");
+  luai_new_localvarliteral(ls, "(for generator)");
+  luai_new_localvarliteral(ls, "(for state)");
+  luai_new_localvarliteral(ls, "(for control)");
   /* create declared variables */
-  new_localvar(ls, indexname);
-  while (testnext(ls, ',')) {
-    new_localvar(ls, luai_str_checkname(ls));
+  luai_new_localvar(ls, indexname);
+  while (luai_testnext(ls, ',')) {
+    luai_new_localvar(ls, luai_str_checkname(ls));
     nvars++;
   }
-  checknext(ls, TK_IN);
+  luai_checknext(ls, LUAI_TK_IN);
   line = ls->linenumber;
-  adjust_assign(ls, 3, explist(ls, &e), &e);
+  luai_adjust_assign(ls, 3, luai_explist(ls, &e), &e);
   luaK_checkstack(fs, 3);  /* extra space to call generator */
   forbody(ls, base, line, nvars - 3, 0);
 }
@@ -16478,158 +16477,158 @@ static void forlist (LexState *ls, TString *indexname) {
 
 static void forstat (LexState *ls, int line) {
   /* forstat -> FOR (fornum | forlist) END */
-  FuncState *fs = ls->fs;
-  TString *varname;
-  BlockCnt bl;
-  enterblock(fs, &bl, 1);  /* scope for loop and control variables */
+  luai_FuncState *fs = ls->fs;
+  luai_TString *varname;
+  luai_BlockCnt bl;
+  luai_enterblock(fs, &bl, 1);  /* scope for loop and control variables */
   luaX_next(ls);  /* skip 'for' */
   varname = luai_str_checkname(ls);  /* first variable name */
   switch (ls->t.token) {
     case '=': fornum(ls, varname, line); break;
-    case ',': case TK_IN: forlist(ls, varname); break;
+    case ',': case LUAI_TK_IN: forlist(ls, varname); break;
     default: luaX_syntaxerror(ls, "'=' or 'in' expected");
   }
-  luai_check_match(ls, TK_END, TK_FOR, line);
-  leaveblock(fs);  /* loop scope ('break' jumps to this point) */
+  luai_check_match(ls, LUAI_TK_END, LUAI_TK_FOR, line);
+  luai_leaveblock(fs);  /* loop scope ('break' jumps to this point) */
 }
 
 
 static void test_then_block (LexState *ls, int *escapelist) {
-  /* test_then_block -> [IF | ELSEIF] cond THEN block */
-  BlockCnt bl;
-  FuncState *fs = ls->fs;
-  expdesc v;
+  /* test_then_block -> [IF | ELSEIF] cond THEN luai_getblock */
+  luai_BlockCnt bl;
+  luai_FuncState *fs = ls->fs;
+  luai_expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
   luaX_next(ls);  /* skip IF or ELSEIF */
-  expr(ls, &v);  /* read condition */
-  checknext(ls, TK_THEN);
-  if (ls->t.token == TK_GOTO || ls->t.token == TK_BREAK) {
+  luai_expr(ls, &v);  /* read condition */
+  luai_checknext(ls, LUAI_TK_THEN);
+  if (ls->t.token == LUAI_TK_GOTO || ls->t.token == LUAI_TK_BREAK) {
     luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
-    enterblock(fs, &bl, 0);  /* must enter block before 'goto' */
+    luai_enterblock(fs, &bl, 0);  /* must enter luai_getblock before 'goto' */
     gotostat(ls, v.t);  /* handle goto/break */
     skipnoopstat(ls);  /* skip other no-op statements */
-    if (block_follow(ls, 0)) {  /* 'goto' is the entire block? */
-      leaveblock(fs);
+    if (luai_block_follow(ls, 0)) {  /* 'goto' is the entire luai_getblock? */
+      luai_leaveblock(fs);
       return;  /* and that is it */
     }
     else  /* must skip over 'then' part if condition is false */
       jf = luaK_jump(fs);
   }
   else {  /* regular case (not goto/break) */
-    luaK_goiftrue(ls->fs, &v);  /* skip over block if condition is false */
-    enterblock(fs, &bl, 0);
+    luaK_goiftrue(ls->fs, &v);  /* skip over luai_getblock if condition is false */
+    luai_enterblock(fs, &bl, 0);
     jf = v.f;
   }
-  statlist(ls);  /* 'then' part */
-  leaveblock(fs);
-  if (ls->t.token == TK_ELSE ||
-      ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
+  luai_statlist(ls);  /* 'then' part */
+  luai_leaveblock(fs);
+  if (ls->t.token == LUAI_TK_ELSE ||
+      ls->t.token == LUAI_TK_ELSEIF)  /* followed by 'else'/'elseif'? */
     luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
   luaK_patchtohere(fs, jf);
 }
 
 
-static void ifstat (LexState *ls, int line) {
-  /* ifstat -> IF cond THEN block {ELSEIF cond THEN block} [ELSE block] END */
-  FuncState *fs = ls->fs;
-  int escapelist = NO_JUMP;  /* exit list for finished parts */
-  test_then_block(ls, &escapelist);  /* IF cond THEN block */
-  while (ls->t.token == TK_ELSEIF)
-    test_then_block(ls, &escapelist);  /* ELSEIF cond THEN block */
-  if (testnext(ls, TK_ELSE))
-    block(ls);  /* 'else' part */
-  luai_check_match(ls, TK_END, TK_IF, line);
+static void luai_ifstat (LexState *ls, int line) {
+  /* luai_ifstat -> IF cond THEN luai_getblock {ELSEIF cond THEN luai_getblock} [ELSE luai_getblock] END */
+  luai_FuncState *fs = ls->fs;
+  int escapelist = LUAI_NO_JUMP;  /* exit list for finished parts */
+  test_then_block(ls, &escapelist);  /* IF cond THEN luai_getblock */
+  while (ls->t.token == LUAI_TK_ELSEIF)
+    test_then_block(ls, &escapelist);  /* ELSEIF cond THEN luai_getblock */
+  if (luai_testnext(ls, LUAI_TK_ELSE))
+    luai_getblock(ls);  /* 'else' part */
+  luai_check_match(ls, LUAI_TK_END, LUAI_TK_IF, line);
   luaK_patchtohere(fs, escapelist);  /* patch escape list to 'if' end */
 }
 
 
-static void localfunc (LexState *ls) {
-  expdesc b;
-  FuncState *fs = ls->fs;
-  new_localvar(ls, luai_str_checkname(ls));  /* new local variable */
-  adjustlocalvars(ls, 1);  /* enter its scope */
-  body(ls, &b, 0, ls->linenumber);  /* function created in next register */
+static void luai_localfunc (LexState *ls) {
+  luai_expdesc b;
+  luai_FuncState *fs = ls->fs;
+  luai_new_localvar(ls, luai_str_checkname(ls));  /* new local variable */
+  luai_ajustlocalvars(ls, 1);  /* enter its scope */
+  luai_body(ls, &b, 0, ls->linenumber);  /* function created in luai_next register */
   /* debug information will only see the variable after this point! */
-  getlocvar(fs, b.u.info)->startpc = fs->pc;
+  luai_getlocvar(fs, b.u.info)->startpc = fs->pc;
 }
 
 
 static void localstat (LexState *ls) {
-  /* stat -> LOCAL NAME {',' NAME} ['=' explist] */
+  /* stat -> LOCAL NAME {',' NAME} ['=' luai_explist] */
   int nvars = 0;
   int nexps;
-  expdesc e;
+  luai_expdesc e;
   do {
-    new_localvar(ls, luai_str_checkname(ls));
+    luai_new_localvar(ls, luai_str_checkname(ls));
     nvars++;
-  } while (testnext(ls, ','));
-  if (testnext(ls, '='))
-    nexps = explist(ls, &e);
+  } while (luai_testnext(ls, ','));
+  if (luai_testnext(ls, '='))
+    nexps = luai_explist(ls, &e);
   else {
-    e.k = VVOID;
+    e.k = LUAI_VVOID;
     nexps = 0;
   }
-  adjust_assign(ls, nvars, nexps, &e);
-  adjustlocalvars(ls, nvars);
+  luai_adjust_assign(ls, nvars, nexps, &e);
+  luai_ajustlocalvars(ls, nvars);
 }
 
 
-static int funcname (LexState *ls, expdesc *v) {
-  /* funcname -> NAME {fieldsel} [':' NAME] */
+static int luai_funcname (LexState *ls, luai_expdesc *v) {
+  /* luai_funcname -> NAME {luai_fieldsel} [':' NAME] */
   int ismethod = 0;
-  singlevar(ls, v);
+  luai_singlevar(ls, v);
   while (ls->t.token == '.')
-    fieldsel(ls, v);
+    luai_fieldsel(ls, v);
   if (ls->t.token == ':') {
     ismethod = 1;
-    fieldsel(ls, v);
+    luai_fieldsel(ls, v);
   }
   return ismethod;
 }
 
 
 static void luai_funcstat (LexState *ls, int line) {
-  /* luai_funcstat -> FUNCTION funcname body */
+  /* luai_funcstat -> FUNCTION luai_funcname luai_body */
   int ismethod;
-  expdesc v, b;
+  luai_expdesc v, b;
   luaX_next(ls);  /* skip FUNCTION */
-  ismethod = funcname(ls, &v);
-  body(ls, &b, ismethod, line);
+  ismethod = luai_funcname(ls, &v);
+  luai_body(ls, &b, ismethod, line);
   luaK_storevar(ls->fs, &v, &b);
   luaK_fixline(ls->fs, line);  /* definition "happens" in the first line */
 }
 
 
-static void exprstat (LexState *ls) {
-  /* stat -> func | assignment */
-  FuncState *fs = ls->fs;
-  struct LHS_assign v;
-  suffixedexp(ls, &v.v);
-  if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
+static void luai_exprstat (LexState *ls) {
+  /* stat -> func | luai_assignment */
+  luai_FuncState *fs = ls->fs;
+  struct luai_LHS_assign v;
+  luai_suffixedexp(ls, &v.v);
+  if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> luai_assignment ? */
     v.prev = NULL;
-    assignment(ls, &v, 1);
+    luai_assignment(ls, &v, 1);
   }
   else {  /* stat -> func */
-    luai_check_condition(ls, v.v.k == VCALL, "syntax error");
-    SETARG_C(getinstruction(fs, &v.v), 1);  /* call statement uses no results */
+    luai_check_condition(ls, v.v.k == LUAI_VCALL, "syntax error");
+    luai_SETARG_C(luai_getinstruction(fs, &v.v), 1);  /* call luai_statement uses no results */
   }
 }
 
 
 static void retstat (LexState *ls) {
-  /* stat -> RETURN [explist] [';'] */
-  FuncState *fs = ls->fs;
-  expdesc e;
+  /* stat -> RETURN [luai_explist] [';'] */
+  luai_FuncState *fs = ls->fs;
+  luai_expdesc e;
   int first, nret;  /* registers with returned values */
-  if (block_follow(ls, 1) || ls->t.token == ';')
+  if (luai_block_follow(ls, 1) || ls->t.token == ';')
     first = nret = 0;  /* return no values */
   else {
-    nret = explist(ls, &e);  /* optional return values */
+    nret = luai_explist(ls, &e);  /* optional return values */
     if (hasmultret(e.k)) {
       luaK_setmultret(fs, &e);
-      if (e.k == VCALL && nret == 1) {  /* tail call? */
-        SET_OPCODE(getinstruction(fs,&e), OP_TAILCALL);
-        lua_assert(GETARG_A(getinstruction(fs,&e)) == fs->nactvar);
+      if (e.k == LUAI_VCALL && nret == 1) {  /* tail call? */
+        luai_SETOPCODE(luai_getinstruction(fs,&e), luai_OP_TAILCALL);
+        lua_assert(luai_GETARG_A(luai_getinstruction(fs,&e)) == fs->nactvar);
       }
       first = fs->nactvar;
       nret = LUA_MULTRET;  /* return all values */
@@ -16640,81 +16639,81 @@ static void retstat (LexState *ls) {
       else {
         luaK_exp2nextreg(fs, &e);  /* values must go to the stack */
         first = fs->nactvar;  /* return all active values */
-        lua_assert(nret == fs->freereg - first);
+        lua_assert(nret == fs->luai_freereg - first);
       }
     }
   }
   luaK_ret(fs, first, nret);
-  testnext(ls, ';');  /* skip optional semicolon */
+  luai_testnext(ls, ';');  /* skip optional semicolon */
 }
 
 
-static void statement (LexState *ls) {
+static void luai_statement (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
-  enterlevel(ls);
+  luai_enterlevel(ls);
   switch (ls->t.token) {
-    case ';': {  /* stat -> ';' (empty statement) */
+    case ';': {  /* stat -> ';' (empty luai_statement) */
       luaX_next(ls);  /* skip ';' */
       break;
     }
-    case TK_IF: {  /* stat -> ifstat */
-      ifstat(ls, line);
+    case LUAI_TK_IF: {  /* stat -> luai_ifstat */
+      luai_ifstat(ls, line);
       break;
     }
-    case TK_WHILE: {  /* stat -> whilestat */
+    case LUAI_TK_WHILE: {  /* stat -> whilestat */
       whilestat(ls, line);
       break;
     }
-    case TK_DO: {  /* stat -> DO block END */
+    case LUAI_TK_DO: {  /* stat -> DO luai_getblock END */
       luaX_next(ls);  /* skip DO */
-      block(ls);
-      luai_check_match(ls, TK_END, TK_DO, line);
+      luai_getblock(ls);
+      luai_check_match(ls, LUAI_TK_END, LUAI_TK_DO, line);
       break;
     }
-    case TK_FOR: {  /* stat -> forstat */
+    case LUAI_TK_FOR: {  /* stat -> forstat */
       forstat(ls, line);
       break;
     }
-    case TK_REPEAT: {  /* stat -> repeatstat */
+    case LUAI_TK_REPEAT: {  /* stat -> repeatstat */
       repeatstat(ls, line);
       break;
     }
-    case TK_FUNCTION: {  /* stat -> luai_funcstat */
+    case LUAI_TK_FUNCTION: {  /* stat -> luai_funcstat */
       luai_funcstat(ls, line);
       break;
     }
-    case TK_LOCAL: {  /* stat -> localstat */
+    case LUAI_TK_LOCAL: {  /* stat -> localstat */
       luaX_next(ls);  /* skip LOCAL */
-      if (testnext(ls, TK_FUNCTION))  /* local function? */
-        localfunc(ls);
+      if (luai_testnext(ls, LUAI_TK_FUNCTION))  /* local function? */
+        luai_localfunc(ls);
       else
         localstat(ls);
       break;
     }
-    case TK_DBCOLON: {  /* stat -> label */
+    case LUAI_TK_DBCOLON: {  /* stat -> label */
       luaX_next(ls);  /* skip double colon */
       labelstat(ls, luai_str_checkname(ls), line);
       break;
     }
-    case TK_RETURN: {  /* stat -> retstat */
+    case LUAI_TK_RETURN: {  /* stat -> retstat */
       luaX_next(ls);  /* skip RETURN */
       retstat(ls);
       break;
     }
-    case TK_BREAK:   /* stat -> breakstat */
-    case TK_GOTO: {  /* stat -> 'goto' NAME */
+    case LUAI_TK_BREAK:   /* stat -> breakstat */
+    case LUAI_TK_GOTO: {  /* stat -> 'goto' NAME */
       gotostat(ls, luaK_jump(ls->fs));
       break;
     }
-    default: {  /* stat -> func | assignment */
-      exprstat(ls);
+    default: {  /* stat -> func | luai_assignment */
+      luai_exprstat(ls);
       break;
     }
   }
-  lua_assert(ls->fs->f->maxstacksize >= ls->fs->freereg &&
-             ls->fs->freereg >= ls->fs->nactvar);
-  ls->fs->freereg = ls->fs->nactvar;  /* free registers */
-  leavelevel(ls);
+  lua_assert(ls->fs->f->maxstacksize >= ls->fs->luai_freereg &&
+             ls->fs->luai_freereg >= ls->fs->nactvar);
+  ls->fs->luai_freereg = ls->fs->nactvar;  /* free registers */
+  luai_leavelevel(ls);
 }
 
 /* }====================================================================== */
@@ -16724,24 +16723,24 @@ static void statement (LexState *ls) {
 ** compiles the main function, which is a regular vararg function with an
 ** upvalue named LUA_ENV
 */
-static void mainfunc (LexState *ls, FuncState *fs) {
-  BlockCnt bl;
-  expdesc v;
-  open_func(ls, fs, &bl);
+static void luai_mainfunc (LexState *ls, luai_FuncState *fs) {
+  luai_BlockCnt bl;
+  luai_expdesc v;
+  luai_open_func(ls, fs, &bl);
   fs->f->is_vararg = 1;  /* main function is always declared vararg */
-  init_exp(&v, VLOCAL, 0);  /* create and... */
-  newupvalue(fs, ls->envn, &v);  /* ...set environment upvalue */
+  luai_init_exp(&v, LUAI_VLOCAL, 0);  /* create and... */
+  luai_newupvalue(fs, ls->envn, &v);  /* ...set environment upvalue */
   luaX_next(ls);  /* read first token */
-  statlist(ls);  /* parse main body */
-  check(ls, TK_EOS);
-  close_func(ls);
+  luai_statlist(ls);  /* parse main luai_body */
+  luai_check(ls, LUAI_TK_EOS);
+  luai_close_func(ls);
 }
 
 
 LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
-                       Dyndata *dyd, const char *name, int firstchar) {
+                       luai_Dyndata *dyd, const char *name, int firstchar) {
   LexState lexstate;
-  FuncState luai_funcstate;
+  luai_FuncState luai_funcstate;
   LClosure *cl = luaF_newLclosure(L, 1);  /* create main closure */
   setclLvalue(L, L->top, cl);  /* anchor it (to avoid being collected) */
   luaD_inctop(L);
@@ -16749,13 +16748,13 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   sethvalue(L, L->top, lexstate.h);  /* anchor it */
   luaD_inctop(L);
   luai_funcstate.f = cl->p = luaF_newproto(L);
-  luai_funcstate.f->source = luaS_new(L, name);  /* create and anchor TString */
+  luai_funcstate.f->source = luaS_new(L, name);  /* create and anchor luai_TString */
   lua_assert(iswhite(luai_funcstate.f));  /* do not need barrier here */
   lexstate.buff = buff;
   lexstate.dyd = dyd;
   dyd->actvar.n = dyd->gt.n = dyd->label.n = 0;
   luaX_setinput(L, &lexstate, z, luai_funcstate.f->source, firstchar);
-  mainfunc(&lexstate, &luai_funcstate);
+  luai_mainfunc(&lexstate, &luai_funcstate);
   lua_assert(!luai_funcstate.prev && luai_funcstate.nups == 1 && !lexstate.fs);
   /* all scopes should be correctly finished */
   lua_assert(dyd->actvar.n == 0 && dyd->gt.n == 0 && dyd->label.n == 0);
@@ -16770,7 +16769,7 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
 #endif
 
 #if !defined(LUAI_GCMUL)
-#define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
+#define LUAI_GCMUL	200 /* LUAI_GC runs 'twice the speed' of memory allocation */
 #endif
 
 
@@ -16780,7 +16779,7 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
 */
 #if !defined(luai_makeseed)
 #include <time.h>
-#define luai_makeseed()		cast(unsigned int, time(NULL))
+#define luai_makeseed()		luai_cast(unsigned int, time(NULL))
 #endif
 
 
@@ -16804,7 +16803,7 @@ typedef struct LG {
 
 
 
-#define fromstate(L)	(cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
+#define fromstate(L)	(luai_cast(LX *, luai_cast(lu_byte *, (L)) - offsetof(LX, l)))
 
 
 /*
@@ -16812,7 +16811,7 @@ typedef struct LG {
 ** Layout Randomization (if present) to increase randomness..
 */
 #define addbuff(b,p,e) \
-  { size_t t = cast(size_t, e); \
+  { size_t t = luai_cast(size_t, e); \
     memcpy(b + p, &t, sizeof(t)); p += sizeof(t); }
 
 static unsigned int makeseed (lua_State *L) {
@@ -16829,25 +16828,25 @@ static unsigned int makeseed (lua_State *L) {
 
 
 /*
-** set GCdebt to a new value keeping the value (totalbytes + GCdebt)
+** set LUAI_GCdebt to a new value keeping the value (totalbytes + LUAI_GCdebt)
 ** invariant (and avoiding underflows in 'totalbytes')
 */
-void luaE_setdebt (global_State *g, l_mem debt) {
-  l_mem tb = gettotalbytes(g);
+void luaE_setdebt (global_State *g, luai_l_mem debt) {
+  luai_l_mem tb = gettotalbytes(g);
   lua_assert(tb > 0);
   if (debt < tb - MAX_LMEM)
     debt = tb - MAX_LMEM;  /* will make 'totalbytes == MAX_LMEM' */
   g->totalbytes = tb - debt;
-  g->GCdebt = debt;
+  g->LUAI_GCdebt = debt;
 }
 
 
 CallInfo *luaE_extendCI (lua_State *L) {
   CallInfo *ci = luaM_new(L, CallInfo);
-  lua_assert(L->ci->next == NULL);
-  L->ci->next = ci;
+  lua_assert(L->ci->luai_next == NULL);
+  L->ci->luai_next = ci;
   ci->previous = L->ci;
-  ci->next = NULL;
+  ci->luai_next = NULL;
   L->nci++;
   return ci;
 }
@@ -16858,10 +16857,10 @@ CallInfo *luaE_extendCI (lua_State *L) {
 */
 void luaE_freeCI (lua_State *L) {
   CallInfo *ci = L->ci;
-  CallInfo *next = ci->next;
-  ci->next = NULL;
-  while ((ci = next) != NULL) {
-    next = ci->next;
+  CallInfo *luai_next = ci->luai_next;
+  ci->luai_next = NULL;
+  while ((ci = luai_next) != NULL) {
+    luai_next = ci->luai_next;
     luaM_free(L, ci);
     L->nci--;
   }
@@ -16873,14 +16872,14 @@ void luaE_freeCI (lua_State *L) {
 */
 void luaE_shrinkCI (lua_State *L) {
   CallInfo *ci = L->ci;
-  CallInfo *next2;  /* next's next */
+  CallInfo *next2;  /* luai_next's luai_next */
   /* while there are two nexts */
-  while (ci->next != NULL && (next2 = ci->next->next) != NULL) {
-    luaM_free(L, ci->next);  /* free next */
+  while (ci->luai_next != NULL && (next2 = ci->luai_next->luai_next) != NULL) {
+    luaM_free(L, ci->luai_next);  /* free luai_next */
     L->nci--;
-    ci->next = next2;  /* remove 'next' from the list */
+    ci->luai_next = next2;  /* remove 'luai_next' from the list */
     next2->previous = ci;
-    ci = next2;  /* keep next's next */
+    ci = next2;  /* keep luai_next's luai_next */
   }
 }
 
@@ -16888,7 +16887,7 @@ void luaE_shrinkCI (lua_State *L) {
 static void stack_init (lua_State *L1, lua_State *L) {
   int i; CallInfo *ci;
   /* initialize stack array */
-  L1->stack = luaM_newvector(L, BASIC_STACK_SIZE, TValue);
+  L1->stack = luaM_newvector(L, BASIC_STACK_SIZE, luai_TValue);
   L1->stacksize = BASIC_STACK_SIZE;
   for (i = 0; i < BASIC_STACK_SIZE; i++)
     setnilvalue(L1->stack + i);  /* erase new stack */
@@ -16896,7 +16895,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->stack_last = L1->stack + L1->stacksize - EXTRA_STACK;
   /* initialize first ci */
   ci = &L1->base_ci;
-  ci->next = ci->previous = NULL;
+  ci->luai_next = ci->previous = NULL;
   ci->callstatus = 0;
   ci->func = L1->top;
   setnilvalue(L1->top++);  /* 'function' entry for this 'ci' */
@@ -16919,10 +16918,10 @@ static void freestack (lua_State *L) {
 ** Create registry table and its predefined values
 */
 static void init_registry (lua_State *L, global_State *g) {
-  TValue temp;
+  luai_TValue temp;
   /* create registry */
-  Table *registry = luaH_new(L);
-  sethvalue(L, &g->l_registry, registry);
+  luai_Table *registry = luaH_new(L);
+  sethvalue(L, &g->luai_l_registry, registry);
   luaH_resize(L, registry, LUA_RIDX_LAST, 0);
   /* registry[LUA_RIDX_MAINTHREAD] = L */
   setthvalue(L, &temp, L);  /* temp = L */
@@ -16955,7 +16954,7 @@ static void luai_f_luaopen (lua_State *L, void *ud) {
 ** preinitialize a thread with consistent values without allocating
 ** any memory (to avoid errors)
 */
-static void preinit_thread (lua_State *L, global_State *g) {
+static void luai_preinit_thread (lua_State *L, global_State *g) {
   G(L) = g;
   L->stack = NULL;
   L->ci = NULL;
@@ -16968,7 +16967,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
   L->hookmask = 0;
   L->basehookcount = 0;
   L->allowhook = 1;
-  resethookcount(L);
+  luai_resethookcount(L);
   L->openupval = NULL;
   L->nny = 1;
   L->status = LUA_OK;
@@ -16976,7 +16975,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
 }
 
 
-static void close_state (lua_State *L) {
+static void luai_close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_freeallobjects(L);  /* collect all objects */
@@ -16985,7 +16984,7 @@ static void close_state (lua_State *L) {
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
   freestack(L);
   lua_assert(gettotalbytes(g) == sizeof(LG));
-  (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);  /* free main block */
+  (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);  /* free main luai_getblock */
 }
 
 
@@ -16995,20 +16994,20 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   lua_lock(L);
   luaC_checkGC(L);
   /* create new thread */
-  L1 = &cast(LX *, luaM_newobject(L, LUA_TTHREAD, sizeof(LX)))->l;
+  L1 = &luai_cast(LX *, luaM_newobject(L, LUA_TTHREAD, sizeof(LX)))->l;
   L1->marked = luaC_white(g);
   L1->tt = LUA_TTHREAD;
   /* link it on list 'allgc' */
-  L1->next = g->allgc;
+  L1->luai_next = g->allgc;
   g->allgc = obj2gco(L1);
   /* anchor it on L stack */
   setthvalue(L, L->top, L1);
   api_incr_top(L);
-  preinit_thread(L1, g);
+  luai_preinit_thread(L1, g);
   L1->hookmask = L->hookmask;
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
-  resethookcount(L1);
+  luai_resethookcount(L1);
   /* initialize L1 extra space */
   memcpy(lua_getextraspace(L1), lua_getextraspace(g->mainthread),
          LUA_EXTRASPACE);
@@ -17033,27 +17032,27 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   int i;
   lua_State *L;
   global_State *g;
-  LG *l = cast(LG *, (*f)(ud, NULL, LUA_TTHREAD, sizeof(LG)));
+  LG *l = luai_cast(LG *, (*f)(ud, NULL, LUA_TTHREAD, sizeof(LG)));
   if (l == NULL) return NULL;
   L = &l->l.l;
   g = &l->g;
-  L->next = NULL;
+  L->luai_next = NULL;
   L->tt = LUA_TTHREAD;
   g->currentwhite = bitmask(WHITE0BIT);
   L->marked = luaC_white(g);
-  preinit_thread(L, g);
+  luai_preinit_thread(L, g);
   g->frealloc = f;
   g->ud = ud;
   g->mainthread = L;
   g->seed = makeseed(L);
-  g->gcrunning = 0;  /* no GC while building state */
-  g->GCestimate = 0;
+  g->gcrunning = 0;  /* no LUAI_GC while building state */
+  g->LUAI_GCestimate = 0;
   g->strt.size = g->strt.nuse = 0;
   g->strt.hash = NULL;
-  setnilvalue(&g->l_registry);
+  setnilvalue(&g->luai_l_registry);
   g->panic = NULL;
   g->version = NULL;
-  g->gcstate = GCSpause;
+  g->gcstate = LUAI_GCSpause;
   g->gckind = KGC_NORMAL;
   g->allgc = g->finobj = g->tobefnz = g->fixedgc = NULL;
   g->sweepgc = NULL;
@@ -17061,14 +17060,14 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->weak = g->ephemeron = g->allweak = NULL;
   g->twups = NULL;
   g->totalbytes = sizeof(LG);
-  g->GCdebt = 0;
+  g->LUAI_GCdebt = 0;
   g->gcfinnum = 0;
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, luai_f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */
-    close_state(L);
+    luai_close_state(L);
     L = NULL;
   }
   return L;
@@ -17078,7 +17077,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
 LUA_API void lua_close (lua_State *L) {
   L = G(L)->mainthread;  /* only the main thread can be closed */
   lua_lock(L);
-  close_state(L);
+  luai_close_state(L);
 }
 
 /*__lstring.c__*/
@@ -17098,7 +17097,7 @@ LUA_API void lua_close (lua_State *L) {
 /*
 ** equality for long strings
 */
-int luaS_eqlngstr (TString *a, TString *b) {
+int luaS_eqlngstr (luai_TString *a, luai_TString *b) {
   size_t len = a->u.lnglen;
   lua_assert(a->tt == LUA_TLNGSTR && b->tt == LUA_TLNGSTR);
   return (a == b) ||  /* same instance or... */
@@ -17108,15 +17107,15 @@ int luaS_eqlngstr (TString *a, TString *b) {
 
 
 unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
-  unsigned int h = seed ^ cast(unsigned int, l);
+  unsigned int h = seed ^ luai_cast(unsigned int, l);
   size_t step = (l >> LUAI_HASHLIMIT) + 1;
   for (; l >= step; l -= step)
-    h ^= ((h<<5) + (h>>2) + cast_byte(str[l - 1]));
+    h ^= ((h<<5) + (h>>2) + luai_cast_byte(str[l - 1]));
   return h;
 }
 
 
-unsigned int luaS_hashlongstr (TString *ts) {
+unsigned int luaS_hashlongstr (luai_TString *ts) {
   lua_assert(ts->tt == LUA_TLNGSTR);
   if (ts->extra == 0) {  /* no hash? */
     ts->hash = luaS_hash(getstr(ts), ts->u.lnglen, ts->hash);
@@ -17133,15 +17132,15 @@ void luaS_resize (lua_State *L, int newsize) {
   int i;
   stringtable *tb = &G(L)->strt;
   if (newsize > tb->size) {  /* grow table if needed */
-    luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
+    luaM_reallocvector(L, tb->hash, tb->size, newsize, luai_TString *);
     for (i = tb->size; i < newsize; i++)
       tb->hash[i] = NULL;
   }
-  for (i = 0; i < tb->size; i++) {  /* rehash */
-    TString *p = tb->hash[i];
+  for (i = 0; i < tb->size; i++) {  /* luai_rehash */
+    luai_TString *p = tb->hash[i];
     tb->hash[i] = NULL;
     while (p) {  /* for each node in the list */
-      TString *hnext = p->u.hnext;  /* save next */
+      luai_TString *hnext = p->u.hnext;  /* luai_save luai_next */
       unsigned int h = lmod(p->hash, newsize);  /* new position */
       p->u.hnext = tb->hash[h];  /* chain it */
       tb->hash[h] = p;
@@ -17151,7 +17150,7 @@ void luaS_resize (lua_State *L, int newsize) {
   if (newsize < tb->size) {  /* shrink table if needed */
     /* vanishing slice should be empty */
     lua_assert(tb->hash[newsize] == NULL && tb->hash[tb->size - 1] == NULL);
-    luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
+    luaM_reallocvector(L, tb->hash, tb->size, newsize, luai_TString *);
   }
   tb->size = newsize;
 }
@@ -17191,11 +17190,11 @@ void luaS_init (lua_State *L) {
 /*
 ** creates a new string object
 */
-static TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
-  TString *ts;
-  GCObject *o;
-  size_t totalsize;  /* total size of TString object */
-  totalsize = sizelstring(l);
+static luai_TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
+  luai_TString *ts;
+  LUAI_GCObject *o;
+  size_t totalsize;  /* total size of luai_TString object */
+  totalsize = luai_sizelstring(l);
   o = luaC_newobj(L, tag, totalsize);
   ts = gco2ts(o);
   ts->hash = h;
@@ -17205,16 +17204,16 @@ static TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
 }
 
 
-TString *luaS_createlngstrobj (lua_State *L, size_t l) {
-  TString *ts = createstrobj(L, l, LUA_TLNGSTR, G(L)->seed);
+luai_TString *luaS_createlngstrobj (lua_State *L, size_t l) {
+  luai_TString *ts = createstrobj(L, l, LUA_TLNGSTR, G(L)->seed);
   ts->u.lnglen = l;
   return ts;
 }
 
 
-void luaS_remove (lua_State *L, TString *ts) {
+void luaS_remove (lua_State *L, luai_TString *ts) {
   stringtable *tb = &G(L)->strt;
-  TString **p = &tb->hash[lmod(ts->hash, tb->size)];
+  luai_TString **p = &tb->hash[lmod(ts->hash, tb->size)];
   while (*p != ts)  /* find previous element */
     p = &(*p)->u.hnext;
   *p = (*p)->u.hnext;  /* remove element from its list */
@@ -17225,11 +17224,11 @@ void luaS_remove (lua_State *L, TString *ts) {
 /*
 ** checks whether short string exists and reuses it or creates a new one
 */
-static TString *internshrstr (lua_State *L, const char *str, size_t l) {
-  TString *ts;
+static luai_TString *internshrstr (lua_State *L, const char *str, size_t l) {
+  luai_TString *ts;
   global_State *g = G(L);
   unsigned int h = luaS_hash(str, l, g->seed);
-  TString **list = &g->strt.hash[lmod(h, g->strt.size)];
+  luai_TString **list = &g->strt.hash[lmod(h, g->strt.size)];
   lua_assert(str != NULL);  /* otherwise 'memcmp'/'memcpy' are undefined */
   for (ts = *list; ts != NULL; ts = ts->u.hnext) {
     if (l == ts->shrlen &&
@@ -17246,7 +17245,7 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   }
   ts = createstrobj(L, l, LUA_TSHRSTR, h);
   memcpy(getstr(ts), str, l * sizeof(char));
-  ts->shrlen = cast_byte(l);
+  ts->shrlen = luai_cast_byte(l);
   ts->u.hnext = *list;
   *list = ts;
   g->strt.nuse++;
@@ -17257,12 +17256,12 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
 /*
 ** new string (with explicit length)
 */
-TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
+luai_TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   if (l <= LUAI_MAXSHORTLEN)  /* short string? */
     return internshrstr(L, str, l);
   else {
-    TString *ts;
-    if (l >= (MAX_SIZE - sizeof(TString))/sizeof(char))
+    luai_TString *ts;
+    if (l >= (MAX_SIZE - sizeof(luai_TString))/sizeof(char))
       luaM_toobig(L);
     ts = luaS_createlngstrobj(L, l);
     memcpy(getstr(ts), str, l * sizeof(char));
@@ -17275,12 +17274,12 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 ** Create or reuse a zero-terminated string, first checking in the
 ** cache (using the string address as a key). The cache can contain
 ** only zero-terminated strings, so it is safe to use 'strcmp' to
-** check hits.
+** luai_check hits.
 */
-TString *luaS_new (lua_State *L, const char *str) {
+luai_TString *luaS_new (lua_State *L, const char *str) {
   unsigned int i = point2uint(str) % STRCACHE_N;  /* hash */
   int j;
-  TString **p = G(L)->strcache[i];
+  luai_TString **p = G(L)->strcache[i];
   for (j = 0; j < STRCACHE_M; j++) {
     if (strcmp(str, getstr(p[j])) == 0)  /* hit? */
       return p[j];  /* that is it */
@@ -17296,10 +17295,10 @@ TString *luaS_new (lua_State *L, const char *str) {
 
 Udata *luaS_newudata (lua_State *L, size_t s) {
   Udata *u;
-  GCObject *o;
+  LUAI_GCObject *o;
   if (s > MAX_SIZE - sizeof(Udata))
     luaM_toobig(L);
-  o = luaC_newobj(L, LUA_TUSERDATA, sizeludata(s));
+  o = luaC_newobj(L, LUA_TUSERDATA, luai_sizeludata(s));
   u = gco2u(o);
   u->len = s;
   u->metatable = NULL;
@@ -17519,7 +17518,7 @@ static const char *match (MatchState *ms, const char *s, const char *p);
 #endif
 
 
-#define L_ESC		'%'
+#define LUAI_L_ESC		'%'
 #define SPECIALS	"^$*+?.([%-"
 
 
@@ -17541,7 +17540,7 @@ static int capture_to_close (MatchState *ms) {
 
 static const char *classend (MatchState *ms, const char *p) {
   switch (*p++) {
-    case L_ESC: {
+    case LUAI_L_ESC: {
       if (p == ms->p_end)
         luaL_error(ms->L, "malformed pattern (ends with '%%')");
       return p+1;
@@ -17551,7 +17550,7 @@ static const char *classend (MatchState *ms, const char *p) {
       do {  /* look for a ']' */
         if (p == ms->p_end)
           luaL_error(ms->L, "malformed pattern (missing ']')");
-        if (*(p++) == L_ESC && p < ms->p_end)
+        if (*(p++) == LUAI_L_ESC && p < ms->p_end)
           p++;  /* skip escapes (e.g. '%]') */
       } while (*p != ']');
       return p+1;
@@ -17590,7 +17589,7 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
     p++;  /* skip the '^' */
   }
   while (++p < ec) {
-    if (*p == L_ESC) {
+    if (*p == LUAI_L_ESC) {
       p++;
       if (match_class(c, uchar(*p)))
         return sig;
@@ -17614,7 +17613,7 @@ static int singlematch (MatchState *ms, const char *s, const char *p,
     int c = uchar(*s);
     switch (*p) {
       case '.': return 1;  /* matches any char */
-      case L_ESC: return match_class(c, uchar(*(p+1)));
+      case LUAI_L_ESC: return match_class(c, uchar(*(p+1)));
       case '[': return matchbracketclass(c, p, ep-1);
       default:  return (uchar(*p) == c);
     }
@@ -17726,10 +17725,10 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
       case '$': {
         if ((p + 1) != ms->p_end)  /* is the '$' the last char in pattern? */
           goto dflt;  /* no; go to default */
-        s = (s == ms->src_end) ? s : NULL;  /* check end of string */
+        s = (s == ms->src_end) ? s : NULL;  /* luai_check end of string */
         break;
       }
-      case L_ESC: {  /* escaped sequences not in the format class[*+?-]? */
+      case LUAI_L_ESC: {  /* escaped sequences not in the format class[*+?-]? */
         switch (*(p + 1)) {
           case 'b': {  /* balanced string? */
             s = matchbalance(ms, s, p + 2);
@@ -17743,7 +17742,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
             p += 2;
             if (*p != '[')
               luaL_error(ms->L, "missing '[' after '%%f' in pattern");
-            ep = classend(ms, p);  /* points to what is next */
+            ep = classend(ms, p);  /* points to what is luai_next */
             previous = (s == ms->src_init) ? '\0' : *(s - 1);
             if (!matchbracketclass(uchar(previous), p, ep - 1) &&
                matchbracketclass(uchar(*s), p, ep - 1)) {
@@ -17860,7 +17859,7 @@ static int push_captures (MatchState *ms, const char *s, const char *e) {
 }
 
 
-/* check whether pattern has no special characters */
+/* luai_check whether pattern has no special characters */
 static int nospecials (const char *p, size_t l) {
   size_t upto = 0;
   do {
@@ -17990,13 +17989,13 @@ static void add_s (MatchState *ms, luaL_Buffer *b, const char *s,
   lua_State *L = ms->L;
   const char *news = lua_tolstring(L, 3, &l);
   for (i = 0; i < l; i++) {
-    if (news[i] != L_ESC)
+    if (news[i] != LUAI_L_ESC)
       luaL_addchar(b, news[i]);
     else {
       i++;  /* skip ESC */
       if (!isdigit(uchar(news[i]))) {
-        if (news[i] != L_ESC)
-          luaL_error(L, "invalid use of '%c' in replacement string", L_ESC);
+        if (news[i] != LUAI_L_ESC)
+          luaL_error(L, "invalid use of '%c' in replacement string", LUAI_L_ESC);
         luaL_addchar(b, news[i]);
       }
       else if (news[i] == '0')
@@ -18103,19 +18102,19 @@ static int luai_str_gsub (lua_State *L) {
 
 
 /*
-** Number of bits that goes into the first digit. It can be any value
+** Number of bits that goes into the first luai_digit. It can be any value
 ** between 1 and 4; the following definition tries to align the number
-** to nibble boundaries by making what is left after that first digit a
+** to nibble boundaries by making what is left after that first luai_digit a
 ** multiple of 4.
 */
-#define L_NBFD		((l_mathlim(MANT_DIG) - 1)%4 + 1)
+#define LUAI_L_NBFD		((luai_l_mathlim(MANT_DIG) - 1)%4 + 1)
 
 
 /*
 ** Add integer part of 'x' to buffer and return new 'x'
 */
 static lua_Number adddigit (char *buff, int n, lua_Number x) {
-  lua_Number dd = l_mathop(floor)(x);  /* get integer part from 'x' */
+  lua_Number dd = luai_l_mathop(floor)(x);  /* get integer part from 'x' */
   int d = (int)dd;
   buff[n] = (d < 10 ? d + '0' : d - 10 + 'a');  /* add to buffer */
   return x - dd;  /* return what is left */
@@ -18125,29 +18124,29 @@ static lua_Number adddigit (char *buff, int n, lua_Number x) {
 static int num2straux (char *buff, int sz, lua_Number x) {
   /* if 'inf' or 'NaN', format it like '%g' */
   if (x != x || x == (lua_Number)HUGE_VAL || x == -(lua_Number)HUGE_VAL)
-    return l_sprintf(buff, sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)x);
+    return luai_l_sprintf(buff, sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)x);
   else if (x == 0) {  /* can be -0... */
     /* create "0" or "-0" followed by exponent */
-    return l_sprintf(buff, sz, LUA_NUMBER_FMT "x0p+0", (LUAI_UACNUMBER)x);
+    return luai_l_sprintf(buff, sz, LUA_NUMBER_FMT "x0p+0", (LUAI_UACNUMBER)x);
   }
   else {
     int e;
-    lua_Number m = l_mathop(frexp)(x, &e);  /* 'x' fraction and exponent */
+    lua_Number m = luai_l_mathop(frexp)(x, &e);  /* 'x' fraction and exponent */
     int n = 0;  /* character count */
     if (m < 0) {  /* is number negative? */
       buff[n++] = '-';  /* add signal */
       m = -m;  /* make it positive */
     }
     buff[n++] = '0'; buff[n++] = 'x';  /* add "0x" */
-    m = adddigit(buff, n++, m * (1 << L_NBFD));  /* add first digit */
-    e -= L_NBFD;  /* this digit goes before the radix point */
+    m = adddigit(buff, n++, m * (1 << LUAI_L_NBFD));  /* add first luai_digit */
+    e -= LUAI_L_NBFD;  /* this luai_digit goes before the radix point */
     if (m > 0) {  /* more digits? */
       buff[n++] = lua_getlocaledecpoint();  /* add radix point */
       do {  /* add as many digits as needed */
         m = adddigit(buff, n++, m * 16);
       } while (m > 0);
     }
-    n += l_sprintf(buff + n, sz - n, "p%+d", e);  /* add exponent */
+    n += luai_l_sprintf(buff + n, sz - n, "p%+d", e);  /* add exponent */
     lua_assert(n < sz);
     return n;
   }
@@ -18177,7 +18176,7 @@ static int lua_number2strx (lua_State *L, char *buff, int sz,
 ** is maximum exponent + 1). (99+3+1 then rounded to 120 for "extra
 ** expenses", such as locale-dependent stuff)
 */
-#define LUA_MAX_ITEM        (120 + l_mathlim(MAX_10_EXP))
+#define LUA_MAX_ITEM        (120 + luai_l_mathlim(MAX_10_EXP))
 
 
 /* valid flags in a format specification */
@@ -18199,9 +18198,9 @@ static void luai_addquoted (luaL_Buffer *b, const char *s, size_t len) {
     else if (iscntrl(uchar(*s))) {
       char buff[10];
       if (!isdigit(uchar(*(s+1))))
-        l_sprintf(buff, sizeof(buff), "\\%d", (int)uchar(*s));
+        luai_l_sprintf(buff, sizeof(buff), "\\%d", (int)uchar(*s));
       else
-        l_sprintf(buff, sizeof(buff), "\\%03d", (int)uchar(*s));
+        luai_l_sprintf(buff, sizeof(buff), "\\%03d", (int)uchar(*s));
       luaL_addstring(b, buff);
     }
     else
@@ -18245,7 +18244,7 @@ static void luai_addliteral (lua_State *L, luaL_Buffer *b, int arg) {
         const char *format = (n == LUA_MININTEGER)  /* corner case? */
                            ? "0x%" LUA_INTEGER_FRMLEN "x"  /* use hexa */
                            : LUA_INTEGER_FMT;  /* else use default format */
-        nb = l_sprintf(buff, LUA_MAX_ITEM, format, (LUAI_UACINT)n);
+        nb = luai_l_sprintf(buff, LUA_MAX_ITEM, format, (LUAI_UACINT)n);
       }
       luaL_addsize(b, nb);
       break;
@@ -18306,9 +18305,9 @@ static int luai_str_format (lua_State *L) {
   luaL_Buffer b;
   luaL_buffinit(L, &b);
   while (strfrmt < strfrmt_end) {
-    if (*strfrmt != L_ESC)
+    if (*strfrmt != LUAI_L_ESC)
       luaL_addchar(&b, *strfrmt++);
-    else if (*++strfrmt == L_ESC)
+    else if (*++strfrmt == LUAI_L_ESC)
       luaL_addchar(&b, *strfrmt++);  /* %% */
     else { /* format item */
       char form[LUA_MAX_FORMAT];  /* to store the format ('%...') */
@@ -18319,14 +18318,14 @@ static int luai_str_format (lua_State *L) {
       strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
         case 'c': {
-          nb = l_sprintf(buff, LUA_MAX_ITEM, form, (int)luaL_checkinteger(L, arg));
+          nb = luai_l_sprintf(buff, LUA_MAX_ITEM, form, (int)luaL_checkinteger(L, arg));
           break;
         }
         case 'd': case 'i':
         case 'o': case 'u': case 'x': case 'X': {
           lua_Integer n = luaL_checkinteger(L, arg);
           addlenmod(form, LUA_INTEGER_FRMLEN);
-          nb = l_sprintf(buff, LUA_MAX_ITEM, form, (LUAI_UACINT)n);
+          nb = luai_l_sprintf(buff, LUA_MAX_ITEM, form, (LUAI_UACINT)n);
           break;
         }
         case 'a': case 'A':
@@ -18338,7 +18337,7 @@ static int luai_str_format (lua_State *L) {
         case 'g': case 'G': {
           lua_Number n = luaL_checknumber(L, arg);
           addlenmod(form, LUA_NUMBER_FRMLEN);
-          nb = l_sprintf(buff, LUA_MAX_ITEM, form, (LUAI_UACNUMBER)n);
+          nb = luai_l_sprintf(buff, LUA_MAX_ITEM, form, (LUAI_UACNUMBER)n);
           break;
         }
         case 'q': {
@@ -18357,7 +18356,7 @@ static int luai_str_format (lua_State *L) {
               luaL_addvalue(&b);  /* keep entire string */
             }
             else {  /* format the string into 'buff' */
-              nb = l_sprintf(buff, LUA_MAX_ITEM, form, s);
+              nb = luai_l_sprintf(buff, LUA_MAX_ITEM, form, s);
               lua_pop(L, 1);  /* remove result from 'luaL_tolstring' */
             }
           }
@@ -18412,65 +18411,65 @@ static const union {
 
 
 /* dummy structure to get native alignment requirements */
-struct cD {
+struct luai_cD {
   char c;
   union { double d; void *p; lua_Integer i; lua_Number n; } u;
 };
 
-#define MAXALIGN	(offsetof(struct cD, u))
+#define LUAI_MAXALIGN	(offsetof(struct luai_cD, u))
 
 
 /*
 ** Union for serializing floats
 */
-typedef union Ftypes {
+typedef union luai_Ftypes {
   float f;
   double d;
   lua_Number n;
   char buff[5 * sizeof(lua_Number)];  /* enough for any float type */
-} Ftypes;
+} luai_Ftypes;
 
 
 /*
 ** information to luai_pack/luai_unpack stuff
 */
-typedef struct Header {
+typedef struct luai_Header {
   lua_State *L;
   int islittle;
   int maxalign;
-} Header;
+} luai_Header;
 
 
 /*
 ** options for luai_pack/luai_unpack
 */
-typedef enum KOption {
-  Kint,		/* signed integers */
-  Kuint,	/* unsigned integers */
-  Kfloat,	/* floating-point numbers */
-  Kchar,	/* fixed-length strings */
-  Kstring,	/* strings with prefixed length */
-  Kzstr,	/* zero-terminated strings */
-  Kpadding,	/* padding */
-  Kpaddalign,	/* padding for alignment */
-  Knop		/* no-op (configuration or spaces) */
-} KOption;
+typedef enum luai_KOption {
+  luai_Kint,		/* signed integers */
+  luai_Kuint,	/* unsigned integers */
+  luai_Kfloat,	/* floating-point numbers */
+  luai_Kchar,	/* fixed-length strings */
+  luai_Kstring,	/* strings with prefixed length */
+  luai_Kzstr,	/* zero-terminated strings */
+  luai_Kpadding,	/* padding */
+  luai_Kpaddalign,	/* padding for alignment */
+  luai_Knop		/* no-op (configuration or spaces) */
+} luai_KOption;
 
 
 /*
 ** Read an integer numeral from string 'fmt' or return 'df' if
 ** there is no numeral
 */
-static int digit (int c) { return '0' <= c && c <= '9'; }
+static int luai_digit (int c) { return '0' <= c && c <= '9'; }
 
-static int getnum (const char **fmt, int df) {
-  if (!digit(**fmt))  /* no number? */
+static int luai_getnum (const char **fmt, int df) {
+  if (!luai_digit(**fmt))  /* no number? */
     return df;  /* return default value */
   else {
     int a = 0;
     do {
       a = a*10 + (*((*fmt)++) - '0');
-    } while (digit(**fmt) && a <= ((int)MAXSIZE - 9)/10);
+    } while (luai_digit(**fmt) && a <= ((int)MAXSIZE - 9)/10);
     return a;
   }
 }
@@ -18480,8 +18479,8 @@ static int getnum (const char **fmt, int df) {
 ** Read an integer numeral and raises an error if it is larger
 ** than the maximum size for integers.
 */
-static int getnumlimit (Header *h, const char **fmt, int df) {
-  int sz = getnum(fmt, df);
+static int luai_getnumlimit (luai_Header *h, const char **fmt, int df) {
+  int sz = luai_getnum(fmt, df);
   if (sz > LUA_MAXINTSIZE || sz <= 0)
     luaL_error(h->L, "integral size (%d) out of limits [1,%d]",
                      sz, LUA_MAXINTSIZE);
@@ -18490,9 +18489,9 @@ static int getnumlimit (Header *h, const char **fmt, int df) {
 
 
 /*
-** Initialize Header
+** Initialize luai_Header
 */
-static void initheader (lua_State *L, Header *h) {
+static void luai_initheader (lua_State *L, luai_Header *h) {
   h->L = L;
   h->islittle = luai_nativeendian.little;
   h->maxalign = 1;
@@ -18500,64 +18499,64 @@ static void initheader (lua_State *L, Header *h) {
 
 
 /*
-** Read and classify next option. 'size' is filled with option's size.
+** Read and classify luai_next option. 'size' is filled with option's size.
 */
-static KOption getoption (Header *h, const char **fmt, int *size) {
+static luai_KOption luai_getoption (luai_Header *h, const char **fmt, int *size) {
   int opt = *((*fmt)++);
   *size = 0;  /* default */
   switch (opt) {
-    case 'b': *size = sizeof(char); return Kint;
-    case 'B': *size = sizeof(char); return Kuint;
-    case 'h': *size = sizeof(short); return Kint;
-    case 'H': *size = sizeof(short); return Kuint;
-    case 'l': *size = sizeof(long); return Kint;
-    case 'L': *size = sizeof(long); return Kuint;
-    case 'j': *size = sizeof(lua_Integer); return Kint;
-    case 'J': *size = sizeof(lua_Integer); return Kuint;
-    case 'T': *size = sizeof(size_t); return Kuint;
-    case 'f': *size = sizeof(float); return Kfloat;
-    case 'd': *size = sizeof(double); return Kfloat;
-    case 'n': *size = sizeof(lua_Number); return Kfloat;
-    case 'i': *size = getnumlimit(h, fmt, sizeof(int)); return Kint;
-    case 'I': *size = getnumlimit(h, fmt, sizeof(int)); return Kuint;
-    case 's': *size = getnumlimit(h, fmt, sizeof(size_t)); return Kstring;
+    case 'b': *size = sizeof(char); return luai_Kint;
+    case 'B': *size = sizeof(char); return luai_Kuint;
+    case 'h': *size = sizeof(short); return luai_Kint;
+    case 'H': *size = sizeof(short); return luai_Kuint;
+    case 'l': *size = sizeof(long); return luai_Kint;
+    case 'L': *size = sizeof(long); return luai_Kuint;
+    case 'j': *size = sizeof(lua_Integer); return luai_Kint;
+    case 'J': *size = sizeof(lua_Integer); return luai_Kuint;
+    case 'T': *size = sizeof(size_t); return luai_Kuint;
+    case 'f': *size = sizeof(float); return luai_Kfloat;
+    case 'd': *size = sizeof(double); return luai_Kfloat;
+    case 'n': *size = sizeof(lua_Number); return luai_Kfloat;
+    case 'i': *size = luai_getnumlimit(h, fmt, sizeof(int)); return luai_Kint;
+    case 'I': *size = luai_getnumlimit(h, fmt, sizeof(int)); return luai_Kuint;
+    case 's': *size = luai_getnumlimit(h, fmt, sizeof(size_t)); return luai_Kstring;
     case 'c':
-      *size = getnum(fmt, -1);
+      *size = luai_getnum(fmt, -1);
       if (*size == -1)
         luaL_error(h->L, "missing size for format option 'c'");
-      return Kchar;
-    case 'z': return Kzstr;
-    case 'x': *size = 1; return Kpadding;
-    case 'X': return Kpaddalign;
+      return luai_Kchar;
+    case 'z': return luai_Kzstr;
+    case 'x': *size = 1; return luai_Kpadding;
+    case 'X': return luai_Kpaddalign;
     case ' ': break;
     case '<': h->islittle = 1; break;
     case '>': h->islittle = 0; break;
     case '=': h->islittle = luai_nativeendian.little; break;
-    case '!': h->maxalign = getnumlimit(h, fmt, MAXALIGN); break;
+    case '!': h->maxalign = luai_getnumlimit(h, fmt, LUAI_MAXALIGN); break;
     default: luaL_error(h->L, "invalid format option '%c'", opt);
   }
-  return Knop;
+  return luai_Knop;
 }
 
 
 /*
-** Read, classify, and fill other details about the next option.
+** Read, classify, and fill other details about the luai_next option.
 ** 'psize' is filled with option's size, 'notoalign' with its
 ** alignment requirements.
 ** Local variable 'size' gets the size to be aligned. (Kpadal option
 ** always gets its full alignment, other options are limited by
-** the maximum alignment ('maxalign'). Kchar option needs no alignment
+** the maximum alignment ('maxalign'). luai_Kchar option needs no alignment
 ** despite its size.
 */
-static KOption luai_getdetails (Header *h, size_t totalsize,
+static luai_KOption luai_getdetails (luai_Header *h, size_t totalsize,
                            const char **fmt, int *psize, int *ntoalign) {
-  KOption opt = getoption(h, fmt, psize);
+  luai_KOption opt = luai_getoption(h, fmt, psize);
   int align = *psize;  /* usually, alignment follows size */
-  if (opt == Kpaddalign) {  /* 'X' gets alignment from following option */
-    if (**fmt == '\0' || getoption(h, fmt, &align) == Kchar || align == 0)
-      luaL_argerror(h->L, 1, "invalid next option for option 'X'");
+  if (opt == luai_Kpaddalign) {  /* 'X' gets alignment from following option */
+    if (**fmt == '\0' || luai_getoption(h, fmt, &align) == luai_Kchar || align == 0)
+      luaL_argerror(h->L, 1, "invalid luai_next option for option 'X'");
   }
-  if (align <= 1 || opt == Kchar)  /* need no alignment? */
+  if (align <= 1 || opt == luai_Kchar)  /* need no alignment? */
     *ntoalign = 0;
   else {
     if (align > h->maxalign)  /* enforce maximum alignment */
@@ -18613,40 +18612,40 @@ static void luai_copywithendian (volatile char *dest, volatile const char *src,
 
 static int luai_str_pack (lua_State *L) {
   luaL_Buffer b;
-  Header h;
+  luai_Header h;
   const char *fmt = luaL_checkstring(L, 1);  /* format string */
   int arg = 1;  /* current argument to luai_pack */
   size_t totalsize = 0;  /* accumulate total size of result */
-  initheader(L, &h);
+  luai_initheader(L, &h);
   lua_pushnil(L);  /* mark to separate arguments from string buffer */
   luaL_buffinit(L, &b);
   while (*fmt != '\0') {
     int size, ntoalign;
-    KOption opt = luai_getdetails(&h, totalsize, &fmt, &size, &ntoalign);
+    luai_KOption opt = luai_getdetails(&h, totalsize, &fmt, &size, &ntoalign);
     totalsize += ntoalign + size;
     while (ntoalign-- > 0)
      luaL_addchar(&b, LUAL_PACKPADBYTE);  /* fill alignment */
     arg++;
     switch (opt) {
-      case Kint: {  /* signed integers */
+      case luai_Kint: {  /* signed integers */
         lua_Integer n = luaL_checkinteger(L, arg);
-        if (size < LUA_SZINT) {  /* need overflow check? */
+        if (size < LUA_SZINT) {  /* need overflow luai_check? */
           lua_Integer lim = (lua_Integer)1 << ((size * LUA_NB) - 1);
           luaL_argcheck(L, -lim <= n && n < lim, arg, "integer overflow");
         }
         luai_packint(&b, (lua_Unsigned)n, h.islittle, size, (n < 0));
         break;
       }
-      case Kuint: {  /* unsigned integers */
+      case luai_Kuint: {  /* unsigned integers */
         lua_Integer n = luaL_checkinteger(L, arg);
-        if (size < LUA_SZINT)  /* need overflow check? */
+        if (size < LUA_SZINT)  /* need overflow luai_check? */
           luaL_argcheck(L, (lua_Unsigned)n < ((lua_Unsigned)1 << (size * LUA_NB)),
                            arg, "unsigned overflow");
         luai_packint(&b, (lua_Unsigned)n, h.islittle, size, 0);
         break;
       }
-      case Kfloat: {  /* floating-point options */
-        volatile Ftypes u;
+      case luai_Kfloat: {  /* floating-point options */
+        volatile luai_Ftypes u;
         char *buff = luaL_prepbuffsize(&b, size);
         lua_Number n = luaL_checknumber(L, arg);  /* get argument */
         if (size == sizeof(u.f)) u.f = (float)n;  /* copy it into 'u' */
@@ -18657,7 +18656,7 @@ static int luai_str_pack (lua_State *L) {
         luaL_addsize(&b, size);
         break;
       }
-      case Kchar: {  /* fixed-size string */
+      case luai_Kchar: {  /* fixed-size string */
         size_t len;
         const char *s = luaL_checklstring(L, arg, &len);
         luaL_argcheck(L, len <= (size_t)size, arg,
@@ -18667,7 +18666,7 @@ static int luai_str_pack (lua_State *L) {
           luaL_addchar(&b, LUAL_PACKPADBYTE);
         break;
       }
-      case Kstring: {  /* strings with length count */
+      case luai_Kstring: {  /* strings with length count */
         size_t len;
         const char *s = luaL_checklstring(L, arg, &len);
         luaL_argcheck(L, size >= (int)sizeof(size_t) ||
@@ -18678,7 +18677,7 @@ static int luai_str_pack (lua_State *L) {
         totalsize += len;
         break;
       }
-      case Kzstr: {  /* zero-terminated string */
+      case luai_Kzstr: {  /* zero-terminated string */
         size_t len;
         const char *s = luaL_checklstring(L, arg, &len);
         luaL_argcheck(L, strlen(s) == len, arg, "string contains zeros");
@@ -18687,8 +18686,8 @@ static int luai_str_pack (lua_State *L) {
         totalsize += len + 1;
         break;
       }
-      case Kpadding: luaL_addchar(&b, LUAL_PACKPADBYTE);  /* FALLTHROUGH */
-      case Kpaddalign: case Knop:
+      case luai_Kpadding: luaL_addchar(&b, LUAL_PACKPADBYTE);  /* FALLTHROUGH */
+      case luai_Kpaddalign: case luai_Knop:
         arg--;  /* undo increment */
         break;
     }
@@ -18699,20 +18698,20 @@ static int luai_str_pack (lua_State *L) {
 
 
 static int luai_str_packsize (lua_State *L) {
-  Header h;
+  luai_Header h;
   const char *fmt = luaL_checkstring(L, 1);  /* format string */
   size_t totalsize = 0;  /* accumulate total size of result */
-  initheader(L, &h);
+  luai_initheader(L, &h);
   while (*fmt != '\0') {
     int size, ntoalign;
-    KOption opt = luai_getdetails(&h, totalsize, &fmt, &size, &ntoalign);
+    luai_KOption opt = luai_getdetails(&h, totalsize, &fmt, &size, &ntoalign);
     size += ntoalign;  /* total space used by option */
     luaL_argcheck(L, totalsize <= MAXSIZE - size, 1,
                      "format result too large");
     totalsize += size;
     switch (opt) {
-      case Kstring:  /* strings with length count */
-      case Kzstr:    /* zero-terminated string */
+      case luai_Kstring:  /* strings with length count */
+      case luai_Kzstr:    /* zero-terminated string */
         luaL_argerror(L, 1, "variable-length format");
         /* call never return, but to avoid warnings: *//* FALLTHROUGH */
       default:  break;
@@ -18728,10 +18727,10 @@ static int luai_str_packsize (lua_State *L) {
 ** If size is smaller than the size of a Lua integer and integer
 ** is signed, must do sign extension (propagating the sign to the
 ** higher bits); if size is larger than the size of a Lua integer,
-** it must check the unread bytes to see whether they do not cause an
+** it must luai_check the unread bytes to see whether they do not cause an
 ** overflow.
 */
-static lua_Integer unpackint (lua_State *L, const char *str,
+static lua_Integer luai_unpackint (lua_State *L, const char *str,
                               int islittle, int size, int issigned) {
   lua_Unsigned res = 0;
   int i;
@@ -18746,7 +18745,7 @@ static lua_Integer unpackint (lua_State *L, const char *str,
       res = ((res ^ mask) - mask);  /* do sign extension */
     }
   }
-  else if (size > LUA_SZINT) {  /* must check unread bytes */
+  else if (size > LUA_SZINT) {  /* must luai_check unread bytes */
     int mask = (!issigned || (lua_Integer)res >= 0) ? 0 : LUA_MC;
     for (i = limit; i < size; i++) {
       if ((unsigned char)str[islittle ? i : size - 1 - i] != mask)
@@ -18758,33 +18757,33 @@ static lua_Integer unpackint (lua_State *L, const char *str,
 
 
 static int luai_str_unpack (lua_State *L) {
-  Header h;
+  luai_Header h;
   const char *fmt = luaL_checkstring(L, 1);
   size_t ld;
   const char *data = luaL_checklstring(L, 2, &ld);
   size_t pos = (size_t)posrelat(luaL_optinteger(L, 3, 1), ld) - 1;
   int n = 0;  /* number of results */
   luaL_argcheck(L, pos <= ld, 3, "initial position out of string");
-  initheader(L, &h);
+  luai_initheader(L, &h);
   while (*fmt != '\0') {
     int size, ntoalign;
-    KOption opt = luai_getdetails(&h, pos, &fmt, &size, &ntoalign);
+    luai_KOption opt = luai_getdetails(&h, pos, &fmt, &size, &ntoalign);
     if ((size_t)ntoalign + size > ~pos || pos + ntoalign + size > ld)
       luaL_argerror(L, 2, "data string too short");
     pos += ntoalign;  /* skip alignment */
-    /* stack space for item + next position */
+    /* stack space for item + luai_next position */
     luaL_checkstack(L, 2, "too many results");
     n++;
     switch (opt) {
-      case Kint:
-      case Kuint: {
-        lua_Integer res = unpackint(L, data + pos, h.islittle, size,
-                                       (opt == Kint));
+      case luai_Kint:
+      case luai_Kuint: {
+        lua_Integer res = luai_unpackint(L, data + pos, h.islittle, size,
+                                       (opt == luai_Kint));
         lua_pushinteger(L, res);
         break;
       }
-      case Kfloat: {
-        volatile Ftypes u;
+      case luai_Kfloat: {
+        volatile luai_Ftypes u;
         lua_Number num;
         luai_copywithendian(u.buff, data + pos, size, h.islittle);
         if (size == sizeof(u.f)) num = (lua_Number)u.f;
@@ -18793,30 +18792,30 @@ static int luai_str_unpack (lua_State *L) {
         lua_pushnumber(L, num);
         break;
       }
-      case Kchar: {
+      case luai_Kchar: {
         lua_pushlstring(L, data + pos, size);
         break;
       }
-      case Kstring: {
-        size_t len = (size_t)unpackint(L, data + pos, h.islittle, size, 0);
+      case luai_Kstring: {
+        size_t len = (size_t)luai_unpackint(L, data + pos, h.islittle, size, 0);
         luaL_argcheck(L, pos + len + size <= ld, 2, "data string too short");
         lua_pushlstring(L, data + pos + size, len);
         pos += len;  /* skip string */
         break;
       }
-      case Kzstr: {
+      case luai_Kzstr: {
         size_t len = (int)strlen(data + pos);
         lua_pushlstring(L, data + pos, len);
         pos += len + 1;  /* skip string plus final '\0' */
         break;
       }
-      case Kpaddalign: case Kpadding: case Knop:
+      case luai_Kpaddalign: case luai_Kpadding: case luai_Knop:
         n--;  /* undo increment */
         break;
     }
     pos += size;
   }
-  lua_pushinteger(L, pos + 1);  /* next position */
+  lua_pushinteger(L, pos + 1);  /* luai_next position */
   return n + 1;
 }
 
@@ -18838,14 +18837,14 @@ static const luaL_Reg luai_strlib[] = {
   {"reverse", luai_str_reverse},
   {"sub", luai_str_sub},
   {"upper", luai_str_upper},
-  {"luai_pack", luai_str_pack},
+  {"pack", luai_str_pack},
   {"packsize", luai_str_packsize},
-  {"luai_unpack", luai_str_unpack},
+  {"unpack", luai_str_unpack},
   {NULL, NULL}
 };
 
 
-static void createmetatable (lua_State *L) {
+static void luai_createmetatable (lua_State *L) {
   lua_createtable(L, 0, 1);  /* table to be metatable for strings */
   lua_pushliteral(L, "");  /* dummy string */
   lua_pushvalue(L, -2);  /* copy table */
@@ -18862,48 +18861,48 @@ static void createmetatable (lua_State *L) {
 */
 LUAMOD_API int luaopen_string (lua_State *L) {
   luaL_newlib(L, luai_strlib);
-  createmetatable(L);
+  luai_createmetatable(L);
   return 1;
 }
 
 /*__ltable.c__*/
 
 /*
-** Maximum size of array part (MAXASIZE) is 2^MAXABITS. MAXABITS is
-** the largest integer such that MAXASIZE fits in an unsigned int.
+** Maximum size of array part (LUAI_MAXASIZE) is 2^LUAI_MAXABITS. LUAI_MAXABITS is
+** the largest integer such that LUAI_MAXASIZE fits in an unsigned int.
 */
-#define MAXABITS	cast_int(sizeof(int) * CHAR_BIT - 1)
-#define MAXASIZE	(1u << MAXABITS)
+#define LUAI_MAXABITS	luai_cast_int(sizeof(int) * CHAR_BIT - 1)
+#define LUAI_MAXASIZE	(1u << LUAI_MAXABITS)
 
 /*
-** Maximum size of hash part is 2^MAXHBITS. MAXHBITS is the largest
-** integer such that 2^MAXHBITS fits in a signed int. (Note that the
-** maximum number of elements in a table, 2^MAXABITS + 2^MAXHBITS, still
+** Maximum size of hash part is 2^LUAI_MAXHBITS. LUAI_MAXHBITS is the largest
+** integer such that 2^LUAI_MAXHBITS fits in a signed int. (Note that the
+** maximum number of elements in a table, 2^LUAI_MAXABITS + 2^LUAI_MAXHBITS, still
 ** fits comfortably in an unsigned int.)
 */
-#define MAXHBITS	(MAXABITS - 1)
+#define LUAI_MAXHBITS	(LUAI_MAXABITS - 1)
 
 
-#define hashpow2(t,n)		(gnode(t, lmod((n), sizenode(t))))
+#define luai_hashpow2(t,n)		(luai_gnode(t, lmod((n), sizenode(t))))
 
-#define hashstr(t,str)		hashpow2(t, (str)->hash)
-#define hashboolean(t,p)	hashpow2(t, p)
-#define hashint(t,i)		hashpow2(t, i)
+#define luai_hashstr(t,str)		luai_hashpow2(t, (str)->hash)
+#define luai_hashboolean(t,p)	luai_hashpow2(t, p)
+#define luai_hashint(t,i)		luai_hashpow2(t, i)
 
 
 /*
 ** for some types, it is better to avoid modulus by power of 2, as
 ** they tend to have many 2 factors.
 */
-#define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1)|1))))
+#define luai_hashmod(t,n)	(luai_gnode(t, ((n) % ((sizenode(t)-1)|1))))
 
 
-#define hashpointer(t,p)	hashmod(t, point2uint(p))
+#define luai_hashpointer(t,p)	luai_hashmod(t, point2uint(p))
 
 
-#define dummynode		(&dummynode_)
+#define luai_dummynode		(&luai_dummynode_)
 
-static const Node dummynode_ = {
+static const luai_Node luai_dummynode_ = {
   {NILCONSTANT},  /* value */
   {{NILCONSTANT, 0}}  /* key */
 };
@@ -18922,18 +18921,18 @@ static const Node dummynode_ = {
 ** adding 'i'; the use of '~u' (instead of '-u') avoids problems with
 ** INT_MIN.
 */
-#if !defined(l_hashfloat)
-static int l_hashfloat (lua_Number n) {
+#if !defined(luai_l_hashfloat)
+static int luai_l_hashfloat (lua_Number n) {
   int i;
   lua_Integer ni;
-  n = l_mathop(frexp)(n, &i) * -cast_num(INT_MIN);
+  n = luai_l_mathop(frexp)(n, &i) * -luai_cast_num(INT_MIN);
   if (!lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
-    lua_assert(luai_numisnan(n) || l_mathop(fabs)(n) == cast_num(HUGE_VAL));
+    lua_assert(luai_numisnan(n) || luai_l_mathop(fabs)(n) == luai_cast_num(HUGE_VAL));
     return 0;
   }
   else {  /* normal case */
-    unsigned int u = cast(unsigned int, i) + cast(unsigned int, ni);
-    return cast_int(u <= cast(unsigned int, INT_MAX) ? u : ~u);
+    unsigned int u = luai_cast(unsigned int, i) + luai_cast(unsigned int, ni);
+    return luai_cast_int(u <= luai_cast(unsigned int, INT_MAX) ? u : ~u);
   }
 }
 #endif
@@ -18943,25 +18942,25 @@ static int l_hashfloat (lua_Number n) {
 ** returns the 'main' position of an element in a table (that is, the index
 ** of its hash value)
 */
-static Node *mainposition (const Table *t, const TValue *key) {
+static luai_Node *luai_mainposition (const luai_Table *t, const luai_TValue *key) {
   switch (ttype(key)) {
     case LUA_TNUMINT:
-      return hashint(t, ivalue(key));
+      return luai_hashint(t, ivalue(key));
     case LUA_TNUMFLT:
-      return hashmod(t, l_hashfloat(fltvalue(key)));
+      return luai_hashmod(t, luai_l_hashfloat(fltvalue(key)));
     case LUA_TSHRSTR:
-      return hashstr(t, tsvalue(key));
+      return luai_hashstr(t, tsvalue(key));
     case LUA_TLNGSTR:
-      return hashpow2(t, luaS_hashlongstr(tsvalue(key)));
+      return luai_hashpow2(t, luaS_hashlongstr(tsvalue(key)));
     case LUA_TBOOLEAN:
-      return hashboolean(t, bvalue(key));
+      return luai_hashboolean(t, bvalue(key));
     case LUA_TLIGHTUSERDATA:
-      return hashpointer(t, pvalue(key));
+      return luai_hashpointer(t, pvalue(key));
     case LUA_TLCF:
-      return hashpointer(t, fvalue(key));
+      return luai_hashpointer(t, fvalue(key));
     default:
       lua_assert(!ttisdeadkey(key));
-      return hashpointer(t, gcvalue(key));
+      return luai_hashpointer(t, gcvalue(key));
   }
 }
 
@@ -18970,11 +18969,11 @@ static Node *mainposition (const Table *t, const TValue *key) {
 ** returns the index for 'key' if 'key' is an appropriate key to live in
 ** the array part of the table, 0 otherwise.
 */
-static unsigned int arrayindex (const TValue *key) {
+static unsigned int luai_arrayindex (const luai_TValue *key) {
   if (ttisinteger(key)) {
     lua_Integer k = ivalue(key);
-    if (0 < k && (lua_Unsigned)k <= MAXASIZE)
-      return cast(unsigned int, k);  /* 'key' is an appropriate array index */
+    if (0 < k && (lua_Unsigned)k <= LUAI_MAXASIZE)
+      return luai_cast(unsigned int, k);  /* 'key' is an appropriate array index */
   }
   return 0;  /* 'key' did not match some condition */
 }
@@ -18985,35 +18984,35 @@ static unsigned int arrayindex (const TValue *key) {
 ** elements in the array part, then elements in the hash part. The
 ** beginning of a traversal is signaled by 0.
 */
-static unsigned int findindex (lua_State *L, Table *t, StkId key) {
+static unsigned int luai_findindex (lua_State *L, luai_Table *t, StkId key) {
   unsigned int i;
   if (ttisnil(key)) return 0;  /* first iteration */
-  i = arrayindex(key);
+  i = luai_arrayindex(key);
   if (i != 0 && i <= t->sizearray)  /* is 'key' inside array part? */
     return i;  /* yes; that's the index */
   else {
     int nx;
-    Node *n = mainposition(t, key);
-    for (;;) {  /* check whether 'key' is somewhere in the chain */
-      /* key may be dead already, but it is ok to use it in 'next' */
-      if (luaV_rawequalobj(gkey(n), key) ||
-            (ttisdeadkey(gkey(n)) && iscollectable(key) &&
-             deadvalue(gkey(n)) == gcvalue(key))) {
-        i = cast_int(n - gnode(t, 0));  /* key index in hash table */
+    luai_Node *n = luai_mainposition(t, key);
+    for (;;) {  /* luai_check whether 'key' is somewhere in the chain */
+      /* key may be dead already, but it is ok to use it in 'luai_next' */
+      if (luaV_rawequalobj(luai_gkey(n), key) ||
+            (ttisdeadkey(luai_gkey(n)) && iscollectable(key) &&
+             deadvalue(luai_gkey(n)) == gcvalue(key))) {
+        i = luai_cast_int(n - luai_gnode(t, 0));  /* key index in hash table */
         /* hash elements are numbered after array ones */
         return (i + 1) + t->sizearray;
       }
-      nx = gnext(n);
+      nx = luai_gnext(n);
       if (nx == 0)
-        luaG_runerror(L, "invalid key to 'next'");  /* key not found */
+        luaG_runerror(L, "invalid key to 'luai_next'");  /* key not found */
       else n += nx;
     }
   }
 }
 
 
-int luaH_next (lua_State *L, Table *t, StkId key) {
-  unsigned int i = findindex(L, t, key);  /* find original element */
+int luaH_next (lua_State *L, luai_Table *t, StkId key) {
+  unsigned int i = luai_findindex(L, t, key);  /* find original element */
   for (; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
       setivalue(key, i + 1);
@@ -19021,10 +19020,10 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
       return 1;
     }
   }
-  for (i -= t->sizearray; cast_int(i) < sizenode(t); i++) {  /* hash part */
-    if (!ttisnil(gval(gnode(t, i)))) {  /* a non-nil value? */
-      setobj2s(L, key, gkey(gnode(t, i)));
-      setobj2s(L, key+1, gval(gnode(t, i)));
+  for (i -= t->sizearray; luai_cast_int(i) < sizenode(t); i++) {  /* hash part */
+    if (!ttisnil(luai_gval(luai_gnode(t, i)))) {  /* a non-nil value? */
+      setobj2s(L, key, luai_gkey(luai_gnode(t, i)));
+      setobj2s(L, key+1, luai_gval(luai_gnode(t, i)));
       return 1;
     }
   }
@@ -19045,7 +19044,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
 ** integer keys in the table and leaves with the number of keys that
 ** will go to the array part; return the optimal size.
 */
-static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
+static unsigned int luai_computesizes (unsigned int nums[], unsigned int *pna) {
   int i;
   unsigned int twotoi;  /* 2^i (candidate for optimal size) */
   unsigned int a = 0;  /* number of elements smaller than 2^i */
@@ -19067,8 +19066,8 @@ static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
 }
 
 
-static int countint (const TValue *key, unsigned int *nums) {
-  unsigned int k = arrayindex(key);
+static int luai_countint (const luai_TValue *key, unsigned int *nums) {
+  unsigned int k = luai_arrayindex(key);
   if (k != 0) {  /* is 'key' an appropriate array index? */
     nums[luaO_ceillog2(k)]++;  /* count as such */
     return 1;
@@ -19083,13 +19082,13 @@ static int countint (const TValue *key, unsigned int *nums) {
 ** number of keys that will go into corresponding slice and return
 ** total number of non-nil keys.
 */
-static unsigned int numusearray (const Table *t, unsigned int *nums) {
+static unsigned int luai_numusearray (const luai_Table *t, unsigned int *nums) {
   int lg;
   unsigned int ttlg;  /* 2^lg */
   unsigned int ause = 0;  /* summation of 'nums' */
   unsigned int i = 1;  /* count to traverse all array keys */
   /* traverse each slice */
-  for (lg = 0, ttlg = 1; lg <= MAXABITS; lg++, ttlg *= 2) {
+  for (lg = 0, ttlg = 1; lg <= LUAI_MAXABITS; lg++, ttlg *= 2) {
     unsigned int lc = 0;  /* counter */
     unsigned int lim = ttlg;
     if (lim > t->sizearray) {
@@ -19109,14 +19108,14 @@ static unsigned int numusearray (const Table *t, unsigned int *nums) {
 }
 
 
-static int numusehash (const Table *t, unsigned int *nums, unsigned int *pna) {
+static int luai_numusehash (const luai_Table *t, unsigned int *nums, unsigned int *pna) {
   int totaluse = 0;  /* total number of elements */
   int ause = 0;  /* elements added to 'nums' (can go to array part) */
   int i = sizenode(t);
   while (i--) {
-    Node *n = &t->node[i];
-    if (!ttisnil(gval(n))) {
-      ause += countint(gkey(n), nums);
+    luai_Node *n = &t->node[i];
+    if (!ttisnil(luai_gval(n))) {
+      ause += luai_countint(luai_gkey(n), nums);
       totaluse++;
     }
   }
@@ -19125,51 +19124,51 @@ static int numusehash (const Table *t, unsigned int *nums, unsigned int *pna) {
 }
 
 
-static void setarrayvector (lua_State *L, Table *t, unsigned int size) {
+static void luai_setarrayvector (lua_State *L, luai_Table *t, unsigned int size) {
   unsigned int i;
-  luaM_reallocvector(L, t->array, t->sizearray, size, TValue);
+  luaM_reallocvector(L, t->array, t->sizearray, size, luai_TValue);
   for (i=t->sizearray; i<size; i++)
      setnilvalue(&t->array[i]);
   t->sizearray = size;
 }
 
 
-static void setnodevector (lua_State *L, Table *t, unsigned int size) {
+static void luai_setnodevector (lua_State *L, luai_Table *t, unsigned int size) {
   if (size == 0) {  /* no elements to hash part? */
-    t->node = cast(Node *, dummynode);  /* use common 'dummynode' */
+    t->node = luai_cast(luai_Node *, luai_dummynode);  /* use common 'luai_dummynode' */
     t->lsizenode = 0;
     t->lastfree = NULL;  /* signal that it is using dummy node */
   }
   else {
     int i;
     int lsize = luaO_ceillog2(size);
-    if (lsize > MAXHBITS)
+    if (lsize > LUAI_MAXHBITS)
       luaG_runerror(L, "table overflow");
     size = twoto(lsize);
-    t->node = luaM_newvector(L, size, Node);
+    t->node = luaM_newvector(L, size, luai_Node);
     for (i = 0; i < (int)size; i++) {
-      Node *n = gnode(t, i);
-      gnext(n) = 0;
-      setnilvalue(wgkey(n));
-      setnilvalue(gval(n));
+      luai_Node *n = luai_gnode(t, i);
+      luai_gnext(n) = 0;
+      setnilvalue(luai_wgkey(n));
+      setnilvalue(luai_gval(n));
     }
-    t->lsizenode = cast_byte(lsize);
-    t->lastfree = gnode(t, size);  /* all positions are free */
+    t->lsizenode = luai_cast_byte(lsize);
+    t->lastfree = luai_gnode(t, size);  /* all positions are free */
   }
 }
 
 
-void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
+void luaH_resize (lua_State *L, luai_Table *t, unsigned int nasize,
                                           unsigned int nhsize) {
   unsigned int i;
   int j;
   unsigned int oldasize = t->sizearray;
-  int oldhsize = allocsizenode(t);
-  Node *nold = t->node;  /* save old hash ... */
+  int oldhsize = luai_allocsizenode(t);
+  luai_Node *nold = t->node;  /* luai_save old hash ... */
   if (nasize > oldasize)  /* array part must grow? */
-    setarrayvector(L, t, nasize);
+    luai_setarrayvector(L, t, nasize);
   /* create new hash part with appropriate size */
-  setnodevector(L, t, nhsize);
+  luai_setnodevector(L, t, nhsize);
   if (nasize < oldasize) {  /* array part must shrink? */
     t->sizearray = nasize;
     /* re-insert elements from vanishing slice */
@@ -19178,45 +19177,45 @@ void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
         luaH_setint(L, t, i + 1, &t->array[i]);
     }
     /* shrink array */
-    luaM_reallocvector(L, t->array, oldasize, nasize, TValue);
+    luaM_reallocvector(L, t->array, oldasize, nasize, luai_TValue);
   }
   /* re-insert elements from hash part */
   for (j = oldhsize - 1; j >= 0; j--) {
-    Node *old = nold + j;
-    if (!ttisnil(gval(old))) {
+    luai_Node *old = nold + j;
+    if (!ttisnil(luai_gval(old))) {
       /* doesn't need barrier/invalidate cache, as entry was
          already present in the table */
-      setobjt2t(L, luaH_set(L, t, gkey(old)), gval(old));
+      setobjt2t(L, luaH_set(L, t, luai_gkey(old)), luai_gval(old));
     }
   }
   if (oldhsize > 0)  /* not the dummy node? */
-    luaM_freearray(L, nold, cast(size_t, oldhsize)); /* free old hash */
+    luaM_freearray(L, nold, luai_cast(size_t, oldhsize)); /* free old hash */
 }
 
 
-void luaH_resizearray (lua_State *L, Table *t, unsigned int nasize) {
-  int nsize = allocsizenode(t);
+void luaH_resizearray (lua_State *L, luai_Table *t, unsigned int nasize) {
+  int nsize = luai_allocsizenode(t);
   luaH_resize(L, t, nasize, nsize);
 }
 
 /*
 ** nums[i] = number of keys 'k' where 2^(i - 1) < k <= 2^i
 */
-static void rehash (lua_State *L, Table *t, const TValue *ek) {
+static void luai_rehash (lua_State *L, luai_Table *t, const luai_TValue *ek) {
   unsigned int asize;  /* optimal size for array part */
   unsigned int na;  /* number of keys in the array part */
-  unsigned int nums[MAXABITS + 1];
+  unsigned int nums[LUAI_MAXABITS + 1];
   int i;
   int totaluse;
-  for (i = 0; i <= MAXABITS; i++) nums[i] = 0;  /* reset counts */
-  na = numusearray(t, nums);  /* count keys in array part */
+  for (i = 0; i <= LUAI_MAXABITS; i++) nums[i] = 0;  /* reset counts */
+  na = luai_numusearray(t, nums);  /* count keys in array part */
   totaluse = na;  /* all those keys are integer keys */
-  totaluse += numusehash(t, nums, &na);  /* count keys in hash part */
+  totaluse += luai_numusehash(t, nums, &na);  /* count keys in hash part */
   /* count extra key */
-  na += countint(ek, nums);
+  na += luai_countint(ek, nums);
   totaluse++;
   /* compute new size for array part */
-  asize = computesizes(nums, &na);
+  asize = luai_computesizes(nums, &na);
   /* resize the table to new computed sizes */
   luaH_resize(L, t, asize, totaluse - na);
 }
@@ -19228,31 +19227,31 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
 */
 
 
-Table *luaH_new (lua_State *L) {
-  GCObject *o = luaC_newobj(L, LUA_TTABLE, sizeof(Table));
-  Table *t = gco2t(o);
+luai_Table *luaH_new (lua_State *L) {
+  LUAI_GCObject *o = luaC_newobj(L, LUA_TTABLE, sizeof(luai_Table));
+  luai_Table *t = gco2t(o);
   t->metatable = NULL;
-  t->flags = cast_byte(~0);
+  t->flags = luai_cast_byte(~0);
   t->array = NULL;
   t->sizearray = 0;
-  setnodevector(L, t, 0);
+  luai_setnodevector(L, t, 0);
   return t;
 }
 
 
-void luaH_free (lua_State *L, Table *t) {
-  if (!isdummy(t))
-    luaM_freearray(L, t->node, cast(size_t, sizenode(t)));
+void luaH_free (lua_State *L, luai_Table *t) {
+  if (!luai_isdummy(t))
+    luaM_freearray(L, t->node, luai_cast(size_t, sizenode(t)));
   luaM_freearray(L, t->array, t->sizearray);
   luaM_free(L, t);
 }
 
 
-static Node *getfreepos (Table *t) {
-  if (!isdummy(t)) {
+static luai_Node *luai_getfreepos (luai_Table *t) {
+  if (!luai_isdummy(t)) {
     while (t->lastfree > t->node) {
       t->lastfree--;
-      if (ttisnil(gkey(t->lastfree)))
+      if (ttisnil(luai_gkey(t->lastfree)))
         return t->lastfree;
     }
   }
@@ -19262,15 +19261,15 @@ static Node *getfreepos (Table *t) {
 
 
 /*
-** inserts a new key into a hash table; first, check whether key's main
-** position is free. If not, check whether colliding node is in its main
+** inserts a new key into a hash table; first, luai_check whether key's main
+** position is free. If not, luai_check whether colliding node is in its main
 ** position or not: if it is not, move colliding node to an empty place and
 ** put new key in its main position; otherwise (colliding node is in its main
 ** position), new key goes to an empty position.
 */
-TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
-  Node *mp;
-  TValue aux;
+luai_TValue *luaH_newkey (lua_State *L, luai_Table *t, const luai_TValue *key) {
+  luai_Node *mp;
+  luai_TValue aux;
   if (ttisnil(key)) luaG_runerror(L, "table index is nil");
   else if (ttisfloat(key)) {
     lua_Integer k;
@@ -19281,59 +19280,59 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     else if (luai_numisnan(fltvalue(key)))
       luaG_runerror(L, "table index is NaN");
   }
-  mp = mainposition(t, key);
-  if (!ttisnil(gval(mp)) || isdummy(t)) {  /* main position is taken? */
-    Node *othern;
-    Node *f = getfreepos(t);  /* get a free place */
+  mp = luai_mainposition(t, key);
+  if (!ttisnil(luai_gval(mp)) || luai_isdummy(t)) {  /* main position is taken? */
+    luai_Node *othern;
+    luai_Node *f = luai_getfreepos(t);  /* get a free place */
     if (f == NULL) {  /* cannot find a free place? */
-      rehash(L, t, key);  /* grow table */
+      luai_rehash(L, t, key);  /* grow table */
       /* whatever called 'newkey' takes care of TM cache */
       return luaH_set(L, t, key);  /* insert key into grown table */
     }
-    lua_assert(!isdummy(t));
-    othern = mainposition(t, gkey(mp));
+    lua_assert(!luai_isdummy(t));
+    othern = luai_mainposition(t, luai_gkey(mp));
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
-      while (othern + gnext(othern) != mp)  /* find previous */
-        othern += gnext(othern);
-      gnext(othern) = cast_int(f - othern);  /* rechain to point to 'f' */
-      *f = *mp;  /* copy colliding node into free pos. (mp->next also goes) */
-      if (gnext(mp) != 0) {
-        gnext(f) += cast_int(mp - f);  /* correct 'next' */
-        gnext(mp) = 0;  /* now 'mp' is free */
+      while (othern + luai_gnext(othern) != mp)  /* find previous */
+        othern += luai_gnext(othern);
+      luai_gnext(othern) = luai_cast_int(f - othern);  /* rechain to point to 'f' */
+      *f = *mp;  /* copy colliding node into free pos. (mp->luai_next also goes) */
+      if (luai_gnext(mp) != 0) {
+        luai_gnext(f) += luai_cast_int(mp - f);  /* correct 'luai_next' */
+        luai_gnext(mp) = 0;  /* now 'mp' is free */
       }
-      setnilvalue(gval(mp));
+      setnilvalue(luai_gval(mp));
     }
     else {  /* colliding node is in its own main position */
       /* new node will go into free position */
-      if (gnext(mp) != 0)
-        gnext(f) = cast_int((mp + gnext(mp)) - f);  /* chain new position */
-      else lua_assert(gnext(f) == 0);
-      gnext(mp) = cast_int(f - mp);
+      if (luai_gnext(mp) != 0)
+        luai_gnext(f) = luai_cast_int((mp + luai_gnext(mp)) - f);  /* chain new position */
+      else lua_assert(luai_gnext(f) == 0);
+      luai_gnext(mp) = luai_cast_int(f - mp);
       mp = f;
     }
   }
   setnodekey(L, &mp->i_key, key);
   luaC_barrierback(L, t, key);
-  lua_assert(ttisnil(gval(mp)));
-  return gval(mp);
+  lua_assert(ttisnil(luai_gval(mp)));
+  return luai_gval(mp);
 }
 
 
 /*
 ** search function for integers
 */
-const TValue *luaH_getint (Table *t, lua_Integer key) {
+const luai_TValue *luaH_getint (luai_Table *t, lua_Integer key) {
   /* (1 <= key && key <= t->sizearray) */
-  if (l_castS2U(key) - 1 < t->sizearray)
+  if (luai_l_castS2U(key) - 1 < t->sizearray)
     return &t->array[key - 1];
   else {
-    Node *n = hashint(t, key);
-    for (;;) {  /* check whether 'key' is somewhere in the chain */
-      if (ttisinteger(gkey(n)) && ivalue(gkey(n)) == key)
-        return gval(n);  /* that's it */
+    luai_Node *n = luai_hashint(t, key);
+    for (;;) {  /* luai_check whether 'key' is somewhere in the chain */
+      if (ttisinteger(luai_gkey(n)) && ivalue(luai_gkey(n)) == key)
+        return luai_gval(n);  /* that's it */
       else {
-        int nx = gnext(n);
+        int nx = luai_gnext(n);
         if (nx == 0) break;
         n += nx;
       }
@@ -19346,15 +19345,15 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 /*
 ** search function for short strings
 */
-const TValue *luaH_getshortstr (Table *t, TString *key) {
-  Node *n = hashstr(t, key);
+const luai_TValue *luaH_getshortstr (luai_Table *t, luai_TString *key) {
+  luai_Node *n = luai_hashstr(t, key);
   lua_assert(key->tt == LUA_TSHRSTR);
-  for (;;) {  /* check whether 'key' is somewhere in the chain */
-    const TValue *k = gkey(n);
-    if (ttisshrstring(k) && eqshrstr(tsvalue(k), key))
-      return gval(n);  /* that's it */
+  for (;;) {  /* luai_check whether 'key' is somewhere in the chain */
+    const luai_TValue *k = luai_gkey(n);
+    if (ttisshrstring(k) && luai_eqshrstr(tsvalue(k), key))
+      return luai_gval(n);  /* that's it */
     else {
-      int nx = gnext(n);
+      int nx = luai_gnext(n);
       if (nx == 0)
         return luaO_nilobject;  /* not found */
       n += nx;
@@ -19367,13 +19366,13 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 ** "Generic" get version. (Not that generic: not valid for integers,
 ** which may be in array part, nor for floats with integral values.)
 */
-static const TValue *getgeneric (Table *t, const TValue *key) {
-  Node *n = mainposition(t, key);
-  for (;;) {  /* check whether 'key' is somewhere in the chain */
-    if (luaV_rawequalobj(gkey(n), key))
-      return gval(n);  /* that's it */
+static const luai_TValue *luai_getgeneric (luai_Table *t, const luai_TValue *key) {
+  luai_Node *n = luai_mainposition(t, key);
+  for (;;) {  /* luai_check whether 'key' is somewhere in the chain */
+    if (luaV_rawequalobj(luai_gkey(n), key))
+      return luai_gval(n);  /* that's it */
     else {
-      int nx = gnext(n);
+      int nx = luai_gnext(n);
       if (nx == 0)
         return luaO_nilobject;  /* not found */
       n += nx;
@@ -19382,13 +19381,13 @@ static const TValue *getgeneric (Table *t, const TValue *key) {
 }
 
 
-const TValue *luaH_getstr (Table *t, TString *key) {
+const luai_TValue *luaH_getstr (luai_Table *t, luai_TString *key) {
   if (key->tt == LUA_TSHRSTR)
     return luaH_getshortstr(t, key);
   else {  /* for long strings, use generic case */
-    TValue ko;
-    setsvalue(cast(lua_State *, NULL), &ko, key);
-    return getgeneric(t, &ko);
+    luai_TValue ko;
+    setsvalue(luai_cast(lua_State *, NULL), &ko, key);
+    return luai_getgeneric(t, &ko);
   }
 }
 
@@ -19396,7 +19395,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 /*
 ** main search function
 */
-const TValue *luaH_get (Table *t, const TValue *key) {
+const luai_TValue *luaH_get (luai_Table *t, const luai_TValue *key) {
   switch (ttype(key)) {
     case LUA_TSHRSTR: return luaH_getshortstr(t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
@@ -19408,30 +19407,30 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       /* else... */
     }  /* FALLTHROUGH */
     default:
-      return getgeneric(t, key);
+      return luai_getgeneric(t, key);
   }
 }
 
 
 /*
-** beware: when using this function you probably need to check a GC
+** beware: when using this function you probably need to luai_check a LUAI_GC
 ** barrier and invalidate the TM cache.
 */
-TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
-  const TValue *p = luaH_get(t, key);
+luai_TValue *luaH_set (lua_State *L, luai_Table *t, const luai_TValue *key) {
+  const luai_TValue *p = luaH_get(t, key);
   if (p != luaO_nilobject)
-    return cast(TValue *, p);
+    return luai_cast(luai_TValue *, p);
   else return luaH_newkey(L, t, key);
 }
 
 
-void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
-  const TValue *p = luaH_getint(t, key);
-  TValue *cell;
+void luaH_setint (lua_State *L, luai_Table *t, lua_Integer key, luai_TValue *value) {
+  const luai_TValue *p = luaH_getint(t, key);
+  luai_TValue *cell;
   if (p != luaO_nilobject)
-    cell = cast(TValue *, p);
+    cell = luai_cast(luai_TValue *, p);
   else {
-    TValue k;
+    luai_TValue k;
     setivalue(&k, key);
     cell = luaH_newkey(L, t, &k);
   }
@@ -19439,13 +19438,13 @@ void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
 }
 
 
-static int unbound_search (Table *t, unsigned int j) {
+static int luai_unbound_search (luai_Table *t, unsigned int j) {
   unsigned int i = j;  /* i is zero or a present index */
   j++;
   /* find 'i' and 'j' such that i is present and j is not */
   while (!ttisnil(luaH_getint(t, j))) {
     i = j;
-    if (j > cast(unsigned int, MAX_INT)/2) {  /* overflow? */
+    if (j > luai_cast(unsigned int, MAX_INT)/2) {  /* overflow? */
       /* table was built with bad purposes: resort to linear search */
       i = 1;
       while (!ttisnil(luaH_getint(t, i))) i++;
@@ -19467,7 +19466,7 @@ static int unbound_search (Table *t, unsigned int j) {
 ** Try to find a boundary in table 't'. A 'boundary' is an integer index
 ** such that t[i] is non-nil and t[i+1] is nil (and 0 if t[1] is nil).
 */
-int luaH_getn (Table *t) {
+int luaH_getn (luai_Table *t) {
   unsigned int j = t->sizearray;
   if (j > 0 && ttisnil(&t->array[j - 1])) {
     /* there is a boundary in the array part: (binary) search for it */
@@ -19480,20 +19479,20 @@ int luaH_getn (Table *t) {
     return i;
   }
   /* else must find a boundary in hash part */
-  else if (isdummy(t))  /* hash part is empty? */
+  else if (luai_isdummy(t))  /* hash part is empty? */
     return j;  /* that is easy... */
-  else return unbound_search(t, j);
+  else return luai_unbound_search(t, j);
 }
 
 
 
 #if defined(LUA_DEBUG)
 
-Node *luaH_mainposition (const Table *t, const TValue *key) {
-  return mainposition(t, key);
+luai_Node *luaH_mainposition (const luai_Table *t, const luai_TValue *key) {
+  return luai_mainposition(t, key);
 }
 
-int luaH_isdummy (const Table *t) { return isdummy(t); }
+int luaH_isdummy (const luai_Table *t) { return luai_isdummy(t); }
 
 #endif
 
@@ -19509,10 +19508,10 @@ int luaH_isdummy (const Table *t) { return isdummy(t); }
 #define TAB_RW	(TAB_R | TAB_W)		/* read/write */
 
 
-#define aux_getn(L,n,w)	(checktab(L, n, (w) | TAB_L), luaL_len(L, n))
+#define aux_getn(L,n,w)	(luai_checktab(L, n, (w) | TAB_L), luaL_len(L, n))
 
 
-static int checkfield (lua_State *L, const char *key, int n) {
+static int luai_checkfield (lua_State *L, const char *key, int n) {
   lua_pushstring(L, key);
   return (lua_rawget(L, -n) != LUA_TNIL);
 }
@@ -19522,13 +19521,13 @@ static int checkfield (lua_State *L, const char *key, int n) {
 ** Check that 'arg' either is a table or can behave like one (that is,
 ** has a metatable with the required metamethods)
 */
-static void checktab (lua_State *L, int arg, int what) {
+static void luai_checktab (lua_State *L, int arg, int what) {
   if (lua_type(L, arg) != LUA_TTABLE) {  /* is it not a table? */
     int n = 1;  /* number of elements to pop */
     if (lua_getmetatable(L, arg) &&  /* must have metatable */
-        (!(what & TAB_R) || checkfield(L, "__index", ++n)) &&
-        (!(what & TAB_W) || checkfield(L, "__newindex", ++n)) &&
-        (!(what & TAB_L) || checkfield(L, "__len", ++n))) {
+        (!(what & TAB_R) || luai_checkfield(L, "__index", ++n)) &&
+        (!(what & TAB_W) || luai_checkfield(L, "__newindex", ++n)) &&
+        (!(what & TAB_L) || luai_checkfield(L, "__len", ++n))) {
       lua_pop(L, n);  /* pop metatable and tested metamethods */
     }
     else
@@ -19609,8 +19608,8 @@ static int luai_tmove (lua_State *L) {
   lua_Integer e = luaL_checkinteger(L, 3);
   lua_Integer t = luaL_checkinteger(L, 4);
   int tt = !lua_isnoneornil(L, 5) ? 5 : 1;  /* destination table */
-  checktab(L, 1, TAB_R);
-  checktab(L, tt, TAB_W);
+  luai_checktab(L, 1, TAB_R);
+  luai_checktab(L, tt, TAB_W);
   if (e >= f) {  /* otherwise, nothing to move */
     lua_Integer n, i;
     luaL_argcheck(L, f > 0 || e < LUA_MAXINTEGER + f, 3,
@@ -19636,7 +19635,7 @@ static int luai_tmove (lua_State *L) {
 }
 
 
-static void addfield (lua_State *L, luaL_Buffer *b, lua_Integer i) {
+static void luai_addfield (lua_State *L, luaL_Buffer *b, lua_Integer i) {
   lua_geti(L, 1, i);
   if (!lua_isstring(L, -1))
     luaL_error(L, "invalid value (%s) at index %d in table for 'concat'",
@@ -19654,11 +19653,11 @@ static int luai_tconcat (lua_State *L) {
   last = luaL_optinteger(L, 4, last);
   luaL_buffinit(L, &b);
   for (; i < last; i++) {
-    addfield(L, &b, i);
+    luai_addfield(L, &b, i);
     luaL_addlstring(&b, sep, lsep);
   }
   if (i == last)  /* add last value (if interval was not empty) */
-    addfield(L, &b, i);
+    luai_addfield(L, &b, i);
   luaL_pushresult(&b);
   return 1;
 }
@@ -19712,16 +19711,16 @@ static int luai_unpack (lua_State *L) {
 
 
 /* type for array indices */
-typedef unsigned int IdxT;
+typedef unsigned int luai_IdxT;
 
 
 /*
 ** Produce a "random" 'unsigned int' to randomize pivot choice. This
 ** macro is used only when 'luai_sort' detects a big imbalance in the result
-** of a partition. (If you don't want/need this "randomness", ~0 is a
+** of a luai_partition. (If you don't want/need this "randomness", ~0 is a
 ** good choice.)
 */
-#if !defined(l_randomizePivot)		/* { */
+#if !defined(luai_l_randomizePivot)		/* { */
 
 #include <time.h>
 
@@ -19730,11 +19729,11 @@ typedef unsigned int IdxT;
 
 /*
 ** Use 'time' and 'clock' as sources of "randomness". Because we don't
-** know the types 'clock_t' and 'time_t', we cannot cast them to
+** know the types 'clock_t' and 'time_t', we cannot luai_cast them to
 ** anything without risking overflows. A safe way to use their values
 ** is to copy them to an array of a known type and use the array values.
 */
-static unsigned int l_randomizePivot (void) {
+static unsigned int luai_l_randomizePivot (void) {
   clock_t c = clock();
   time_t t = time(NULL);
   unsigned int buff[sof(c) + sof(t)];
@@ -19753,7 +19752,7 @@ static unsigned int l_randomizePivot (void) {
 #define RANLIMIT	100u
 
 
-static void set2 (lua_State *L, IdxT i, IdxT j) {
+static void luai_set2 (lua_State *L, luai_IdxT i, luai_IdxT j) {
   lua_seti(L, 1, i);
   lua_seti(L, 1, j);
 }
@@ -19763,7 +19762,7 @@ static void set2 (lua_State *L, IdxT i, IdxT j) {
 ** Return true iff value at stack index 'a' is less than the value at
 ** index 'b' (according to the order of the luai_sort).
 */
-static int sort_comp (lua_State *L, int a, int b) {
+static int luai_sort_comp (lua_State *L, int a, int b) {
   if (lua_isnil(L, 2))  /* no function? */
     return lua_compare(L, a, b, LUA_OPLT);  /* a < b */
   else {  /* function */
@@ -19780,26 +19779,26 @@ static int sort_comp (lua_State *L, int a, int b) {
 
 
 /*
-** Does the partition: Pivot P is at the top of the stack.
+** Does the luai_partition: Pivot P is at the top of the stack.
 ** precondition: a[lo] <= P == a[up-1] <= a[up],
-** so it only needs to do the partition from lo + 1 to up - 2.
+** so it only needs to do the luai_partition from lo + 1 to up - 2.
 ** Pos-condition: a[lo .. i - 1] <= a[i] == P <= a[i + 1 .. up]
 ** returns 'i'.
 */
-static IdxT partition (lua_State *L, IdxT lo, IdxT up) {
-  IdxT i = lo;  /* will be incremented before first use */
-  IdxT j = up - 1;  /* will be decremented before first use */
+static luai_IdxT luai_partition (lua_State *L, luai_IdxT lo, luai_IdxT up) {
+  luai_IdxT i = lo;  /* will be incremented before first use */
+  luai_IdxT j = up - 1;  /* will be decremented before first use */
   /* loop invariant: a[lo .. i] <= P <= a[j .. up] */
   for (;;) {
-    /* next loop: repeat ++i while a[i] < P */
-    while (lua_geti(L, 1, ++i), sort_comp(L, -1, -2)) {
+    /* luai_next loop: repeat ++i while a[i] < P */
+    while (lua_geti(L, 1, ++i), luai_sort_comp(L, -1, -2)) {
       if (i == up - 1)  /* a[i] < P  but a[up - 1] == P  ?? */
         luaL_error(L, "invalid order function for sorting");
       lua_pop(L, 1);  /* remove a[i] */
     }
     /* after the loop, a[i] >= P and a[lo .. i - 1] < P */
-    /* next loop: repeat --j while P < a[j] */
-    while (lua_geti(L, 1, --j), sort_comp(L, -3, -1)) {
+    /* luai_next loop: repeat --j while P < a[j] */
+    while (lua_geti(L, 1, --j), luai_sort_comp(L, -3, -1)) {
       if (j < i)  /* j < i  but  a[j] > P ?? */
         luaL_error(L, "invalid order function for sorting");
       lua_pop(L, 1);  /* remove a[j] */
@@ -19809,11 +19808,11 @@ static IdxT partition (lua_State *L, IdxT lo, IdxT up) {
       /* a[lo .. i - 1] <= P <= a[j + 1 .. i .. up] */
       lua_pop(L, 1);  /* pop a[j] */
       /* swap pivot (a[up - 1]) with a[i] to satisfy pos-condition */
-      set2(L, up - 1, i);
+      luai_set2(L, up - 1, i);
       return i;
     }
     /* otherwise, swap a[i] - a[j] to restore invariant and repeat */
-    set2(L, i, j);
+    luai_set2(L, i, j);
   }
 }
 
@@ -19822,9 +19821,9 @@ static IdxT partition (lua_State *L, IdxT lo, IdxT up) {
 ** Choose an element in the middle (2nd-3th quarters) of [lo,up]
 ** "randomized" by 'rnd'
 */
-static IdxT choosePivot (IdxT lo, IdxT up, unsigned int rnd) {
-  IdxT r4 = (up - lo) / 4;  /* range/4 */
-  IdxT p = rnd % (r4 * 2) + (lo + r4);
+static luai_IdxT luai_choosePivot (luai_IdxT lo, luai_IdxT up, unsigned int rnd) {
+  luai_IdxT r4 = (up - lo) / 4;  /* range/4 */
+  luai_IdxT p = rnd % (r4 * 2) + (lo + r4);
   lua_assert(lo + r4 <= p && p <= up - r4);
   return p;
 }
@@ -19833,16 +19832,16 @@ static IdxT choosePivot (IdxT lo, IdxT up, unsigned int rnd) {
 /*
 ** QuickSort algorithm (recursive function)
 */
-static void auxsort (lua_State *L, IdxT lo, IdxT up,
+static void luai_auxsort (lua_State *L, luai_IdxT lo, luai_IdxT up,
                                    unsigned int rnd) {
   while (lo < up) {  /* loop for tail recursion */
-    IdxT p;  /* Pivot index */
-    IdxT n;  /* to be used later */
+    luai_IdxT p;  /* Pivot index */
+    luai_IdxT n;  /* to be used later */
     /* luai_sort elements 'lo', 'p', and 'up' */
     lua_geti(L, 1, lo);
     lua_geti(L, 1, up);
-    if (sort_comp(L, -1, -2))  /* a[up] < a[lo]? */
-      set2(L, lo, up);  /* swap a[lo] - a[up] */
+    if (luai_sort_comp(L, -1, -2))  /* a[up] < a[lo]? */
+      luai_set2(L, lo, up);  /* swap a[lo] - a[up] */
     else
       lua_pop(L, 2);  /* remove both values */
     if (up - lo == 1)  /* only 2 elements? */
@@ -19850,16 +19849,16 @@ static void auxsort (lua_State *L, IdxT lo, IdxT up,
     if (up - lo < RANLIMIT || rnd == 0)  /* small interval or no randomize? */
       p = (lo + up)/2;  /* middle element is a good pivot */
     else  /* for larger intervals, it is worth a random pivot */
-      p = choosePivot(lo, up, rnd);
+      p = luai_choosePivot(lo, up, rnd);
     lua_geti(L, 1, p);
     lua_geti(L, 1, lo);
-    if (sort_comp(L, -2, -1))  /* a[p] < a[lo]? */
-      set2(L, p, lo);  /* swap a[p] - a[lo] */
+    if (luai_sort_comp(L, -2, -1))  /* a[p] < a[lo]? */
+      luai_set2(L, p, lo);  /* swap a[p] - a[lo] */
     else {
       lua_pop(L, 1);  /* remove a[lo] */
       lua_geti(L, 1, up);
-      if (sort_comp(L, -1, -2))  /* a[up] < a[p]? */
-        set2(L, p, up);  /* swap a[up] - a[p] */
+      if (luai_sort_comp(L, -1, -2))  /* a[up] < a[p]? */
+        luai_set2(L, p, up);  /* swap a[up] - a[p] */
       else
         lua_pop(L, 2);
     }
@@ -19868,22 +19867,22 @@ static void auxsort (lua_State *L, IdxT lo, IdxT up,
     lua_geti(L, 1, p);  /* get middle element (Pivot) */
     lua_pushvalue(L, -1);  /* push Pivot */
     lua_geti(L, 1, up - 1);  /* push a[up - 1] */
-    set2(L, p, up - 1);  /* swap Pivot (a[p]) with a[up - 1] */
-    p = partition(L, lo, up);
+    luai_set2(L, p, up - 1);  /* swap Pivot (a[p]) with a[up - 1] */
+    p = luai_partition(L, lo, up);
     /* a[lo .. p - 1] <= a[p] == P <= a[p + 1 .. up] */
     if (p - lo < up - p) {  /* lower interval is smaller? */
-      auxsort(L, lo, p - 1, rnd);  /* call recursively for lower interval */
+      luai_auxsort(L, lo, p - 1, rnd);  /* call recursively for lower interval */
       n = p - lo;  /* size of smaller interval */
       lo = p + 1;  /* tail call for [p + 1 .. up] (upper interval) */
     }
     else {
-      auxsort(L, p + 1, up, rnd);  /* call recursively for upper interval */
+      luai_auxsort(L, p + 1, up, rnd);  /* call recursively for upper interval */
       n = up - p;  /* size of smaller interval */
       up = p - 1;  /* tail call for [lo .. p - 1]  (lower interval) */
     }
-    if ((up - lo) / 128 > n) /* partition too imbalanced? */
-      rnd = l_randomizePivot();  /* try a new randomization */
-  }  /* tail call auxsort(L, lo, up, rnd) */
+    if ((up - lo) / 128 > n) /* luai_partition too imbalanced? */
+      rnd = luai_l_randomizePivot();  /* try a new randomization */
+  }  /* tail call luai_auxsort(L, lo, up, rnd) */
 }
 
 
@@ -19894,7 +19893,7 @@ static int luai_sort (lua_State *L) {
     if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
       luaL_checktype(L, 2, LUA_TFUNCTION);  /* must be a function */
     lua_settop(L, 2);  /* make sure there are two arguments */
-    auxsort(L, 1, (IdxT)n, 0);
+    luai_auxsort(L, 1, (luai_IdxT)n, 0);
   }
   return 0;
 }
@@ -19961,19 +19960,19 @@ void luaT_init (lua_State *L) {
 ** function to be used with macro "fasttm": optimized for absence of
 ** tag methods
 */
-const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
-  const TValue *tm = luaH_getshortstr(events, ename);
+const luai_TValue *luaT_gettm (luai_Table *events, TMS event, luai_TString *ename) {
+  const luai_TValue *tm = luaH_getshortstr(events, ename);
   lua_assert(event <= TM_EQ);
   if (ttisnil(tm)) {  /* no tag method? */
-    events->flags |= cast_byte(1u<<event);  /* cache this fact */
+    events->flags |= luai_cast_byte(1u<<event);  /* cache this fact */
     return NULL;
   }
   else return tm;
 }
 
 
-const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
-  Table *mt;
+const luai_TValue *luaT_gettmbyobj (lua_State *L, const luai_TValue *o, TMS event) {
+  luai_Table *mt;
   switch (ttnov(o)) {
     case LUA_TTABLE:
       mt = hvalue(o)->metatable;
@@ -19992,11 +19991,11 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
 ** Return the name of the type of an object. For tables and userdata
 ** with metatable, use their '__name' metafield, if present.
 */
-const char *luaT_objtypename (lua_State *L, const TValue *o) {
-  Table *mt;
+const char *luaT_objtypename (lua_State *L, const luai_TValue *o) {
+  luai_Table *mt;
   if ((ttistable(o) && (mt = hvalue(o)->metatable) != NULL) ||
       (ttisfulluserdata(o) && (mt = uvalue(o)->metatable) != NULL)) {
-    const TValue *name = luaH_getshortstr(mt, luaS_new(L, "__name"));
+    const luai_TValue *name = luaH_getshortstr(mt, luaS_new(L, "__name"));
     if (ttisstring(name))  /* is '__name' a string? */
       return getstr(tsvalue(name));  /* use it as type name */
   }
@@ -20004,9 +20003,9 @@ const char *luaT_objtypename (lua_State *L, const TValue *o) {
 }
 
 
-void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
-                  const TValue *p2, TValue *p3, int hasres) {
-  ptrdiff_t result = savestack(L, p3);
+void luaT_callTM (lua_State *L, const luai_TValue *f, const luai_TValue *p1,
+                  const luai_TValue *p2, luai_TValue *p3, int hasres) {
+  ptrdiff_t result = luai_savestack(L, p3);
   StkId func = L->top;
   setobj2s(L, func, f);  /* push function (assume EXTRA_STACK) */
   setobj2s(L, func + 1, p1);  /* 1st argument */
@@ -20020,15 +20019,15 @@ void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
   else
     luaD_callnoyield(L, func, hasres);
   if (hasres) {  /* if has result, move it to its place */
-    p3 = restorestack(L, result);
+    p3 = luai_restorestack(L, result);
     setobjs2s(L, p3, --L->top);
   }
 }
 
 
-int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
+int luaT_callbinTM (lua_State *L, const luai_TValue *p1, const luai_TValue *p2,
                     StkId res, TMS event) {
-  const TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
+  const luai_TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
   if (ttisnil(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (ttisnil(tm)) return 0;
@@ -20037,7 +20036,7 @@ int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
-void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
+void luaT_trybinTM (lua_State *L, const luai_TValue *p1, const luai_TValue *p2,
                     StkId res, TMS event) {
   if (!luaT_callbinTM(L, p1, p2, res, event)) {
     switch (event) {
@@ -20060,12 +20059,12 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
-int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
+int luaT_callorderTM (lua_State *L, const luai_TValue *p1, const luai_TValue *p2,
                       TMS event) {
   if (!luaT_callbinTM(L, p1, p2, L->top, event))
     return -1;  /* no metamethod */
   else
-    return !l_isfalse(L->top);
+    return !luai_l_isfalse(L->top);
 }
 
 /*__lundump.c__*/
@@ -20082,7 +20081,7 @@ typedef struct {
 } luai_LoadState;
 
 
-static l_noret luai_error(luai_LoadState *S, const char *why) {
+static luai_l_noret luai_error(luai_LoadState *S, const char *why) {
   luaO_pushfstring(S->L, "%s: %s precompiled chunk", S->name, why);
   luaD_throw(S->L, LUA_ERRSYNTAX);
 }
@@ -20131,7 +20130,7 @@ static lua_Integer luai_LoadInteger (luai_LoadState *S) {
 }
 
 
-static TString *luai_LoadString (luai_LoadState *S) {
+static luai_TString *luai_LoadString (luai_LoadState *S) {
   size_t size = luai_LoadByte(S);
   if (size == 0xFF)
     luai_LoadVar(S, size);
@@ -20143,14 +20142,14 @@ static TString *luai_LoadString (luai_LoadState *S) {
     return luaS_newlstr(S->L, buff, size);
   }
   else {  /* long string */
-    TString *ts = luaS_createlngstrobj(S->L, size);
+    luai_TString *ts = luaS_createlngstrobj(S->L, size);
     luai_LoadVector(S, getstr(ts), size);  /* load directly in final place */
     return ts;
   }
 }
 
 
-static void luai_LoadCode (luai_LoadState *S, Proto *f) {
+static void luai_LoadCode (luai_LoadState *S, luai_Proto *f) {
   int n = luai_LoadInt(S);
   f->code = luaM_newvector(S->L, n, Instruction);
   f->sizecode = n;
@@ -20158,18 +20157,18 @@ static void luai_LoadCode (luai_LoadState *S, Proto *f) {
 }
 
 
-static void luai_LoadFunction(luai_LoadState *S, Proto *f, TString *psource);
+static void luai_LoadFunction(luai_LoadState *S, luai_Proto *f, luai_TString *psource);
 
 
-static void luai_LoadConstants (luai_LoadState *S, Proto *f) {
+static void luai_LoadConstants (luai_LoadState *S, luai_Proto *f) {
   int i;
   int n = luai_LoadInt(S);
-  f->k = luaM_newvector(S->L, n, TValue);
+  f->k = luaM_newvector(S->L, n, luai_TValue);
   f->sizek = n;
   for (i = 0; i < n; i++)
     setnilvalue(&f->k[i]);
   for (i = 0; i < n; i++) {
-    TValue *o = &f->k[i];
+    luai_TValue *o = &f->k[i];
     int t = luai_LoadByte(S);
     switch (t) {
     case LUA_TNIL:
@@ -20195,10 +20194,10 @@ static void luai_LoadConstants (luai_LoadState *S, Proto *f) {
 }
 
 
-static void luai_LoadProtos (luai_LoadState *S, Proto *f) {
+static void luai_LoadProtos (luai_LoadState *S, luai_Proto *f) {
   int i;
   int n = luai_LoadInt(S);
-  f->p = luaM_newvector(S->L, n, Proto *);
+  f->p = luaM_newvector(S->L, n, luai_Proto *);
   f->sizep = n;
   for (i = 0; i < n; i++)
     f->p[i] = NULL;
@@ -20209,7 +20208,7 @@ static void luai_LoadProtos (luai_LoadState *S, Proto *f) {
 }
 
 
-static void luai_LoadUpvalues (luai_LoadState *S, Proto *f) {
+static void luai_LoadUpvalues (luai_LoadState *S, luai_Proto *f) {
   int i, n;
   n = luai_LoadInt(S);
   f->upvalues = luaM_newvector(S->L, n, Upvaldesc);
@@ -20223,7 +20222,7 @@ static void luai_LoadUpvalues (luai_LoadState *S, Proto *f) {
 }
 
 
-static void luai_LoadDebug (luai_LoadState *S, Proto *f) {
+static void luai_LoadDebug (luai_LoadState *S, luai_Proto *f) {
   int i, n;
   n = luai_LoadInt(S);
   f->lineinfo = luaM_newvector(S->L, n, int);
@@ -20245,7 +20244,7 @@ static void luai_LoadDebug (luai_LoadState *S, Proto *f) {
 }
 
 
-static void luai_LoadFunction (luai_LoadState *S, Proto *f, TString *psource) {
+static void luai_LoadFunction (luai_LoadState *S, luai_Proto *f, luai_TString *psource) {
   f->source = luai_LoadString(S);
   if (f->source == NULL)  /* no source in dump? */
     f->source = psource;  /* reuse parent's source */
@@ -20279,7 +20278,7 @@ static void luai_fchecksize (luai_LoadState *S, size_t size, const char *tname) 
 
 #define luai_checksize(S,t)	luai_fchecksize(S,sizeof(t),#t)
 
-static void checkHeader (luai_LoadState *S) {
+static void luai_checkHeader (luai_LoadState *S) {
   luai_checkliteral(S, LUA_SIGNATURE + 1, "not a");  /* 1st char already checked */
   if (luai_LoadByte(S) != LUAC_VERSION)
     luai_error(S, "version mismatch in");
@@ -20312,7 +20311,7 @@ LClosure *luaU_undump(lua_State *L, ZIO *Z, const char *name) {
     S.name = name;
   S.L = L;
   S.Z = Z;
-  checkHeader(&S);
+  luai_checkHeader(&S);
   cl = luaF_newLclosure(L, luai_LoadByte(&S));
   setclLvalue(L, L->top, cl);
   luaD_inctop(L);
@@ -20327,12 +20326,12 @@ LClosure *luaU_undump(lua_State *L, ZIO *Z, const char *name) {
 
 #define LUA_MAXUNICODE	0x10FFFF
 
-#define iscont(p)	((*(p) & 0xC0) == 0x80)
+#define luai_iscont(p)	((*(p) & 0xC0) == 0x80)
 
 
 /* from luai_strlib */
 /* translate a relative string position: negative means back from end */
-static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
+static lua_Integer luai_u_posrelat (lua_Integer pos, size_t len) {
   if (pos >= 0) return pos;
   else if (0u - (size_t)pos > len) return 0;
   else return (lua_Integer)len + pos + 1;
@@ -20352,11 +20351,11 @@ static const char *utf8_decode (const char *o, int *val) {
   else {
     int count = 0;  /* to count number of continuation bytes */
     while (c & 0x40) {  /* still have continuation bytes? */
-      int cc = s[++count];  /* read next byte */
+      int cc = s[++count];  /* read luai_next byte */
       if ((cc & 0xC0) != 0x80)  /* not a continuation byte? */
         return NULL;  /* invalid byte sequence */
       res = (res << 6) | (cc & 0x3F);  /* add lower 6 bits from cont. byte */
-      c <<= 1;  /* to test next bit */
+      c <<= 1;  /* to test luai_next bit */
     }
     res |= ((c & 0x7F) << (count * 5));  /* add first byte */
     if (count > 3 || res > LUA_MAXUNICODE || res <= limits[count])
@@ -20377,8 +20376,8 @@ static int luai_utflen (lua_State *L) {
   int n = 0;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
-  lua_Integer posj = u_posrelat(luaL_optinteger(L, 3, -1), len);
+  lua_Integer posi = luai_u_posrelat(luaL_optinteger(L, 2, 1), len);
+  lua_Integer posj = luai_u_posrelat(luaL_optinteger(L, 3, -1), len);
   luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 2,
                    "initial position out of string");
   luaL_argcheck(L, --posj < (lua_Integer)len, 3,
@@ -20405,8 +20404,8 @@ static int luai_utflen (lua_State *L) {
 static int luai_codepoint (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
-  lua_Integer pose = u_posrelat(luaL_optinteger(L, 3, posi), len);
+  lua_Integer posi = luai_u_posrelat(luaL_optinteger(L, 2, 1), len);
+  lua_Integer pose = luai_u_posrelat(luaL_optinteger(L, 3, posi), len);
   int n;
   const char *se;
   luaL_argcheck(L, posi >= 1, 2, "out of range");
@@ -20430,7 +20429,7 @@ static int luai_codepoint (lua_State *L) {
 }
 
 
-static void pushutfchar (lua_State *L, int arg) {
+static void luai_pushutfchar (lua_State *L, int arg) {
   lua_Integer code = luaL_checkinteger(L, arg);
   luaL_argcheck(L, 0 <= code && code <= LUA_MAXUNICODE, arg, "value out of range");
   lua_pushfstring(L, "%U", (long)code);
@@ -20443,13 +20442,13 @@ static void pushutfchar (lua_State *L, int arg) {
 static int luai_utfchar (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   if (n == 1)  /* optimize common case of single char */
-    pushutfchar(L, 1);
+    luai_pushutfchar(L, 1);
   else {
     int i;
     luaL_Buffer b;
     luaL_buffinit(L, &b);
     for (i = 1; i <= n; i++) {
-      pushutfchar(L, i);
+      luai_pushutfchar(L, i);
       luaL_addvalue(&b);
     }
     luaL_pushresult(&b);
@@ -20467,30 +20466,30 @@ static int luai_byteoffset (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer n  = luaL_checkinteger(L, 2);
   lua_Integer posi = (n >= 0) ? 1 : len + 1;
-  posi = u_posrelat(luaL_optinteger(L, 3, posi), len);
+  posi = luai_u_posrelat(luaL_optinteger(L, 3, posi), len);
   luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 3,
                    "position out of range");
   if (n == 0) {
     /* find beginning of current byte sequence */
-    while (posi > 0 && iscont(s + posi)) posi--;
+    while (posi > 0 && luai_iscont(s + posi)) posi--;
   }
   else {
-    if (iscont(s + posi))
+    if (luai_iscont(s + posi))
       luaL_error(L, "initial position is a continuation byte");
     if (n < 0) {
        while (n < 0 && posi > 0) {  /* move back */
          do {  /* find beginning of previous character */
            posi--;
-         } while (posi > 0 && iscont(s + posi));
+         } while (posi > 0 && luai_iscont(s + posi));
          n++;
        }
      }
      else {
        n--;  /* do not move for 1st character */
        while (n > 0 && posi < (lua_Integer)len) {
-         do {  /* find beginning of next character */
+         do {  /* find beginning of luai_next character */
            posi++;
-         } while (iscont(s + posi));  /* (cannot pass final '\0') */
+         } while (luai_iscont(s + posi));  /* (cannot pass final '\0') */
          n--;
        }
      }
@@ -20503,7 +20502,7 @@ static int luai_byteoffset (lua_State *L) {
 }
 
 
-static int iter_aux (lua_State *L) {
+static int luai_iter_aux (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer n = lua_tointeger(L, 2) - 1;
@@ -20511,14 +20510,14 @@ static int iter_aux (lua_State *L) {
     n = 0;  /* start from here */
   else if (n < (lua_Integer)len) {
     n++;  /* skip current byte */
-    while (iscont(s + n)) n++;  /* and its continuations */
+    while (luai_iscont(s + n)) n++;  /* and its continuations */
   }
   if (n >= (lua_Integer)len)
     return 0;  /* no more codepoints */
   else {
     int code;
-    const char *next = utf8_decode(s + n, &code);
-    if (next == NULL || iscont(next))
+    const char *luai_next = utf8_decode(s + n, &code);
+    if (luai_next == NULL || luai_iscont(luai_next))
       return luaL_error(L, "invalid UTF-8 code");
     lua_pushinteger(L, n + 1);
     lua_pushinteger(L, code);
@@ -20529,7 +20528,7 @@ static int iter_aux (lua_State *L) {
 
 static int luai_iter_codes (lua_State *L) {
   luaL_checkstring(L, 1);
-  lua_pushcfunction(L, iter_aux);
+  lua_pushcfunction(L, luai_iter_aux);
   lua_pushvalue(L, 1);
   lua_pushinteger(L, 0);
   return 3;
@@ -20537,7 +20536,7 @@ static int luai_iter_codes (lua_State *L) {
 
 
 /* pattern to match a single UTF-8 character */
-#define UTF8PATT	"[\0-\x7F\xC2-\xF4][\x80-\xBF]*"
+#define LUAI_UTF8PATT	"[\0-\x7F\xC2-\xF4][\x80-\xBF]*"
 
 
 static const luaL_Reg luai_funcs[] = {
@@ -20554,7 +20553,7 @@ static const luaL_Reg luai_funcs[] = {
 
 LUAMOD_API int luaopen_utf8 (lua_State *L) {
   luaL_newlib(L, luai_funcs);
-  lua_pushlstring(L, UTF8PATT, sizeof(UTF8PATT)/sizeof(char) - 1);
+  lua_pushlstring(L, LUAI_UTF8PATT, sizeof(LUAI_UTF8PATT)/sizeof(char) - 1);
   lua_setfield(L, -2, "charpattern");
   return 1;
 }
@@ -20562,32 +20561,32 @@ LUAMOD_API int luaopen_utf8 (lua_State *L) {
 /*__lvm.c__*/
 
 /* limit for table tag-method chains (to avoid loops) */
-#define MAXTAGLOOP	2000
+#define LUAI_MAXTAGLOOP	2000
 
 
 
 /*
-** 'l_intfitsf' checks whether a given integer can be converted to a
+** 'luai_l_intfitsf' checks whether a given integer can be converted to a
 ** float without rounding. Used in comparisons. Left undefined if
 ** all integers fit in a float precisely.
 */
-#if !defined(l_intfitsf)
+#if !defined(luai_l_intfitsf)
 
 /* number of bits in the mantissa of a float */
-#define NBM		(l_mathlim(MANT_DIG))
+#define LUAI_NBM		(luai_l_mathlim(MANT_DIG))
 
 /*
 ** Check whether some integers may not fit in a float, that is, whether
-** (maxinteger >> NBM) > 0 (that implies (1 << NBM) <= maxinteger).
+** (maxinteger >> LUAI_NBM) > 0 (that implies (1 << LUAI_NBM) <= maxinteger).
 ** (The shifts are done in parts to avoid shifting by more than the size
-** of an integer. In a worst case, NBM == 113 for long double and
+** of an integer. In a worst case, LUAI_NBM == 113 for long double and
 ** sizeof(integer) == 32.)
 */
-#if ((((LUA_MAXINTEGER >> (NBM / 4)) >> (NBM / 4)) >> (NBM / 4)) \
-	>> (NBM - (3 * (NBM / 4))))  >  0
+#if ((((LUA_MAXINTEGER >> (LUAI_NBM / 4)) >> (LUAI_NBM / 4)) >> (LUAI_NBM / 4)) \
+	>> (LUAI_NBM - (3 * (LUAI_NBM / 4))))  >  0
 
-#define l_intfitsf(i)  \
-  (-((lua_Integer)1 << NBM) <= (i) && (i) <= ((lua_Integer)1 << NBM))
+#define luai_l_intfitsf(i)  \
+  (-((lua_Integer)1 << LUAI_NBM) <= (i) && (i) <= ((lua_Integer)1 << LUAI_NBM))
 
 #endif
 
@@ -20599,10 +20598,10 @@ LUAMOD_API int luaopen_utf8 (lua_State *L) {
 ** Try to convert a value to a float. The float case is already handled
 ** by the macro 'tonumber'.
 */
-int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
-  TValue v;
+int luaV_tonumber_ (const luai_TValue *obj, lua_Number *n) {
+  luai_TValue v;
   if (ttisinteger(obj)) {
-    *n = cast_num(ivalue(obj));
+    *n = luai_cast_num(ivalue(obj));
     return 1;
   }
   else if (cvt2num(obj) &&  /* string convertible to number? */
@@ -20621,12 +20620,12 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 ** mode == 1: takes the floor of the number
 ** mode == 2: takes the ceil of the number
 */
-int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
-  TValue v;
+int luaV_tointeger (const luai_TValue *obj, lua_Integer *p, int mode) {
+  luai_TValue v;
  again:
   if (ttisfloat(obj)) {
     lua_Number n = fltvalue(obj);
-    lua_Number f = l_floor(n);
+    lua_Number f = luai_l_floor(n);
     if (n != f) {  /* not an integral value? */
       if (mode == 0) return 0;  /* fails if mode demands integral value */
       else if (mode > 1)  /* needs ceil? */
@@ -20654,7 +20653,7 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
 ** for negative steps mutatis mutandis.)
 ** If the limit can be converted to an integer, rounding down, that is
 ** it.
-** Otherwise, check whether the limit can be converted to a number.  If
+** Otherwise, luai_check whether the limit can be converted to a number.  If
 ** the number is too large, it is OK to set the limit as LUA_MAXINTEGER,
 ** which means no limit.  If the number is too negative, the loop
 ** should not run, because any initial integer value is larger than the
@@ -20662,7 +20661,7 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
 ** the extreme case when the initial value is LUA_MININTEGER, in which
 ** case the LUA_MININTEGER limit would still run the loop once.
 */
-static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
+static int luai_forlimit (const luai_TValue *obj, lua_Integer *p, lua_Integer step,
                      int *stopnow) {
   *stopnow = 0;  /* usually, let loops run */
   if (!luaV_tointeger(obj, p, (step < 0 ? 2 : 1))) {  /* not fit in integer? */
@@ -20687,11 +20686,11 @@ static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
 ** if 'slot' is NULL, 't' is not a table; otherwise, 'slot' points to
 ** t[k] entry (which must be nil).
 */
-void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
-                      const TValue *slot) {
+void luaV_finishget (lua_State *L, const luai_TValue *t, luai_TValue *key, StkId val,
+                      const luai_TValue *slot) {
   int loop;  /* counter to avoid infinite loops */
-  const TValue *tm;  /* metamethod */
-  for (loop = 0; loop < MAXTAGLOOP; loop++) {
+  const luai_TValue *tm;  /* metamethod */
+  for (loop = 0; loop < LUAI_MAXTAGLOOP; loop++) {
     if (slot == NULL) {  /* 't' is not a table? */
       lua_assert(!ttistable(t));
       tm = luaT_gettmbyobj(L, t, TM_INDEX);
@@ -20724,33 +20723,33 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
 
 
 /*
-** Finish a table assignment 't[key] = val'.
+** Finish a table luai_assignment 't[key] = val'.
 ** If 'slot' is NULL, 't' is not a table.  Otherwise, 'slot' points
 ** to the entry 't[key]', or to 'luaO_nilobject' if there is no such
 ** entry.  (The value at 'slot' must be nil, otherwise 'luaV_fastset'
 ** would have done the job.)
 */
-void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
-                     StkId val, const TValue *slot) {
+void luaV_finishset (lua_State *L, const luai_TValue *t, luai_TValue *key,
+                     StkId val, const luai_TValue *slot) {
   int loop;  /* counter to avoid infinite loops */
-  for (loop = 0; loop < MAXTAGLOOP; loop++) {
-    const TValue *tm;  /* '__newindex' metamethod */
+  for (loop = 0; loop < LUAI_MAXTAGLOOP; loop++) {
+    const luai_TValue *tm;  /* '__newindex' metamethod */
     if (slot != NULL) {  /* is 't' a table? */
-      Table *h = hvalue(t);  /* save 't' table */
+      luai_Table *h = hvalue(t);  /* luai_save 't' table */
       lua_assert(ttisnil(slot));  /* old value must be nil */
       tm = fasttm(L, h->metatable, TM_NEWINDEX);  /* get metamethod */
       if (tm == NULL) {  /* no metamethod? */
         if (slot == luaO_nilobject)  /* no previous entry? */
           slot = luaH_newkey(L, h, key);  /* create one */
         /* no metamethod and (now) there is an entry with given key */
-        setobj2t(L, cast(TValue *, slot), val);  /* set its new value */
-        invalidateTMcache(h);
+        setobj2t(L, luai_cast(luai_TValue *, slot), val);  /* set its new value */
+        luai_invalidateTMcache(h);
         luaC_barrierback(L, h, val);
         return;
       }
       /* else will try the metamethod */
     }
-    else {  /* not a table; check metamethod */
+    else {  /* not a table; luai_check metamethod */
       if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
         luaG_typeerror(L, t, "index");
     }
@@ -20759,7 +20758,7 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       luaT_callTM(L, tm, t, key, val, 0);
       return;
     }
-    t = tm;  /* else repeat assignment over 'tm' */
+    t = tm;  /* else repeat luai_assignment over 'tm' */
     if (luaV_fastset(L, t, key, slot, luaH_get, val))
       return;  /* done */
     /* else loop */
@@ -20775,7 +20774,7 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
 ** and it uses 'strcoll' (to respect locales) for each segments
 ** of the strings.
 */
-static int l_strcmp (const TString *ls, const TString *rs) {
+static int luai_l_strcmp (const luai_TString *ls, const luai_TString *rs) {
   const char *l = getstr(ls);
   size_t ll = tsslen(ls);
   const char *r = getstr(rs);
@@ -20787,7 +20786,7 @@ static int l_strcmp (const TString *ls, const TString *rs) {
     else {  /* strings are equal up to a '\0' */
       size_t len = strlen(l);  /* index of first '\0' in both strings */
       if (len == lr)  /* 'rs' is finished? */
-        return (len == ll) ? 0 : 1;  /* check 'ls' */
+        return (len == ll) ? 0 : 1;  /* luai_check 'ls' */
       else if (len == ll)  /* 'ls' is finished? */
         return -1;  /* 'ls' is smaller than 'rs' ('rs' is not finished) */
       /* both strings longer than 'len'; go on comparing after the '\0' */
@@ -20800,7 +20799,7 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 
 /*
 ** Check whether integer 'i' is less than float 'f'. If 'i' has an
-** exact representation as a float ('l_intfitsf'), compare numbers as
+** exact representation as a float ('luai_l_intfitsf'), compare numbers as
 ** floats. Otherwise, if 'f' is outside the range for integers, result
 ** is trivial. Otherwise, compare them as integers. (When 'i' has no
 ** float representation, either 'f' is "far away" from 'i' or 'f' has
@@ -20808,18 +20807,18 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 ** truncated is irrelevant.) When 'f' is NaN, comparisons must result
 ** in false.
 */
-static int LTintfloat (lua_Integer i, lua_Number f) {
-#if defined(l_intfitsf)
-  if (!l_intfitsf(i)) {
-    if (f >= -cast_num(LUA_MININTEGER))  /* -minint == maxint + 1 */
+static int luai_LTintfloat (lua_Integer i, lua_Number f) {
+#if defined(luai_l_intfitsf)
+  if (!luai_l_intfitsf(i)) {
+    if (f >= -luai_cast_num(LUA_MININTEGER))  /* -minint == maxint + 1 */
       return 1;  /* f >= maxint + 1 > i */
-    else if (f > cast_num(LUA_MININTEGER))  /* minint < f <= maxint ? */
-      return (i < cast(lua_Integer, f));  /* compare them as integers */
+    else if (f > luai_cast_num(LUA_MININTEGER))  /* minint < f <= maxint ? */
+      return (i < luai_cast(lua_Integer, f));  /* compare them as integers */
     else  /* f <= minint <= i (or 'f' is NaN)  -->  not(i < f) */
       return 0;
   }
 #endif
-  return luai_numlt(cast_num(i), f);  /* compare them as floats */
+  return luai_numlt(luai_cast_num(i), f);  /* compare them as floats */
 }
 
 
@@ -20827,31 +20826,31 @@ static int LTintfloat (lua_Integer i, lua_Number f) {
 ** Check whether integer 'i' is less than or equal to float 'f'.
 ** See comments on previous function.
 */
-static int LEintfloat (lua_Integer i, lua_Number f) {
-#if defined(l_intfitsf)
-  if (!l_intfitsf(i)) {
-    if (f >= -cast_num(LUA_MININTEGER))  /* -minint == maxint + 1 */
+static int luai_LEintfloat (lua_Integer i, lua_Number f) {
+#if defined(luai_l_intfitsf)
+  if (!luai_l_intfitsf(i)) {
+    if (f >= -luai_cast_num(LUA_MININTEGER))  /* -minint == maxint + 1 */
       return 1;  /* f >= maxint + 1 > i */
-    else if (f >= cast_num(LUA_MININTEGER))  /* minint <= f <= maxint ? */
-      return (i <= cast(lua_Integer, f));  /* compare them as integers */
+    else if (f >= luai_cast_num(LUA_MININTEGER))  /* minint <= f <= maxint ? */
+      return (i <= luai_cast(lua_Integer, f));  /* compare them as integers */
     else  /* f < minint <= i (or 'f' is NaN)  -->  not(i <= f) */
       return 0;
   }
 #endif
-  return luai_numle(cast_num(i), f);  /* compare them as floats */
+  return luai_numle(luai_cast_num(i), f);  /* compare them as floats */
 }
 
 
 /*
 ** Return 'l < r', for numbers.
 */
-static int LTnum (const TValue *l, const TValue *r) {
+static int luai_LTnum (const luai_TValue *l, const luai_TValue *r) {
   if (ttisinteger(l)) {
     lua_Integer li = ivalue(l);
     if (ttisinteger(r))
       return li < ivalue(r);  /* both are integers */
     else  /* 'l' is int and 'r' is float */
-      return LTintfloat(li, fltvalue(r));  /* l < r ? */
+      return luai_LTintfloat(li, fltvalue(r));  /* l < r ? */
   }
   else {
     lua_Number lf = fltvalue(l);  /* 'l' must be float */
@@ -20860,7 +20859,7 @@ static int LTnum (const TValue *l, const TValue *r) {
     else if (luai_numisnan(lf))  /* 'r' is int and 'l' is float */
       return 0;  /* NaN < i is always false */
     else  /* without NaN, (l < r)  <-->  not(r <= l) */
-      return !LEintfloat(ivalue(r), lf);  /* not (r <= l) ? */
+      return !luai_LEintfloat(ivalue(r), lf);  /* not (r <= l) ? */
   }
 }
 
@@ -20868,13 +20867,13 @@ static int LTnum (const TValue *l, const TValue *r) {
 /*
 ** Return 'l <= r', for numbers.
 */
-static int LEnum (const TValue *l, const TValue *r) {
+static int luai_LEnum (const luai_TValue *l, const luai_TValue *r) {
   if (ttisinteger(l)) {
     lua_Integer li = ivalue(l);
     if (ttisinteger(r))
       return li <= ivalue(r);  /* both are integers */
     else  /* 'l' is int and 'r' is float */
-      return LEintfloat(li, fltvalue(r));  /* l <= r ? */
+      return luai_LEintfloat(li, fltvalue(r));  /* l <= r ? */
   }
   else {
     lua_Number lf = fltvalue(l);  /* 'l' must be float */
@@ -20883,7 +20882,7 @@ static int LEnum (const TValue *l, const TValue *r) {
     else if (luai_numisnan(lf))  /* 'r' is int and 'l' is float */
       return 0;  /*  NaN <= i is always false */
     else  /* without NaN, (l <= r)  <-->  not(r < l) */
-      return !LTintfloat(ivalue(r), lf);  /* not (r < l) ? */
+      return !luai_LTintfloat(ivalue(r), lf);  /* not (r < l) ? */
   }
 }
 
@@ -20891,12 +20890,12 @@ static int LEnum (const TValue *l, const TValue *r) {
 /*
 ** Main operation less than; return 'l < r'.
 */
-int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
+int luaV_lessthan (lua_State *L, const luai_TValue *l, const luai_TValue *r) {
   int res;
   if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
-    return LTnum(l, r);
+    return luai_LTnum(l, r);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
-    return l_strcmp(tsvalue(l), tsvalue(r)) < 0;
+    return luai_l_strcmp(tsvalue(l), tsvalue(r)) < 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)  /* no metamethod? */
     luaG_ordererror(L, l, r);  /* error */
   return res;
@@ -20911,12 +20910,12 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 ** about it (to negate the result of r<l); bit CIST_LEQ in the call
 ** status keeps that information.
 */
-int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
+int luaV_lessequal (lua_State *L, const luai_TValue *l, const luai_TValue *r) {
   int res;
   if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
-    return LEnum(l, r);
+    return luai_LEnum(l, r);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
-    return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
+    return luai_l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* try 'le' */
     return res;
   else {  /* try 'lt': */
@@ -20934,8 +20933,8 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 ** Main operation for equality of Lua values; return 't1 == t2'.
 ** L == NULL means raw equality (no metamethods)
 */
-int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
-  const TValue *tm;
+int luaV_equalobj (lua_State *L, const luai_TValue *t1, const luai_TValue *t2) {
+  const luai_TValue *tm;
   if (ttype(t1) != ttype(t2)) {  /* not the same variant? */
     if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
       return 0;  /* only numbers can be equal with different variants */
@@ -20952,7 +20951,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
     case LUA_TLCF: return fvalue(t1) == fvalue(t2);
-    case LUA_TSHRSTR: return eqshrstr(tsvalue(t1), tsvalue(t2));
+    case LUA_TSHRSTR: return luai_eqshrstr(tsvalue(t1), tsvalue(t2));
     case LUA_TLNGSTR: return luaS_eqlngstr(tsvalue(t1), tsvalue(t2));
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
@@ -20976,7 +20975,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   if (tm == NULL)  /* no TM? */
     return 0;  /* objects are different */
   luaT_callTM(L, tm, t1, t2, L->top, 1);  /* call TM */
-  return !l_isfalse(L->top);
+  return !luai_l_isfalse(L->top);
 }
 
 
@@ -20987,7 +20986,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 #define isemptystr(o)	(ttisshrstring(o) && tsvalue(o)->shrlen == 0)
 
 /* copy strings in stack from top - n up to top - 1 to buffer */
-static void copy2buff (StkId top, int n, char *buff) {
+static void luai_copy2buff (StkId top, int n, char *buff) {
   size_t tl = 0;  /* size already copied */
   do {
     size_t l = vslen(top - n);  /* length of string being copied */
@@ -21009,14 +21008,14 @@ void luaV_concat (lua_State *L, int total) {
     if (!(ttisstring(top-2) || cvt2str(top-2)) || !luai_tostring(L, top-1))
       luaT_trybinTM(L, top-2, top-1, top-2, TM_CONCAT);
     else if (isemptystr(top - 1))  /* second operand is empty? */
-      cast_void(luai_tostring(L, top - 2));  /* result is first operand */
+      luai_cast_void(luai_tostring(L, top - 2));  /* result is first operand */
     else if (isemptystr(top - 2)) {  /* first operand is an empty string? */
       setobjs2s(L, top - 2, top - 1);  /* result is second op. */
     }
     else {
       /* at least two non-empty string values; get as many as possible */
       size_t tl = vslen(top - 1);
-      TString *ts;
+      luai_TString *ts;
       /* collect total length and number of strings */
       for (n = 1; n < total && luai_tostring(L, top - n - 1); n++) {
         size_t l = vslen(top - n - 1);
@@ -21026,12 +21025,12 @@ void luaV_concat (lua_State *L, int total) {
       }
       if (tl <= LUAI_MAXSHORTLEN) {  /* is result a short string? */
         char buff[LUAI_MAXSHORTLEN];
-        copy2buff(top, n, buff);  /* copy strings to buffer */
+        luai_copy2buff(top, n, buff);  /* copy strings to buffer */
         ts = luaS_newlstr(L, buff, tl);
       }
       else {  /* long string; copy strings directly to final result */
         ts = luaS_createlngstrobj(L, tl);
-        copy2buff(top, n, getstr(ts));
+        luai_copy2buff(top, n, getstr(ts));
       }
       setsvalue2s(L, top - n, ts);  /* create result */
     }
@@ -21044,11 +21043,11 @@ void luaV_concat (lua_State *L, int total) {
 /*
 ** Main operation 'ra' = #rb'.
 */
-void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
-  const TValue *tm;
+void luaV_objlen (lua_State *L, StkId ra, const luai_TValue *rb) {
+  const luai_TValue *tm;
   switch (ttype(rb)) {
     case LUA_TTABLE: {
-      Table *h = hvalue(rb);
+      luai_Table *h = hvalue(rb);
       tm = fasttm(L, h->metatable, TM_LEN);
       if (tm) break;  /* metamethod? break switch to call it */
       setivalue(ra, luaH_getn(h));  /* else primitive len */
@@ -21080,7 +21079,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 ** otherwise 'floor(q) == trunc(q) - 1'.
 */
 lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
-  if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
+  if (luai_l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
     if (n == 0)
       luaG_runerror(L, "attempt to divide by zero");
     return intop(-, 0, m);   /* n==-1; avoid overflow with 0x80000...//-1 */
@@ -21100,7 +21099,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
 ** about luaV_div.)
 */
 lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
-  if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
+  if (luai_l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
     if (n == 0)
       luaG_runerror(L, "attempt to perform 'n%%0'");
     return 0;   /* m % -1 == 0; avoid overflow with 0x80000...%-1 */
@@ -21115,7 +21114,7 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
 
 
 /* number of bits in an integer */
-#define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
+#define NBITS	luai_cast_int(sizeof(lua_Integer) * CHAR_BIT)
 
 /*
 ** Shift left operation. (Shift right just negates 'y'.)
@@ -21133,18 +21132,18 @@ lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
 
 
 /*
-** check whether cached closure in prototype 'p' may be reused, that is,
+** luai_check whether cached closure in prototype 'p' may be reused, that is,
 ** whether there is a cached closure with the same upvalues needed by
 ** new closure to be created.
 */
-static LClosure *getcached (Proto *p, UpVal **encup, StkId base) {
+static LClosure *luai_getcached (luai_Proto *p, luai_UpVal **encup, StkId base) {
   LClosure *c = p->cache;
   if (c != NULL) {  /* is there a cached closure? */
     int nup = p->sizeupvalues;
     Upvaldesc *uv = p->upvalues;
     int i;
-    for (i = 0; i < nup; i++) {  /* check whether it has right upvalues */
-      TValue *v = uv[i].instack ? base + uv[i].idx : encup[uv[i].idx]->v;
+    for (i = 0; i < nup; i++) {  /* luai_check whether it has right upvalues */
+      luai_TValue *v = uv[i].instack ? base + uv[i].idx : encup[uv[i].idx]->v;
       if (c->upvals[i]->v != v)
         return NULL;  /* wrong upvalue; cannot reuse closure */
     }
@@ -21157,9 +21156,9 @@ static LClosure *getcached (Proto *p, UpVal **encup, StkId base) {
 ** create a new Lua closure, push it in the stack, and initialize
 ** its upvalues. Note that the closure is not cached if prototype is
 ** already black (which means that 'cache' was already cleared by the
-** GC).
+** LUAI_GC).
 */
-static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
+static void luai_pushclosure (lua_State *L, luai_Proto *p, luai_UpVal **encup, StkId base,
                          StkId ra) {
   int nup = p->sizeupvalues;
   Upvaldesc *uv = p->upvalues;
@@ -21175,8 +21174,8 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
     ncl->upvals[i]->refcount++;
     /* new closure is white, so we do not need a barrier here */
   }
-  if (!isblack(p))  /* cache will not break GC invariant? */
-    p->cache = ncl;  /* save it on cache for reuse */
+  if (!isblack(p))  /* cache will not break LUAI_GC invariant? */
+    p->cache = ncl;  /* luai_save it on cache for reuse */
 }
 
 
@@ -21187,54 +21186,54 @@ void luaV_finishOp (lua_State *L) {
   CallInfo *ci = L->ci;
   StkId base = ci->u.l.base;
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
-  OpCode op = GET_OPCODE(inst);
+  luai_OpCode op = luai_GETOPCODE(inst);
   switch (op) {  /* finish its execution */
-    case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV:
-    case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHL: case OP_SHR:
-    case OP_MOD: case OP_POW:
-    case OP_UNM: case OP_BNOT: case OP_LEN:
-    case OP_GETTABUP: case OP_GETTABLE: case OP_SELF: {
-      setobjs2s(L, base + GETARG_A(inst), --L->top);
+    case luai_OP_ADD: case luai_OP_SUB: case luai_OP_MUL: case luai_OP_DIV: case luai_OP_IDIV:
+    case luai_OP_BAND: case luai_OP_BOR: case luai_OP_BXOR: case luai_OP_SHL: case luai_OP_SHR:
+    case luai_OP_MOD: case luai_OP_POW:
+    case luai_OP_UNM: case luai_OP_BNOT: case luai_OP_LEN:
+    case luai_OP_GETTABUP: case luai_OP_GETTABLE: case luai_OP_SELF: {
+      setobjs2s(L, base + luai_GETARG_A(inst), --L->top);
       break;
     }
-    case OP_LE: case OP_LT: case OP_EQ: {
-      int res = !l_isfalse(L->top - 1);
+    case luai_OP_LE: case luai_OP_LT: case luai_OP_EQ: {
+      int res = !luai_l_isfalse(L->top - 1);
       L->top--;
       if (ci->callstatus & CIST_LEQ) {  /* "<=" using "<" instead? */
-        lua_assert(op == OP_LE);
+        lua_assert(op == luai_OP_LE);
         ci->callstatus ^= CIST_LEQ;  /* clear mark */
         res = !res;  /* negate result */
       }
-      lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
-      if (res != GETARG_A(inst))  /* condition failed? */
+      lua_assert(luai_GETOPCODE(*ci->u.l.savedpc) == luai_OP_JMP);
+      if (res != luai_GETARG_A(inst))  /* condition failed? */
         ci->u.l.savedpc++;  /* skip jump instruction */
       break;
     }
-    case OP_CONCAT: {
+    case luai_OP_CONCAT: {
       StkId top = L->top - 1;  /* top when 'luaT_trybinTM' was called */
-      int b = GETARG_B(inst);      /* first element to concatenate */
-      int total = cast_int(top - 1 - (base + b));  /* yet to concatenate */
+      int b = luai_GETARG_B(inst);      /* first element to concatenate */
+      int total = luai_cast_int(top - 1 - (base + b));  /* yet to concatenate */
       setobj2s(L, top - 2, top);  /* put TM result in proper position */
       if (total > 1) {  /* are there elements to concat? */
         L->top = top - 1;  /* top is one after last element (at top-2) */
         luaV_concat(L, total);  /* concat them (may yield again) */
       }
       /* move final result to final position */
-      setobj2s(L, ci->u.l.base + GETARG_A(inst), L->top - 1);
+      setobj2s(L, ci->u.l.base + luai_GETARG_A(inst), L->top - 1);
       L->top = ci->top;  /* restore top */
       break;
     }
-    case OP_TFORCALL: {
-      lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_TFORLOOP);
+    case luai_OP_TFORCALL: {
+      lua_assert(luai_GETOPCODE(*ci->u.l.savedpc) == luai_OP_TFORLOOP);
       L->top = ci->top;  /* correct top */
       break;
     }
-    case OP_CALL: {
-      if (GETARG_C(inst) - 1 >= 0)  /* nresults >= 0? */
+    case luai_OP_CALL: {
+      if (luai_GETARG_C(inst) - 1 >= 0)  /* nresults >= 0? */
         L->top = ci->top;  /* adjust results */
       break;
     }
-    case OP_TAILCALL: case OP_SETTABUP: case OP_SETTABLE:
+    case luai_OP_TAILCALL: case luai_OP_SETTABUP: case luai_OP_SETTABLE:
       break;
     default: lua_assert(0);
   }
@@ -21255,20 +21254,20 @@ void luaV_finishOp (lua_State *L) {
 */
 
 
-#define RA(i)	(base+GETARG_A(i))
-#define RB(i)	luai_check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_B(i))
-#define RC(i)	luai_check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
-#define RKB(i)	luai_check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
-	ISK(GETARG_B(i)) ? k+INDEXK(GETARG_B(i)) : base+GETARG_B(i))
-#define RKC(i)	luai_check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
-	ISK(GETARG_C(i)) ? k+INDEXK(GETARG_C(i)) : base+GETARG_C(i))
+#define RA(i)	(base+luai_GETARG_A(i))
+#define RB(i)	luai_check_exp(luai_getBMode(luai_GETOPCODE(i)) == luai_OpArgR, base+luai_GETARG_B(i))
+#define RC(i)	luai_check_exp(luai_getCMode(luai_GETOPCODE(i)) == luai_OpArgR, base+luai_GETARG_C(i))
+#define RKB(i)	luai_check_exp(luai_getBMode(luai_GETOPCODE(i)) == luai_OpArgK, \
+	luai_ISK(luai_GETARG_B(i)) ? k+luai_INDEXK(luai_GETARG_B(i)) : base+luai_GETARG_B(i))
+#define RKC(i)	luai_check_exp(luai_getCMode(luai_GETOPCODE(i)) == luai_OpArgK, \
+	luai_ISK(luai_GETARG_C(i)) ? k+luai_INDEXK(luai_GETARG_C(i)) : base+luai_GETARG_C(i))
 
 
 /* execute a jump instruction */
 #define luai_dojump(ci,i,e) \
-  { int a = GETARG_A(i); \
+  { int a = luai_GETARG_A(i); \
     if (a != 0) luaF_close(L, ci->u.l.base + a - 1); \
-    ci->u.l.savedpc += GETARG_sBx(i) + e; }
+    ci->u.l.savedpc += luai_GETARG_sBx(i) + e; }
 
 /* for test instructions, execute the jump instruction that follows it */
 #define luai_donextjump(ci)	{ i = *ci->u.l.savedpc; luai_dojump(ci, i, 1); }
@@ -21301,13 +21300,13 @@ void luaV_finishOp (lua_State *L) {
 ** copy of 'luaV_gettable', but protecting the call to potential
 ** metamethod (which can reallocate the stack)
 */
-#define luai_gettableProtected(L,t,k,v)  { const TValue *slot; \
+#define luai_gettableProtected(L,t,k,v)  { const luai_TValue *slot; \
   if (luaV_fastget(L,t,k,slot,luaH_get)) { setobj2s(L, v, slot); } \
   else luai_Protect(luaV_finishget(L,t,k,v,slot)); }
 
 
 /* same for 'luaV_settable' */
-#define luai_settableProtected(L,t,k,v) { const TValue *slot; \
+#define luai_settableProtected(L,t,k,v) { const luai_TValue *slot; \
   if (!luaV_fastset(L,t,k,slot,luaH_get,v)) \
     luai_Protect(luaV_finishset(L,t,k,v,slot)); }
 
@@ -21316,7 +21315,7 @@ void luaV_finishOp (lua_State *L) {
 void luaV_execute (lua_State *L) {
   CallInfo *ci = L->ci;
   LClosure *cl;
-  TValue *k;
+  luai_TValue *k;
   StkId base;
   ci->callstatus |= CIST_FRESH;  /* fresh invocation of 'luaV_execute" */
  newframe:  /* reentry point when frame changes (call/return) */
@@ -21329,86 +21328,86 @@ void luaV_execute (lua_State *L) {
     Instruction i;
     StkId ra;
     luai_vmfetch();
-    luai_vmdispatch (GET_OPCODE(i)) {
-      luai_vmcase(OP_MOVE) {
+    luai_vmdispatch (luai_GETOPCODE(i)) {
+      luai_vmcase(luai_OP_MOVE) {
         setobjs2s(L, ra, RB(i));
         luai_vmbreak;
       }
-      luai_vmcase(OP_LOADK) {
-        TValue *rb = k + GETARG_Bx(i);
+      luai_vmcase(luai_OP_LOADK) {
+        luai_TValue *rb = k + luai_GETARG_Bx(i);
         setobj2s(L, ra, rb);
         luai_vmbreak;
       }
-      luai_vmcase(OP_LOADKX) {
-        TValue *rb;
-        lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_EXTRAARG);
-        rb = k + GETARG_Ax(*ci->u.l.savedpc++);
+      luai_vmcase(luai_OP_LOADKX) {
+        luai_TValue *rb;
+        lua_assert(luai_GETOPCODE(*ci->u.l.savedpc) == luai_OP_EXTRAARG);
+        rb = k + luai_GETARG_Ax(*ci->u.l.savedpc++);
         setobj2s(L, ra, rb);
         luai_vmbreak;
       }
-      luai_vmcase(OP_LOADBOOL) {
-        setbvalue(ra, GETARG_B(i));
-        if (GETARG_C(i)) ci->u.l.savedpc++;  /* skip next instruction (if C) */
+      luai_vmcase(luai_OP_LOADBOOL) {
+        setbvalue(ra, luai_GETARG_B(i));
+        if (luai_GETARG_C(i)) ci->u.l.savedpc++;  /* skip luai_next instruction (if C) */
         luai_vmbreak;
       }
-      luai_vmcase(OP_LOADNIL) {
-        int b = GETARG_B(i);
+      luai_vmcase(luai_OP_LOADNIL) {
+        int b = luai_GETARG_B(i);
         do {
           setnilvalue(ra++);
         } while (b--);
         luai_vmbreak;
       }
-      luai_vmcase(OP_GETUPVAL) {
-        int b = GETARG_B(i);
+      luai_vmcase(luai_OP_GETUPVAL) {
+        int b = luai_GETARG_B(i);
         setobj2s(L, ra, cl->upvals[b]->v);
         luai_vmbreak;
       }
-      luai_vmcase(OP_GETTABUP) {
-        TValue *upval = cl->upvals[GETARG_B(i)]->v;
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_GETTABUP) {
+        luai_TValue *upval = cl->upvals[luai_GETARG_B(i)]->v;
+        luai_TValue *rc = RKC(i);
         luai_gettableProtected(L, upval, rc, ra);
         luai_vmbreak;
       }
-      luai_vmcase(OP_GETTABLE) {
+      luai_vmcase(luai_OP_GETTABLE) {
         StkId rb = RB(i);
-        TValue *rc = RKC(i);
+        luai_TValue *rc = RKC(i);
         luai_gettableProtected(L, rb, rc, ra);
         luai_vmbreak;
       }
-      luai_vmcase(OP_SETTABUP) {
-        TValue *upval = cl->upvals[GETARG_A(i)]->v;
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_SETTABUP) {
+        luai_TValue *upval = cl->upvals[luai_GETARG_A(i)]->v;
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         luai_settableProtected(L, upval, rb, rc);
         luai_vmbreak;
       }
-      luai_vmcase(OP_SETUPVAL) {
-        UpVal *uv = cl->upvals[GETARG_B(i)];
+      luai_vmcase(luai_OP_SETUPVAL) {
+        luai_UpVal *uv = cl->upvals[luai_GETARG_B(i)];
         setobj(L, uv->v, ra);
         luaC_upvalbarrier(L, uv);
         luai_vmbreak;
       }
-      luai_vmcase(OP_SETTABLE) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_SETTABLE) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         luai_settableProtected(L, ra, rb, rc);
         luai_vmbreak;
       }
-      luai_vmcase(OP_NEWTABLE) {
-        int b = GETARG_B(i);
-        int c = GETARG_C(i);
-        Table *t = luaH_new(L);
+      luai_vmcase(luai_OP_NEWTABLE) {
+        int b = luai_GETARG_B(i);
+        int c = luai_GETARG_C(i);
+        luai_Table *t = luaH_new(L);
         sethvalue(L, ra, t);
         if (b != 0 || c != 0)
           luaH_resize(L, t, luaO_fb2int(b), luaO_fb2int(c));
         luai_checkGC(L, ra + 1);
         luai_vmbreak;
       }
-      luai_vmcase(OP_SELF) {
-        const TValue *aux;
+      luai_vmcase(luai_OP_SELF) {
+        const luai_TValue *aux;
         StkId rb = RB(i);
-        TValue *rc = RKC(i);
-        TString *key = tsvalue(rc);  /* key must be a string */
+        luai_TValue *rc = RKC(i);
+        luai_TString *key = tsvalue(rc);  /* key must be a string */
         setobjs2s(L, ra + 1, rb);
         if (luaV_fastget(L, rb, key, aux, luaH_getstr)) {
           setobj2s(L, ra, aux);
@@ -21416,9 +21415,9 @@ void luaV_execute (lua_State *L) {
         else luai_Protect(luaV_finishget(L, rb, rc, ra, aux));
         luai_vmbreak;
       }
-      luai_vmcase(OP_ADD) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_ADD) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -21430,9 +21429,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_ADD)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_SUB) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_SUB) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -21444,9 +21443,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_SUB)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_MUL) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_MUL) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -21458,9 +21457,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_MUL)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_DIV) {  /* float division (always with floats) */
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_DIV) {  /* float division (always with floats) */
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
         if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setfltvalue(ra, luai_numdiv(L, nb, nc));
@@ -21468,9 +21467,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_DIV)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_BAND) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_BAND) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, intop(&, ib, ic));
@@ -21478,9 +21477,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_BAND)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_BOR) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_BOR) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, intop(|, ib, ic));
@@ -21488,9 +21487,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_BOR)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_BXOR) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_BXOR) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, intop(^, ib, ic));
@@ -21498,9 +21497,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_SHL) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_SHL) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, luaV_shiftl(ib, ic));
@@ -21508,9 +21507,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_SHR) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_SHR) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, luaV_shiftl(ib, -ic));
@@ -21518,9 +21517,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHR)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_MOD) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_MOD) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -21534,9 +21533,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_IDIV) {  /* floor division */
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_IDIV) {  /* floor division */
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -21548,9 +21547,9 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_IDIV)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_POW) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_POW) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
         if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setfltvalue(ra, luai_numpow(L, nb, nc));
@@ -21558,8 +21557,8 @@ void luaV_execute (lua_State *L) {
         else { luai_Protect(luaT_trybinTM(L, rb, rc, ra, TM_POW)); }
         luai_vmbreak;
       }
-      luai_vmcase(OP_UNM) {
-        TValue *rb = RB(i);
+      luai_vmcase(luai_OP_UNM) {
+        luai_TValue *rb = RB(i);
         lua_Number nb;
         if (ttisinteger(rb)) {
           lua_Integer ib = ivalue(rb);
@@ -21573,30 +21572,30 @@ void luaV_execute (lua_State *L) {
         }
         luai_vmbreak;
       }
-      luai_vmcase(OP_BNOT) {
-        TValue *rb = RB(i);
+      luai_vmcase(luai_OP_BNOT) {
+        luai_TValue *rb = RB(i);
         lua_Integer ib;
         if (tointeger(rb, &ib)) {
-          setivalue(ra, intop(^, ~l_castS2U(0), ib));
+          setivalue(ra, intop(^, ~luai_l_castS2U(0), ib));
         }
         else {
           luai_Protect(luaT_trybinTM(L, rb, rb, ra, TM_BNOT));
         }
         luai_vmbreak;
       }
-      luai_vmcase(OP_NOT) {
-        TValue *rb = RB(i);
-        int res = l_isfalse(rb);  /* next assignment may change this value */
+      luai_vmcase(luai_OP_NOT) {
+        luai_TValue *rb = RB(i);
+        int res = luai_l_isfalse(rb);  /* luai_next luai_assignment may change this value */
         setbvalue(ra, res);
         luai_vmbreak;
       }
-      luai_vmcase(OP_LEN) {
+      luai_vmcase(luai_OP_LEN) {
         luai_Protect(luaV_objlen(L, ra, RB(i)));
         luai_vmbreak;
       }
-      luai_vmcase(OP_CONCAT) {
-        int b = GETARG_B(i);
-        int c = GETARG_C(i);
+      luai_vmcase(luai_OP_CONCAT) {
+        int b = luai_GETARG_B(i);
+        int c = luai_GETARG_C(i);
         StkId rb;
         L->top = base + c + 1;  /* mark the end of concat operands */
         luai_Protect(luaV_concat(L, c - b + 1));
@@ -21607,49 +21606,49 @@ void luaV_execute (lua_State *L) {
         L->top = ci->top;  /* restore top */
         luai_vmbreak;
       }
-      luai_vmcase(OP_JMP) {
+      luai_vmcase(luai_OP_JMP) {
         luai_dojump(ci, i, 0);
         luai_vmbreak;
       }
-      luai_vmcase(OP_EQ) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+      luai_vmcase(luai_OP_EQ) {
+        luai_TValue *rb = RKB(i);
+        luai_TValue *rc = RKC(i);
         luai_Protect(
-          if (luaV_equalobj(L, rb, rc) != GETARG_A(i))
+          if (luaV_equalobj(L, rb, rc) != luai_GETARG_A(i))
             ci->u.l.savedpc++;
           else
             luai_donextjump(ci);
         )
         luai_vmbreak;
       }
-      luai_vmcase(OP_LT) {
+      luai_vmcase(luai_OP_LT) {
         luai_Protect(
-          if (luaV_lessthan(L, RKB(i), RKC(i)) != GETARG_A(i))
+          if (luaV_lessthan(L, RKB(i), RKC(i)) != luai_GETARG_A(i))
             ci->u.l.savedpc++;
           else
             luai_donextjump(ci);
         )
         luai_vmbreak;
       }
-      luai_vmcase(OP_LE) {
+      luai_vmcase(luai_OP_LE) {
         luai_Protect(
-          if (luaV_lessequal(L, RKB(i), RKC(i)) != GETARG_A(i))
+          if (luaV_lessequal(L, RKB(i), RKC(i)) != luai_GETARG_A(i))
             ci->u.l.savedpc++;
           else
             luai_donextjump(ci);
         )
         luai_vmbreak;
       }
-      luai_vmcase(OP_TEST) {
-        if (GETARG_C(i) ? l_isfalse(ra) : !l_isfalse(ra))
+      luai_vmcase(luai_OP_TEST) {
+        if (luai_GETARG_C(i) ? luai_l_isfalse(ra) : !luai_l_isfalse(ra))
             ci->u.l.savedpc++;
           else
           luai_donextjump(ci);
         luai_vmbreak;
       }
-      luai_vmcase(OP_TESTSET) {
-        TValue *rb = RB(i);
-        if (GETARG_C(i) ? l_isfalse(rb) : !l_isfalse(rb))
+      luai_vmcase(luai_OP_TESTSET) {
+        luai_TValue *rb = RB(i);
+        if (luai_GETARG_C(i) ? luai_l_isfalse(rb) : !luai_l_isfalse(rb))
           ci->u.l.savedpc++;
         else {
           setobjs2s(L, ra, rb);
@@ -21657,9 +21656,9 @@ void luaV_execute (lua_State *L) {
         }
         luai_vmbreak;
       }
-      luai_vmcase(OP_CALL) {
-        int b = GETARG_B(i);
-        int nresults = GETARG_C(i) - 1;
+      luai_vmcase(luai_OP_CALL) {
+        int b = luai_GETARG_B(i);
+        int nresults = luai_GETARG_C(i) - 1;
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         if (luaD_precall(L, ra, nresults)) {  /* C function? */
           if (nresults >= 0)
@@ -21672,10 +21671,10 @@ void luaV_execute (lua_State *L) {
         }
         luai_vmbreak;
       }
-      luai_vmcase(OP_TAILCALL) {
-        int b = GETARG_B(i);
+      luai_vmcase(luai_OP_TAILCALL) {
+        int b = luai_GETARG_B(i);
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
-        lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
+        lua_assert(luai_GETARG_C(i) - 1 == LUA_MULTRET);
         if (luaD_precall(L, ra, LUA_MULTRET)) {  /* C function? */
           luai_Protect((void)0);  /* update 'base' */
         }
@@ -21703,27 +21702,27 @@ void luaV_execute (lua_State *L) {
         }
         luai_vmbreak;
       }
-      luai_vmcase(OP_RETURN) {
-        int b = GETARG_B(i);
+      luai_vmcase(luai_OP_RETURN) {
+        int b = luai_GETARG_B(i);
         if (cl->p->sizep > 0) luaF_close(L, base);
-        b = luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
+        b = luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : luai_cast_int(L->top - ra)));
         if (ci->callstatus & CIST_FRESH)  /* local 'ci' still from callee */
           return;  /* external invocation: return */
         else {  /* invocation via reentry: continue execution */
           ci = L->ci;
           if (b) L->top = ci->top;
           lua_assert(isLua(ci));
-          lua_assert(GET_OPCODE(*((ci)->u.l.savedpc - 1)) == OP_CALL);
+          lua_assert(luai_GETOPCODE(*((ci)->u.l.savedpc - 1)) == luai_OP_CALL);
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
       }
-      luai_vmcase(OP_FORLOOP) {
+      luai_vmcase(luai_OP_FORLOOP) {
         if (ttisinteger(ra)) {  /* integer loop? */
           lua_Integer step = ivalue(ra + 2);
           lua_Integer idx = intop(+, ivalue(ra), step); /* increment index */
           lua_Integer limit = ivalue(ra + 1);
           if ((0 < step) ? (idx <= limit) : (limit <= idx)) {
-            ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
+            ci->u.l.savedpc += luai_GETARG_sBx(i);  /* jump back */
             chgivalue(ra, idx);  /* update internal index... */
             setivalue(ra + 3, idx);  /* ...and external index */
           }
@@ -21734,21 +21733,21 @@ void luaV_execute (lua_State *L) {
           lua_Number limit = fltvalue(ra + 1);
           if (luai_numlt(0, step) ? luai_numle(idx, limit)
                                   : luai_numle(limit, idx)) {
-            ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
+            ci->u.l.savedpc += luai_GETARG_sBx(i);  /* jump back */
             chgfltvalue(ra, idx);  /* update internal index... */
             setfltvalue(ra + 3, idx);  /* ...and external index */
           }
         }
         luai_vmbreak;
       }
-      luai_vmcase(OP_FORPREP) {
-        TValue *init = ra;
-        TValue *plimit = ra + 1;
-        TValue *pstep = ra + 2;
+      luai_vmcase(luai_OP_FORPREP) {
+        luai_TValue *init = ra;
+        luai_TValue *plimit = ra + 1;
+        luai_TValue *pstep = ra + 2;
         lua_Integer ilimit;
         int stopnow;
         if (ttisinteger(init) && ttisinteger(pstep) &&
-            forlimit(plimit, &ilimit, ivalue(pstep), &stopnow)) {
+            luai_forlimit(plimit, &ilimit, ivalue(pstep), &stopnow)) {
           /* all values are integer */
           lua_Integer initv = (stopnow ? 0 : ivalue(init));
           setivalue(plimit, ilimit);
@@ -21766,66 +21765,66 @@ void luaV_execute (lua_State *L) {
             luaG_runerror(L, "'for' initial value must be a number");
           setfltvalue(init, luai_numsub(L, ninit, nstep));
         }
-        ci->u.l.savedpc += GETARG_sBx(i);
+        ci->u.l.savedpc += luai_GETARG_sBx(i);
         luai_vmbreak;
       }
-      luai_vmcase(OP_TFORCALL) {
+      luai_vmcase(luai_OP_TFORCALL) {
         StkId cb = ra + 3;  /* call base */
         setobjs2s(L, cb+2, ra+2);
         setobjs2s(L, cb+1, ra+1);
         setobjs2s(L, cb, ra);
         L->top = cb + 3;  /* func. + 2 args (state and index) */
-        luai_Protect(luaD_call(L, cb, GETARG_C(i)));
+        luai_Protect(luaD_call(L, cb, luai_GETARG_C(i)));
         L->top = ci->top;
-        i = *(ci->u.l.savedpc++);  /* go to next instruction */
+        i = *(ci->u.l.savedpc++);  /* go to luai_next instruction */
         ra = RA(i);
-        lua_assert(GET_OPCODE(i) == OP_TFORLOOP);
-        goto l_tforloop;
+        lua_assert(luai_GETOPCODE(i) == luai_OP_TFORLOOP);
+        goto luai_l_tforloop;
       }
-      luai_vmcase(OP_TFORLOOP) {
-        l_tforloop:
+      luai_vmcase(luai_OP_TFORLOOP) {
+        luai_l_tforloop:
         if (!ttisnil(ra + 1)) {  /* continue loop? */
-          setobjs2s(L, ra, ra + 1);  /* save control variable */
-           ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
+          setobjs2s(L, ra, ra + 1);  /* luai_save control variable */
+           ci->u.l.savedpc += luai_GETARG_sBx(i);  /* jump back */
         }
         luai_vmbreak;
       }
-      luai_vmcase(OP_SETLIST) {
-        int n = GETARG_B(i);
-        int c = GETARG_C(i);
+      luai_vmcase(luai_OP_SETLIST) {
+        int n = luai_GETARG_B(i);
+        int c = luai_GETARG_C(i);
         unsigned int last;
-        Table *h;
-        if (n == 0) n = cast_int(L->top - ra) - 1;
+        luai_Table *h;
+        if (n == 0) n = luai_cast_int(L->top - ra) - 1;
         if (c == 0) {
-          lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_EXTRAARG);
-          c = GETARG_Ax(*ci->u.l.savedpc++);
+          lua_assert(luai_GETOPCODE(*ci->u.l.savedpc) == luai_OP_EXTRAARG);
+          c = luai_GETARG_Ax(*ci->u.l.savedpc++);
         }
         h = hvalue(ra);
-        last = ((c-1)*LFIELDS_PER_FLUSH) + n;
+        last = ((c-1)*LUAI_LFIELDS_PER_FLUSH) + n;
         if (last > h->sizearray)  /* needs more space? */
           luaH_resizearray(L, h, last);  /* preallocate it at once */
         for (; n > 0; n--) {
-          TValue *val = ra+n;
+          luai_TValue *val = ra+n;
           luaH_setint(L, h, last--, val);
           luaC_barrierback(L, h, val);
         }
         L->top = ci->top;  /* correct top (in case of previous open call) */
         luai_vmbreak;
       }
-      luai_vmcase(OP_CLOSURE) {
-        Proto *p = cl->p->p[GETARG_Bx(i)];
-        LClosure *ncl = getcached(p, cl->upvals, base);  /* cached closure */
+      luai_vmcase(luai_OP_CLOSURE) {
+        luai_Proto *p = cl->p->p[luai_GETARG_Bx(i)];
+        LClosure *ncl = luai_getcached(p, cl->upvals, base);  /* cached closure */
         if (ncl == NULL)  /* no match? */
-          pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
+          luai_pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
         else
           setclLvalue(L, ra, ncl);  /* push cashed closure */
         luai_checkGC(L, ra + 1);
         luai_vmbreak;
       }
-      luai_vmcase(OP_VARARG) {
-        int b = GETARG_B(i) - 1;  /* required results */
+      luai_vmcase(luai_OP_VARARG) {
+        int b = luai_GETARG_B(i) - 1;  /* required results */
         int j;
-        int n = cast_int(base - ci->func) - cl->p->numparams - 1;
+        int n = luai_cast_int(base - ci->func) - cl->p->numparams - 1;
         if (n < 0)  /* less arguments than parameters? */
           n = 0;  /* no vararg arguments */
         if (b < 0) {  /* B == 0? */
@@ -21840,7 +21839,7 @@ void luaV_execute (lua_State *L) {
           setnilvalue(ra + j);
         luai_vmbreak;
       }
-      luai_vmcase(OP_EXTRAARG) {
+      luai_vmcase(luai_OP_EXTRAARG) {
         lua_assert(0);
         luai_vmbreak;
       }
@@ -21863,7 +21862,7 @@ int luaZ_fill (ZIO *z) {
     return EOZ;
   z->n = size - 1;  /* discount char being returned */
   z->p = buff;
-  return cast_uchar(*(z->p++));
+  return luai_cast_uchar(*(z->p++));
 }
 
 
